@@ -5,6 +5,9 @@ Manage a stack of [@gorhom/bottom-sheet](https://github.com/gorhom/react-native-
 > ⚠️ **Important:** Not Production Ready
 > This library is currently in active development and is not yet considered production-ready.
 
+## Demo:
+https://x.com/tsolfitsmexx/status/1913103288834089056?s=46&t=kx6uESwbDrRgTUOCDr1tMQ
+
 ---
 
 ## 🚀 Features
