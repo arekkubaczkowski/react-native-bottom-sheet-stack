@@ -22,11 +22,24 @@ yarn add zustand @gorhom/bottom-sheet
 
 ## Usage
 
-```tsx
-import { BottomSheetHost } from './bottomSheet/BottomSheetHost'
-import { initBottomSheetCoordinator } from './bottomSheet/coordinator'
+### 🧠 Important: Use <BottomSheetManaged /> instead of <BottomSheet />
 
-initBottomSheetCoordinator()
+To make the stack manager work, you must replace all instances of BottomSheet from @gorhom/bottom-sheet with the provided:
+
+```tsx
+import { BottomSheetManaged } from 'react-native-bottom-sheet-stack';
+```
+
+In your app entry:
+
+```tsx
+import {
+  BottomSheetHost,
+  BottomSheetManager,
+  initBottomSheetCoordinator,
+} from 'react-native-bottom-sheet-stack';
+
+initBottomSheetCoordinator();
 
 export default function App() {
   return (
@@ -34,7 +47,36 @@ export default function App() {
       <BottomSheetHost />
       {/* your app content */}
     </BottomSheetManager>
-  )
+  );
 }
 ```
 
+In a component:
+
+```tsx
+import { useBottomSheetManager } from 'react-native-bottom-sheet-stack';
+
+export default function YouComponent() {
+  const { openBottomSheet } = useBottomSheetManager();
+
+  return (
+    <TouchableOpacity onPress={() => openBottomSheet(<YourBottomSheet />, { mode: 'switch' })}>
+      <Text>Open Bottom Sheet</Text>
+    </TouchableOpacity>
+  );
+}
+```
+
+Define your bottom sheet:
+
+```tsx
+import { BottomSheetManaged } from 'react-native-bottom-sheet-stack';
+
+export default function YourBottomSheet() {
+  return (
+    <BottomSheetManaged snapPoints={['50%']}>
+      {/* Sheet content */}
+    </BottomSheetManaged>
+  );
+}
+```
