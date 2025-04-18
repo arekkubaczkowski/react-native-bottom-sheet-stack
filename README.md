@@ -2,6 +2,9 @@
 
 Manage a stack of [@gorhom/bottom-sheet](https://github.com/gorhom/react-native-bottom-sheet) components with `push`, `switch`, and `replace` navigation — without unmounting underlying sheets.
 
+> ⚠️ **Important:** Not Production Ready
+> This library is currently in active development and is not yet considered production-ready.
+
 ---
 
 ## 🚀 Features
