@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import { useBottomSheetStore, type OpenMode } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
@@ -24,62 +24,73 @@ export const useBottomSheetManager = () => {
     startClosing: store.startClosing,
   }));
 
-  const openBottomSheet = (
-    content: React.ReactElement,
-    options: {
-      id?: string;
-      groupId?: string;
-      mode?: OpenMode;
-    } = {}
-  ) => {
-    const groupId =
-      options.groupId || bottomSheetManagerContext?.groupId || 'default';
+  const openBottomSheet = useCallback(
+    (
+      content: React.ReactElement,
+      options: {
+        id?: string;
+        groupId?: string;
+        mode?: OpenMode;
+      } = {}
+    ) => {
+      const groupId =
+        options.groupId || bottomSheetManagerContext?.groupId || 'default';
 
-    const id = Math.random().toString(36);
-    const ref = React.createRef<BottomSheetMethods>();
+      const id = Math.random().toString(36);
+      const ref = React.createRef<BottomSheetMethods>();
 
-    sheetRefs[id] = ref;
+      sheetRefs[id] = ref;
 
-    // @ts-ignore
-    const contentWithRef = React.cloneElement(content, { ref });
+      // @ts-ignore
+      const contentWithRef = React.cloneElement(content, { ref });
 
-    if (options.mode === 'replace') {
-      replaceBottomSheet({
-        id,
-        groupId,
-        content: contentWithRef,
-      });
-    } else if (options.mode === 'switch') {
-      switchBottomSheet({
-        id,
-        groupId,
-        content: contentWithRef,
-      });
-    } else {
-      pushBottomSheet({
-        id,
-        groupId,
-        content: contentWithRef,
-      });
-    }
+      if (options.mode === 'replace') {
+        replaceBottomSheet({
+          id,
+          groupId,
+          content: contentWithRef,
+        });
+      } else if (options.mode === 'switch') {
+        switchBottomSheet({
+          id,
+          groupId,
+          content: contentWithRef,
+        });
+      } else {
+        pushBottomSheet({
+          id,
+          groupId,
+          content: contentWithRef,
+        });
+      }
 
-    return id;
-  };
+      return id;
+    },
+    [
+      bottomSheetManagerContext?.groupId,
+      pushBottomSheet,
+      replaceBottomSheet,
+      switchBottomSheet,
+    ]
+  );
 
-  const closeTop = () => {
+  const closeTop = useCallback(() => {
     const top = stack.at(-1);
     if (top) {
       startClosing(top.id);
     }
-  };
+  }, [stack, startClosing]);
 
-  const close = (id: string) => {
-    startClosing(id);
-  };
+  const close = useCallback(
+    (id: string) => {
+      startClosing(id);
+    },
+    [startClosing]
+  );
 
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     storeClearAll();
-  };
+  }, [storeClearAll]);
 
   return {
     clearAll,

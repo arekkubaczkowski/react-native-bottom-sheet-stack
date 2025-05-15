@@ -3,10 +3,10 @@ import { sheetRefs } from './refsMap';
 
 export function initBottomSheetCoordinator() {
   useBottomSheetStore.subscribe(
-    s => s.stack.map(({ id, status }) => ({ id, status })),
+    (s) => s.stack.map(({ id, status }) => ({ id, status })),
     (next, prev) => {
       next.forEach(({ id, status }) => {
-        const prevStatus = prev.find(p => p.id === id)?.status;
+        const prevStatus = prev.find((p) => p.id === id)?.status;
 
         if (prevStatus === status) {
           return;
@@ -29,6 +29,6 @@ export function initBottomSheetCoordinator() {
             break;
         }
       });
-    },
+    }
   );
 }

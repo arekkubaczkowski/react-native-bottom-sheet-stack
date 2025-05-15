@@ -15,7 +15,7 @@ function BottomSheetManagerProviderComp({ id, children }: Props) {
 }
 
 export const BottomSheetManagerProvider = React.memo(
-  BottomSheetManagerProviderComp,
+  BottomSheetManagerProviderComp
 );
 
 export const useBottomSheetManagerContext = () => {
@@ -23,7 +23,7 @@ export const useBottomSheetManagerContext = () => {
 
   if (!context) {
     throw new Error(
-      'useBottomSheetManagerContext must be used within a BottomSheetManagerProvider',
+      'useBottomSheetManagerContext must be used within a BottomSheetManagerProvider'
     );
   }
   return context;

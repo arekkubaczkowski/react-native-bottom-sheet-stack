@@ -1,10 +1,11 @@
 import BottomSheetOriginal, {
   BottomSheetBackdrop,
   useBottomSheetSpringConfigs,
+  type BottomSheetBackdropProps,
   type BottomSheetProps,
 } from '@gorhom/bottom-sheet';
 import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import {
   useBottomSheetStore,
@@ -27,30 +28,30 @@ export const BottomSheetManaged = React.forwardRef<
     const { startClosing, finishClosing } = useBottomSheetStore.getState();
     const { bottomSheetState } = useBottomSheetState();
 
-    const handleOnAnimate: BottomSheetProps['onAnimate'] = (
-      from: number,
-      to: number
-    ) => {
-      if (to === -1) {
-        if (
-          bottomSheetState.status === 'open' ||
-          bottomSheetState.status === 'opening'
-        ) {
-          startClosing(bottomSheetState.id);
+    const handleOnAnimate: BottomSheetProps['onAnimate'] = useCallback(
+      (from: number, to: number) => {
+        if (to === -1) {
+          if (
+            bottomSheetState.status === 'open' ||
+            bottomSheetState.status === 'opening'
+          ) {
+            startClosing(bottomSheetState.id);
+          }
         }
-      }
-      if (from === -1 && to >= 0) {
-        const currentState = useBottomSheetStore.getState();
-        useBottomSheetStore.setState({
-          stack: currentState.stack.map((s) =>
-            s.id === bottomSheetState.id
-              ? { ...s, status: 'open' as BottomSheetStatus }
-              : s
-          ),
-        });
-      }
-      onAnimate?.(from, to);
-    };
+        if (from === -1 && to >= 0) {
+          const currentState = useBottomSheetStore.getState();
+          useBottomSheetStore.setState({
+            stack: currentState.stack.map((s) =>
+              s.id === bottomSheetState.id
+                ? { ...s, status: 'open' as BottomSheetStatus }
+                : s
+            ),
+          });
+        }
+        onAnimate?.(from, to);
+      },
+      [bottomSheetState.id, bottomSheetState.status, onAnimate, startClosing]
+    );
 
     const config = useBottomSheetSpringConfigs({
       stiffness: 400,
@@ -58,13 +59,24 @@ export const BottomSheetManaged = React.forwardRef<
       mass: 0.7,
     });
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
       onClose?.();
 
       if (bottomSheetState.status !== 'hidden') {
         finishClosing(bottomSheetState.id);
       }
-    };
+    }, [bottomSheetState.id, bottomSheetState.status, finishClosing, onClose]);
+
+    const renderBackdropComponent = useCallback(
+      (backdropProps: BottomSheetBackdropProps) => (
+        <BottomSheetBackdrop
+          {...backdropProps}
+          disappearsOnIndex={-1}
+          appearsOnIndex={0}
+        />
+      ),
+      []
+    );
 
     return (
       <BottomSheetOriginal
@@ -74,13 +86,7 @@ export const BottomSheetManaged = React.forwardRef<
         onClose={handleClose}
         onAnimate={handleOnAnimate}
         enablePanDownToClose={enablePanDownToClose}
-        backdropComponent={(props) => (
-          <BottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={-1}
-            appearsOnIndex={0}
-          />
-        )}
+        backdropComponent={renderBackdropComponent}
       >
         {children}
       </BottomSheetOriginal>
