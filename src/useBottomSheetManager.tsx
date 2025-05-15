@@ -73,6 +73,10 @@ export const useBottomSheetManager = () => {
     }
   };
 
+  const close = (id: string) => {
+    startClosing(id);
+  };
+
   const clearAll = () => {
     storeClearAll();
   };
@@ -80,6 +84,7 @@ export const useBottomSheetManager = () => {
   return {
     clearAll,
     closeTop,
+    close,
     openBottomSheet,
     pushBottomSheet,
     replaceBottomSheet,
