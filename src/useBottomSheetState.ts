@@ -7,6 +7,7 @@ import {
 export function useBottomSheetState(): {
   bottomSheetState: BottomSheetState;
   close: () => void;
+  closeBottomSheet: () => void;
 } {
   const context = useMaybeBottomSheetContext();
   const { bottomSheetsStack, startClosing } = useBottomSheetStore((store) => ({
@@ -24,8 +25,11 @@ export function useBottomSheetState(): {
     );
   }
 
+  const close = () => startClosing(bottomSheetState.id);
+
   return {
     bottomSheetState,
-    close: () => startClosing(bottomSheetState.id),
+    close,
+    closeBottomSheet: close,
   };
 }
