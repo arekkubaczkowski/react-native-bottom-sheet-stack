@@ -21,7 +21,6 @@ export const useBottomSheetManager = () => {
       replaceBottomSheet: store.replace,
       pushBottomSheet: store.push,
       switchBottomSheet: store.switch,
-      stack: store.stack,
       startClosing: store.startClosing,
     }),
     shallow
