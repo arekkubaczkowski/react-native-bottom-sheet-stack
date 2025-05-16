@@ -4,6 +4,7 @@ import { useBottomSheetStore, type OpenMode } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import { sheetRefs } from './refsMap';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
+import { shallow } from 'zustand/shallow';
 
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
@@ -12,17 +13,19 @@ export const useBottomSheetManager = () => {
     pushBottomSheet,
     replaceBottomSheet,
     switchBottomSheet,
-    stack,
     startClosing,
     storeClearAll,
-  } = useBottomSheetStore((store) => ({
-    storeClearAll: store.clearAll,
-    replaceBottomSheet: store.replace,
-    pushBottomSheet: store.push,
-    switchBottomSheet: store.switch,
-    stack: store.stack,
-    startClosing: store.startClosing,
-  }));
+  } = useBottomSheetStore(
+    (store) => ({
+      storeClearAll: store.clearAll,
+      replaceBottomSheet: store.replace,
+      pushBottomSheet: store.push,
+      switchBottomSheet: store.switch,
+      stack: store.stack,
+      startClosing: store.startClosing,
+    }),
+    shallow
+  );
 
   const openBottomSheet = useCallback(
     (
@@ -74,13 +77,6 @@ export const useBottomSheetManager = () => {
     ]
   );
 
-  const closeTop = useCallback(() => {
-    const top = stack.at(-1);
-    if (top) {
-      startClosing(top.id);
-    }
-  }, [stack, startClosing]);
-
   const close = useCallback(
     (id: string) => {
       startClosing(id);
@@ -94,7 +90,6 @@ export const useBottomSheetManager = () => {
 
   return {
     clearAll,
-    closeTop,
     close,
     openBottomSheet,
     pushBottomSheet,
