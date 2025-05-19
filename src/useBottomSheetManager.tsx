@@ -38,7 +38,7 @@ export const useBottomSheetManager = () => {
       const groupId =
         options.groupId || bottomSheetManagerContext?.groupId || 'default';
 
-      const id = Math.random().toString(36);
+      const id = options.id || Math.random().toString(36);
       const ref = React.createRef<BottomSheetMethods>();
 
       sheetRefs[id] = ref;
