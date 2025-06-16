@@ -29,8 +29,13 @@ export const BottomSheetManaged = React.forwardRef<
     const { bottomSheetState } = useBottomSheetState();
 
     const handleOnAnimate: BottomSheetProps['onAnimate'] = useCallback(
-      (from: number, to: number) => {
-        if (to === -1) {
+      (
+        fromIndex: number,
+        toIndex: number,
+        fromPosition: number,
+        toPosition: number
+      ) => {
+        if (toIndex === -1) {
           if (
             bottomSheetState.status === 'open' ||
             bottomSheetState.status === 'opening'
@@ -38,7 +43,7 @@ export const BottomSheetManaged = React.forwardRef<
             startClosing(bottomSheetState.id);
           }
         }
-        if (from === -1 && to >= 0) {
+        if (fromIndex === -1 && toIndex >= 0) {
           const currentState = useBottomSheetStore.getState();
           useBottomSheetStore.setState({
             stack: currentState.stack.map((s) =>
@@ -48,7 +53,7 @@ export const BottomSheetManaged = React.forwardRef<
             ),
           });
         }
-        onAnimate?.(from, to);
+        onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
       },
       [bottomSheetState.id, bottomSheetState.status, onAnimate, startClosing]
     );

@@ -1,4 +1,9 @@
-import React, { useEffect, useMemo, type PropsWithChildren } from 'react';
+import React, {
+  Fragment,
+  useEffect,
+  useMemo,
+  type PropsWithChildren,
+} from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { BottomSheetContext } from './BottomSheet.context';
@@ -8,7 +13,11 @@ import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
 
 initBottomSheetCoordinator();
 
-function BottomSheetHostComp() {
+interface BottomSheetHostProps {
+  Container?: React.ComponentType<any>;
+}
+
+function BottomSheetHostComp({ Container = Fragment }: BottomSheetHostProps) {
   const { bottomSheetsStack, clearAll } = useBottomSheetStore((store) => ({
     bottomSheetsStack: store.stack,
     clearAll: store.clearAll,
@@ -35,18 +44,20 @@ function BottomSheetHostComp() {
     <>
       {filteredQueue.map(({ id, content }) => (
         <BottomSheetContext.Provider key={id} value={{ id }}>
-          <View
-            style={[
-              StyleSheet.absoluteFillObject,
-              styles.container,
-              {
-                width,
-                height,
-              },
-            ]}
-          >
-            <MemoizedContent id={id}>{content}</MemoizedContent>
-          </View>
+          <Container>
+            <View
+              style={[
+                StyleSheet.absoluteFillObject,
+                styles.container,
+                {
+                  width,
+                  height,
+                },
+              ]}
+            >
+              <MemoizedContent id={id}>{content}</MemoizedContent>
+            </View>
+          </Container>
         </BottomSheetContext.Provider>
       ))}
     </>
