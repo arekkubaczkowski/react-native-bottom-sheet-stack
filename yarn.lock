@@ -2363,9 +2363,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@gorhom/bottom-sheet@npm:^5.1.2":
-  version: 5.1.2
-  resolution: "@gorhom/bottom-sheet@npm:5.1.2"
+"@gorhom/bottom-sheet@npm:^5.1.8":
+  version: 5.1.8
+  resolution: "@gorhom/bottom-sheet@npm:5.1.8"
   dependencies:
     "@gorhom/portal": 1.0.14
     invariant: ^2.2.4
@@ -2375,13 +2375,13 @@ __metadata:
     react: "*"
     react-native: "*"
     react-native-gesture-handler: ">=2.16.1"
-    react-native-reanimated: ">=3.16.0"
+    react-native-reanimated: "*"
   peerDependenciesMeta:
     "@types/react":
       optional: true
     "@types/react-native":
       optional: true
-  checksum: 13265dffdd20c682e8236b623784804d1e04a924f98e75cee91b8e532871b650fad603f4256f77c244b73cacc137679abb55dbb5ab54e55fca24026431cb9f39
+  checksum: de450ace52d8a4fac9faed0a900ae455f90289114e06c96c8378ba192102a8795a29f614245b450c4e2a29dbe2b93c2ccaaa39cb6a14561f200ea4dd2e372621
   languageName: node
   linkType: hard
 
@@ -11808,7 +11808,7 @@ __metadata:
   dependencies:
     "@babel/core": ^7.20.0
     "@expo/metro-runtime": ~4.0.1
-    "@gorhom/bottom-sheet": ^5.1.2
+    "@gorhom/bottom-sheet": ^5.1.8
     expo: ~52.0.46
     expo-status-bar: ~2.0.1
     react: 18.3.1
@@ -11832,7 +11832,7 @@ __metadata:
     "@eslint/eslintrc": ^3.3.0
     "@eslint/js": ^9.22.0
     "@evilmartians/lefthook": ^1.5.0
-    "@gorhom/bottom-sheet": ^5.1.2
+    "@gorhom/bottom-sheet": ^5.1.8
     "@react-native/eslint-config": ^0.78.0
     "@release-it/conventional-changelog": ^9.0.2
     "@types/jest": ^29.5.5
