@@ -33,11 +33,20 @@ export const useBottomSheetStore = create(
       stack: [],
 
       push: (sheet) =>
-        set((state) => ({
-          stack: [...state.stack, { ...sheet, status: 'opening' }],
-        })),
+        set((state) => {
+          if (state.stack.some((s) => s.id === sheet.id)) {
+            return { stack: state.stack };
+          }
+          return {
+            stack: [...state.stack, { ...sheet, status: 'opening' }],
+          };
+        }),
       switch: (sheet) =>
         set((state) => {
+          if (state.stack.some((s) => s.id === sheet.id)) {
+            return { stack: state.stack };
+          }
+
           const stack = [...state.stack];
 
           if (stack.length) {
@@ -54,6 +63,10 @@ export const useBottomSheetStore = create(
 
       replace: (sheet) =>
         set((state) => {
+          if (state.stack.some((s) => s.id === sheet.id)) {
+            return { stack: state.stack };
+          }
+
           const stack = [...state.stack];
           const prevTop = stack.pop();
 
