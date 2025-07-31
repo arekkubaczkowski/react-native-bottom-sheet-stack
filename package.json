@@ -60,6 +60,7 @@
     "react-native-builder-bob": "^0.40.6",
     "react-native-gesture-handler": "^2.25.0",
     "react-native-reanimated": "^3.17.4",
+    "react-native-safe-area-context": "^5.3.0",
     "release-it": "^17.10.0",
     "typescript": "^5.2.2",
     "zustand": "^5.0.3"
@@ -70,6 +71,7 @@
     "react-native": "*",
     "react-native-gesture-handler": ">=2.0.0",
     "react-native-reanimated": ">=3.0.0",
+    "react-native-safe-area-context": ">=5.0.0",
     "zustand": ">=5.0.0"
   },
   "workspaces": [

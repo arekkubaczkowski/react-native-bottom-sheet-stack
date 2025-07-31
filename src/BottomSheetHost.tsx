@@ -4,7 +4,8 @@ import React, {
   useMemo,
   type PropsWithChildren,
 } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
 import { BottomSheetContext } from './BottomSheet.context';
 import { useBottomSheetStore } from './bottomSheet.store';
@@ -23,7 +24,7 @@ function BottomSheetHostComp({ Container = Fragment }: BottomSheetHostProps) {
     clearAll: store.clearAll,
   }));
 
-  const { width, height } = useWindowDimensions();
+  const { width, height } = useSafeAreaFrame();
   const { groupId } = useBottomSheetManagerContext();
 
   const filteredQueue = useMemo(
