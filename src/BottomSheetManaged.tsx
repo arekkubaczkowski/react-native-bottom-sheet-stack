@@ -22,7 +22,14 @@ export const BottomSheetManaged = React.forwardRef<
   BottomSheetManagedProps
 >(
   (
-    { children, onAnimate, onClose, enablePanDownToClose = true, ...props },
+    {
+      children,
+      onAnimate,
+      onClose,
+      enablePanDownToClose = true,
+      backdropComponent,
+      ...props
+    },
     ref
   ) => {
     const { startClosing, finishClosing } = useBottomSheetStore.getState();
@@ -90,8 +97,8 @@ export const BottomSheetManaged = React.forwardRef<
         {...props}
         onClose={handleClose}
         onAnimate={handleOnAnimate}
+        backdropComponent={backdropComponent || renderBackdropComponent}
         enablePanDownToClose={enablePanDownToClose}
-        backdropComponent={renderBackdropComponent}
       >
         {children}
       </BottomSheetOriginal>
