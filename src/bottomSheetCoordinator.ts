@@ -21,12 +21,11 @@ export function initBottomSheetCoordinator() {
           case 'opening':
             ref.expand();
             break;
-          case 'hidden':
-            ref.close();
-            break;
           case 'closing':
             ref.close();
             break;
+          // Note: 'hidden' sheets are not closed via ref to preserve their state
+          // They remain expanded but visually hidden behind other sheets
         }
       });
     }
