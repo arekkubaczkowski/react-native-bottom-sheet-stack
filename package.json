@@ -1,6 +1,6 @@
 {
   "name": "react-native-bottom-sheet-stack",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Bottom Sheet Stack Manager",
   "source": "./src/index.tsx",
   "main": "lib/commonjs/index.js",
