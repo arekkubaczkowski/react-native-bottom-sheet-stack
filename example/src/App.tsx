@@ -11,19 +11,22 @@ import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { initBottomSheetCoordinator } from '../../src/bottomSheetCoordinator';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 initBottomSheetCoordinator();
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <BottomSheetManagerProvider id="default">
-        <BottomSheetHost />
-        <View style={styles.container}>
-          <Text>Welcome</Text>
-          <Content />
-        </View>
-      </BottomSheetManagerProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.root}>
+        <BottomSheetManagerProvider id="default">
+          <BottomSheetHost />
+          <View style={styles.container}>
+            <Text>Welcome</Text>
+            <Content />
+          </View>
+        </BottomSheetManagerProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 
