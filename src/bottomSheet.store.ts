@@ -10,6 +10,7 @@ export interface BottomSheetState {
   id: string;
   content: ReactNode;
   status: BottomSheetStatus;
+  scaleBackground?: boolean;
 }
 
 type TriggerState = Omit<BottomSheetState, 'status'>;
@@ -22,6 +23,7 @@ interface BottomSheetStoreActions {
   push(sheet: TriggerState): void;
   switch(sheet: TriggerState): void;
   replace(sheet: TriggerState): void;
+  markOpen(id: string): void;
   startClosing(id: string): void;
   finishClosing(id: string): void;
   clearAll(): void;
@@ -77,6 +79,14 @@ export const useBottomSheetStore = create(
 
           return { stack };
         }),
+      markOpen: (id) =>
+        set((state) => {
+          const stack = state.stack.map((s) =>
+            s.id === id ? { ...s, status: 'open' as BottomSheetStatus } : s
+          );
+          return { stack };
+        }),
+
       startClosing: (id) =>
         set((state) => {
           const stack = [...state.stack];

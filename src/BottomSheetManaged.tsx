@@ -5,12 +5,9 @@ import BottomSheetOriginal, {
   type BottomSheetProps,
 } from '@gorhom/bottom-sheet';
 import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
-import {
-  useBottomSheetStore,
-  type BottomSheetStatus,
-} from './bottomSheet.store';
+import { createSheetEventHandlers } from './bottomSheetCoordinator';
 import { useBottomSheetState } from './useBottomSheetState';
 
 export interface BottomSheetRef extends BottomSheetMethods {}
@@ -32,59 +29,36 @@ export const BottomSheetManaged = React.forwardRef<
     },
     ref
   ) => {
-    const { startClosing, finishClosing } = useBottomSheetStore.getState();
     const { bottomSheetState } = useBottomSheetState();
 
-    const handleOnAnimate: BottomSheetProps['onAnimate'] = useCallback(
+    const { handleAnimate, handleClose } = useMemo(
+      () => createSheetEventHandlers(bottomSheetState.id),
+      [bottomSheetState.id]
+    );
+
+    const wrappedOnAnimate: BottomSheetProps['onAnimate'] = useCallback(
       (
         fromIndex: number,
         toIndex: number,
         fromPosition: number,
         toPosition: number
       ) => {
-        if (toIndex === -1) {
-          // Get fresh status from store to avoid stale closure race condition
-          const currentStatus = useBottomSheetStore
-            .getState()
-            .stack.find((s) => s.id === bottomSheetState.id)?.status;
-
-          if (currentStatus === 'open' || currentStatus === 'opening') {
-            startClosing(bottomSheetState.id);
-          }
-        }
-        if (fromIndex === -1 && toIndex >= 0) {
-          const currentState = useBottomSheetStore.getState();
-          useBottomSheetStore.setState({
-            stack: currentState.stack.map((s) =>
-              s.id === bottomSheetState.id
-                ? { ...s, status: 'open' as BottomSheetStatus }
-                : s
-            ),
-          });
-        }
+        handleAnimate(fromIndex, toIndex);
         onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
       },
-      [bottomSheetState.id, onAnimate, startClosing]
+      [handleAnimate, onAnimate]
     );
+
+    const wrappedOnClose = useCallback(() => {
+      onClose?.();
+      handleClose();
+    }, [handleClose, onClose]);
 
     const config = useBottomSheetSpringConfigs({
       stiffness: 400,
       damping: 80,
       mass: 0.7,
     });
-
-    const handleClose = useCallback(() => {
-      onClose?.();
-
-      // Get fresh status from store to avoid stale closure race condition
-      const currentStatus = useBottomSheetStore
-        .getState()
-        .stack.find((s) => s.id === bottomSheetState.id)?.status;
-
-      if (currentStatus !== 'hidden') {
-        finishClosing(bottomSheetState.id);
-      }
-    }, [bottomSheetState.id, finishClosing, onClose]);
 
     const renderBackdropComponent = useCallback(
       (backdropProps: BottomSheetBackdropProps) => (
@@ -102,8 +76,8 @@ export const BottomSheetManaged = React.forwardRef<
         animationConfigs={config}
         ref={ref}
         {...props}
-        onClose={handleClose}
-        onAnimate={handleOnAnimate}
+        onClose={wrappedOnClose}
+        onAnimate={wrappedOnAnimate}
         backdropComponent={backdropComponent || renderBackdropComponent}
         enablePanDownToClose={enablePanDownToClose}
       >

@@ -33,6 +33,7 @@ export const useBottomSheetManager = () => {
         id?: string;
         groupId?: string;
         mode?: OpenMode;
+        scaleBackground?: boolean;
       } = {}
     ) => {
       const groupId =
@@ -46,24 +47,19 @@ export const useBottomSheetManager = () => {
       // @ts-ignore
       const contentWithRef = React.cloneElement(content, { ref });
 
+      const sheetData = {
+        id,
+        groupId,
+        content: contentWithRef,
+        scaleBackground: options.scaleBackground,
+      };
+
       if (options.mode === 'replace') {
-        replaceBottomSheet({
-          id,
-          groupId,
-          content: contentWithRef,
-        });
+        replaceBottomSheet(sheetData);
       } else if (options.mode === 'switch') {
-        switchBottomSheet({
-          id,
-          groupId,
-          content: contentWithRef,
-        });
+        switchBottomSheet(sheetData);
       } else {
-        pushBottomSheet({
-          id,
-          groupId,
-          content: contentWithRef,
-        });
+        pushBottomSheet(sheetData);
       }
 
       return id;

@@ -32,3 +32,45 @@ export function initBottomSheetCoordinator() {
     }
   );
 }
+
+/**
+ * Creates event handlers for a bottom sheet that sync gorhom events back to the store.
+ * Direction: Gorhom Events → Store
+ */
+export function createSheetEventHandlers(sheetId: string) {
+  const { startClosing, finishClosing, markOpen } =
+    useBottomSheetStore.getState();
+
+  const handleAnimate = (fromIndex: number, toIndex: number) => {
+    const currentStatus = useBottomSheetStore
+      .getState()
+      .stack.find((s) => s.id === sheetId)?.status;
+
+    // Sheet is closing (animating to -1)
+    if (toIndex === -1) {
+      if (currentStatus === 'open' || currentStatus === 'opening') {
+        startClosing(sheetId);
+      }
+    }
+
+    // Sheet finished opening (animating from -1 to visible)
+    if (fromIndex === -1 && toIndex >= 0) {
+      markOpen(sheetId);
+    }
+  };
+
+  const handleClose = () => {
+    const currentStatus = useBottomSheetStore
+      .getState()
+      .stack.find((s) => s.id === sheetId)?.status;
+
+    if (currentStatus !== 'hidden') {
+      finishClosing(sheetId);
+    }
+  };
+
+  return {
+    handleAnimate,
+    handleClose,
+  };
+}

@@ -4,6 +4,7 @@ import {
   useBottomSheetManager,
   BottomSheetManaged,
   useBottomSheetState,
+  ScaleBackgroundWrapper,
 } from 'react-native-bottom-sheet-stack';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { forwardRef, type PropsWithChildren } from 'react';
@@ -19,11 +20,14 @@ export default function App() {
     <SafeAreaProvider>
       <GestureHandlerRootView style={styles.root}>
         <BottomSheetManagerProvider id="default">
+          <ScaleBackgroundWrapper
+            config={{ scale: 0.92, translateY: 10, borderRadius: 16 }}
+          >
+            <View style={styles.container}>
+              <Content />
+            </View>
+          </ScaleBackgroundWrapper>
           <BottomSheetHost />
-          <View style={styles.container}>
-            <Text>Welcome</Text>
-            <Content />
-          </View>
         </BottomSheetManagerProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
@@ -53,7 +57,7 @@ export const Content = ({}: PropsWithChildren) => {
     <View>
       <Button
         title="Open Bottom Sheet"
-        onPress={() => openBottomSheet(<SheetA />)}
+        onPress={() => openBottomSheet(<SheetA />, { scaleBackground: true })}
       />
     </View>
   );
@@ -80,7 +84,11 @@ const SheetA = forwardRef<BottomSheetMethods>((_, ref) => {
           </Text>
           <Button
             title="Switch"
-            onPress={() => openBottomSheet(<SheetB />, { mode: 'switch' })}
+            onPress={() =>
+              openBottomSheet(<SheetB />, {
+                mode: 'switch',
+              })
+            }
           />
         </View>
       </BottomSheetView>
@@ -160,11 +168,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 150,
-    backgroundColor: 'rgba(0, 0, 0, 0.50)',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     flexGrow: 1,
   },
   sheet: {
