@@ -43,10 +43,12 @@ export const BottomSheetManaged = React.forwardRef<
         toPosition: number
       ) => {
         if (toIndex === -1) {
-          if (
-            bottomSheetState.status === 'open' ||
-            bottomSheetState.status === 'opening'
-          ) {
+          // Get fresh status from store to avoid stale closure race condition
+          const currentStatus = useBottomSheetStore
+            .getState()
+            .stack.find((s) => s.id === bottomSheetState.id)?.status;
+
+          if (currentStatus === 'open' || currentStatus === 'opening') {
             startClosing(bottomSheetState.id);
           }
         }
@@ -62,7 +64,7 @@ export const BottomSheetManaged = React.forwardRef<
         }
         onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
       },
-      [bottomSheetState.id, bottomSheetState.status, onAnimate, startClosing]
+      [bottomSheetState.id, onAnimate, startClosing]
     );
 
     const config = useBottomSheetSpringConfigs({
@@ -74,10 +76,15 @@ export const BottomSheetManaged = React.forwardRef<
     const handleClose = useCallback(() => {
       onClose?.();
 
-      if (bottomSheetState.status !== 'hidden') {
+      // Get fresh status from store to avoid stale closure race condition
+      const currentStatus = useBottomSheetStore
+        .getState()
+        .stack.find((s) => s.id === bottomSheetState.id)?.status;
+
+      if (currentStatus !== 'hidden') {
         finishClosing(bottomSheetState.id);
       }
-    }, [bottomSheetState.id, bottomSheetState.status, finishClosing, onClose]);
+    }, [bottomSheetState.id, finishClosing, onClose]);
 
     const renderBackdropComponent = useCallback(
       (backdropProps: BottomSheetBackdropProps) => (
