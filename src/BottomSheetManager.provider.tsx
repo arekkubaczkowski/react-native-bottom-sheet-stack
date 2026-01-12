@@ -1,7 +1,10 @@
 import React, { type PropsWithChildren } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { BottomSheetManagerContext } from './BottomSheetManager.context';
+import {
+  BottomSheetManagerContext,
+  type BottomSheetManagerContextValue,
+} from './BottomSheetManager.context';
 
 export interface ScaleBackgroundConfig {
   /** Scale factor when sheet is open (default: 0.92) */
@@ -34,25 +37,27 @@ export const BottomSheetManagerProvider = React.memo(
   BottomSheetManagerProviderComp
 );
 
-export const useBottomSheetManagerContext = () => {
-  const context = React.useContext(BottomSheetManagerContext);
+export const useBottomSheetManagerContext =
+  (): BottomSheetManagerContextValue => {
+    const context = React.useContext(BottomSheetManagerContext);
 
-  if (!context) {
-    throw new Error(
-      'useBottomSheetManagerContext must be used within a BottomSheetManagerProvider'
-    );
-  }
-  return context;
-};
+    if (!context) {
+      throw new Error(
+        'useBottomSheetManagerContext must be used within a BottomSheetManagerProvider'
+      );
+    }
+    return context;
+  };
 
-export const useMaybeBottomSheetManagerContext = () => {
-  const context = React.useContext(BottomSheetManagerContext);
+export const useMaybeBottomSheetManagerContext =
+  (): BottomSheetManagerContextValue | null => {
+    const context = React.useContext(BottomSheetManagerContext);
 
-  if (!context) {
-    return null;
-  }
-  return context;
-};
+    if (!context) {
+      return null;
+    }
+    return context;
+  };
 
 const styles = StyleSheet.create({
   container: {

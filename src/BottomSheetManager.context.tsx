@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface BottomSheetManagerContextValue {
+export interface BottomSheetManagerContextValue {
   groupId: string;
 }
 
