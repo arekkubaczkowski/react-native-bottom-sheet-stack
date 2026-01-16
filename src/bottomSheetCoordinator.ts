@@ -1,9 +1,12 @@
 import { useBottomSheetStore } from './bottomSheet.store';
 import { sheetRefs } from './refsMap';
 
-export function initBottomSheetCoordinator() {
-  useBottomSheetStore.subscribe(
-    (s) => s.stack.map(({ id, status }) => ({ id, status })),
+export function initBottomSheetCoordinator(groupId: string) {
+  return useBottomSheetStore.subscribe(
+    (s) =>
+      s.stack
+        .filter((sheet) => sheet.groupId === groupId)
+        .map(({ id, status }) => ({ id, status })),
     (next, prev) => {
       next.forEach(({ id, status }) => {
         const prevStatus = prev.find((p) => p.id === id)?.status;
