@@ -1,39 +1,25 @@
-import React, {
-  Fragment,
-  useEffect,
-  useMemo,
-  type PropsWithChildren,
-} from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
+import { shallow } from 'zustand/shallow';
 import { BottomSheetContext } from './BottomSheet.context';
 import { useBottomSheetStore } from './bottomSheet.store';
-import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
 import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
 
-initBottomSheetCoordinator();
+function BottomSheetHostComp() {
+  const queueIds = useQueueIds();
+  const clearAll = useBottomSheetStore((store) => store.clearAll);
 
-interface BottomSheetHostProps {
-  Container?: React.ComponentType<any>;
-}
-
-function BottomSheetHostComp({ Container = Fragment }: BottomSheetHostProps) {
-  const { bottomSheetsStack, clearAll } = useBottomSheetStore((store) => ({
-    bottomSheetsStack: store.stack,
-    clearAll: store.clearAll,
-  }));
-
-  const { width, height } = useSafeAreaFrame();
   const { groupId } = useBottomSheetManagerContext();
 
-  const filteredQueue = useMemo(
-    () =>
-      bottomSheetsStack.filter(
-        (bottomSheet) => bottomSheet.groupId === groupId
-      ),
-    [bottomSheetsStack, groupId]
-  );
+  useEffect(() => {
+    const unsubscribe = initBottomSheetCoordinator(groupId);
+    return () => {
+      unsubscribe();
+    };
+  }, [groupId]);
 
   useEffect(() => {
     return () => {
@@ -43,34 +29,48 @@ function BottomSheetHostComp({ Container = Fragment }: BottomSheetHostProps) {
 
   return (
     <>
-      {filteredQueue.map(({ id, content }) => (
-        <BottomSheetContext.Provider key={id} value={{ id }}>
-          <Container>
-            <View
-              style={[
-                StyleSheet.absoluteFillObject,
-                styles.container,
-                {
-                  width,
-                  height,
-                },
-              ]}
-            >
-              <MemoizedContent id={id}>{content}</MemoizedContent>
-            </View>
-          </Container>
-        </BottomSheetContext.Provider>
+      {queueIds.map((id) => (
+        <QueueItem key={id} id={id} />
       ))}
     </>
   );
 }
 
-const MemoizedContent = React.memo(
-  ({ children }: PropsWithChildren<{ id: string }>) => <>{children}</>,
-  (prevProps, nextProps) => {
-    return prevProps.id === nextProps.id;
-  }
-);
+const QueueItem = React.memo(({ id }: { id: string }) => {
+  const content = useBottomSheetStore((state) => state.sheetsById[id]?.content);
+
+  const { width, height } = useSafeAreaFrame();
+  const value = useMemo(() => ({ id }), [id]);
+
+  return (
+    <BottomSheetContext.Provider value={value}>
+      <View
+        style={[
+          StyleSheet.absoluteFillObject,
+          styles.container,
+          {
+            width,
+            height,
+          },
+        ]}
+      >
+        {content}
+      </View>
+    </BottomSheetContext.Provider>
+  );
+});
+
+const useQueueIds = () => {
+  const { groupId } = useBottomSheetManagerContext();
+
+  return useBottomSheetStore(
+    (state) =>
+      state.stackOrder.filter(
+        (sheetId) => state.sheetsById[sheetId]?.groupId === groupId
+      ),
+    shallow
+  );
+};
 
 export const BottomSheetHost = React.memo(BottomSheetHostComp);
 

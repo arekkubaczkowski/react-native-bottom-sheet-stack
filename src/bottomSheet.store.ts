@@ -16,7 +16,8 @@ export interface BottomSheetState {
 type TriggerState = Omit<BottomSheetState, 'status'>;
 
 interface BottomSheetStoreState {
-  stack: BottomSheetState[];
+  sheetsById: Record<string, BottomSheetState>;
+  stackOrder: string[];
 }
 
 interface BottomSheetStoreActions {
@@ -32,99 +33,133 @@ interface BottomSheetStoreActions {
 export const useBottomSheetStore = create(
   subscribeWithSelector<BottomSheetStoreState & BottomSheetStoreActions>(
     (set) => ({
-      stack: [],
+      sheetsById: {},
+      stackOrder: [],
 
       push: (sheet) =>
         set((state) => {
-          if (state.stack.some((s) => s.id === sheet.id)) {
-            return { stack: state.stack };
+          if (state.sheetsById[sheet.id]) {
+            return state;
           }
           return {
-            stack: [...state.stack, { ...sheet, status: 'opening' }],
+            sheetsById: {
+              ...state.sheetsById,
+              [sheet.id]: { ...sheet, status: 'opening' },
+            },
+            stackOrder: [...state.stackOrder, sheet.id],
           };
         }),
+
       switch: (sheet) =>
         set((state) => {
-          if (state.stack.some((s) => s.id === sheet.id)) {
-            return { stack: state.stack };
+          if (state.sheetsById[sheet.id]) {
+            return state;
           }
 
-          const stack = [...state.stack];
+          const newSheetsById = { ...state.sheetsById };
+          const topId = state.stackOrder[state.stackOrder.length - 1];
 
-          if (stack.length) {
-            const topIndex = stack.length - 1;
-            if (stack[topIndex]) {
-              stack[topIndex] = { ...stack[topIndex], status: 'hidden' };
-            }
+          if (topId && newSheetsById[topId]) {
+            newSheetsById[topId] = {
+              ...newSheetsById[topId],
+              status: 'hidden',
+            };
           }
 
-          stack.push({ ...sheet, status: 'opening' });
+          newSheetsById[sheet.id] = { ...sheet, status: 'opening' };
 
-          return { stack };
+          return {
+            sheetsById: newSheetsById,
+            stackOrder: [...state.stackOrder, sheet.id],
+          };
         }),
 
       replace: (sheet) =>
         set((state) => {
-          if (state.stack.some((s) => s.id === sheet.id)) {
-            return { stack: state.stack };
+          if (state.sheetsById[sheet.id]) {
+            return state;
           }
 
-          const stack = [...state.stack];
-          const prevTop = stack.pop();
+          const newSheetsById = { ...state.sheetsById };
+          const topId = state.stackOrder[state.stackOrder.length - 1];
 
-          if (prevTop) {
-            stack.push({ ...prevTop, status: 'closing' });
+          if (topId && newSheetsById[topId]) {
+            newSheetsById[topId] = {
+              ...newSheetsById[topId],
+              status: 'closing',
+            };
           }
-          stack.push({ ...sheet, status: 'opening' });
 
-          return { stack };
+          newSheetsById[sheet.id] = { ...sheet, status: 'opening' };
+
+          return {
+            sheetsById: newSheetsById,
+            stackOrder: [...state.stackOrder, sheet.id],
+          };
         }),
+
       markOpen: (id) =>
         set((state) => {
-          const stack = state.stack.map((s) =>
-            s.id === id ? { ...s, status: 'open' as BottomSheetStatus } : s
-          );
-          return { stack };
+          const sheet = state.sheetsById[id];
+          if (!sheet) {
+            return state;
+          }
+          return {
+            sheetsById: {
+              ...state.sheetsById,
+              [id]: { ...sheet, status: 'open' },
+            },
+          };
         }),
 
       startClosing: (id) =>
         set((state) => {
-          const stack = [...state.stack];
-          const index = stack.findIndex((s) => s.id === id);
-          if (index === -1) {
-            return { stack };
+          const sheet = state.sheetsById[id];
+          if (!sheet || sheet.status === 'hidden') {
+            return state;
           }
 
-          const closing = stack[index];
-          if (closing?.status === 'hidden') {
-            return { stack };
+          const newSheetsById = { ...state.sheetsById };
+          newSheetsById[id] = { ...sheet, status: 'closing' };
+
+          const index = state.stackOrder.indexOf(id);
+          const belowId = state.stackOrder[index - 1];
+          const belowSheet = belowId ? newSheetsById[belowId] : undefined;
+
+          if (belowId && belowSheet && belowSheet.status === 'hidden') {
+            newSheetsById[belowId] = { ...belowSheet, status: 'opening' };
           }
 
-          if (closing) {
-            stack[index] = { ...closing, status: 'closing' };
-          }
-
-          const below = stack[index - 1];
-          if (below && below.status === 'hidden') {
-            stack[index - 1] = { ...below, status: 'opening' };
-          }
-
-          return { stack };
+          return { sheetsById: newSheetsById };
         }),
 
       finishClosing: (id) =>
         set((state) => {
-          const stack = state.stack.filter((s) => s.id !== id);
-
-          const topIndex = stack.length - 1;
-          if (topIndex >= 0 && stack[topIndex]?.status === 'hidden') {
-            stack[topIndex] = { ...stack[topIndex], status: 'opening' };
+          if (!state.sheetsById[id]) {
+            return state;
           }
 
-          return { stack };
+          const newSheetsById = { ...state.sheetsById };
+          delete newSheetsById[id];
+
+          const newStackOrder = state.stackOrder.filter(
+            (sheetId) => sheetId !== id
+          );
+
+          const topId = newStackOrder[newStackOrder.length - 1];
+          const topSheet = topId ? newSheetsById[topId] : undefined;
+
+          if (topId && topSheet && topSheet.status === 'hidden') {
+            newSheetsById[topId] = { ...topSheet, status: 'opening' };
+          }
+
+          return {
+            sheetsById: newSheetsById,
+            stackOrder: newStackOrder,
+          };
         }),
 
-      clearAll: () => set(() => ({ stack: [] })),
+      clearAll: () => set(() => ({ sheetsById: {}, stackOrder: [] })),
     })
   )
 );

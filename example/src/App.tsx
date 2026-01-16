@@ -1,19 +1,17 @@
-import {
-  BottomSheetManagerProvider,
-  BottomSheetHost,
-  useBottomSheetManager,
-  BottomSheetManaged,
-  useBottomSheetState,
-  ScaleBackgroundWrapper,
-} from 'react-native-bottom-sheet-stack';
-import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
-import { forwardRef, type PropsWithChildren } from 'react';
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
-import { initBottomSheetCoordinator } from '../../src/bottomSheetCoordinator';
+import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
+import { forwardRef, type PropsWithChildren } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  BottomSheetHost,
+  BottomSheetManaged,
+  BottomSheetManagerProvider,
+  ScaleBackgroundWrapper,
+  useBottomSheetManager,
+  useBottomSheetState,
+} from 'react-native-bottom-sheet-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-initBottomSheetCoordinator();
 
 export default function App() {
   return (

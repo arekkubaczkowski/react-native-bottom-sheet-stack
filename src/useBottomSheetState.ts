@@ -1,10 +1,9 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
 import {
   useBottomSheetStore,
   type BottomSheetState,
 } from './bottomSheet.store';
-import { shallow } from 'zustand/shallow';
 
 export function useBottomSheetState(): {
   bottomSheetState: BottomSheetState;
@@ -12,19 +11,12 @@ export function useBottomSheetState(): {
   closeBottomSheet: () => void;
 } {
   const context = useMaybeBottomSheetContext();
-  const { bottomSheetsStack, startClosing } = useBottomSheetStore(
-    (store) => ({
-      bottomSheetsStack: store.stack,
-      startClosing: store.startClosing,
-    }),
-    shallow
+
+  const bottomSheetState = useBottomSheetStore(
+    useCallback((state) => state.sheetsById[context?.id!], [context?.id])
   );
 
-  const bottomSheetState = useMemo(
-    () =>
-      bottomSheetsStack.find((bottomSheet) => bottomSheet.id === context?.id),
-    [bottomSheetsStack, context?.id]
-  );
+  const startClosing = useBottomSheetStore((state) => state.startClosing);
 
   if (!bottomSheetState) {
     throw new Error(
