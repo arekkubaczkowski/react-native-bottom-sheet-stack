@@ -4,9 +4,9 @@ import { sheetRefs } from './refsMap';
 export function initBottomSheetCoordinator(groupId: string) {
   return useBottomSheetStore.subscribe(
     (s) =>
-      s.stack
-        .filter((sheet) => sheet.groupId === groupId)
-        .map(({ id, status }) => ({ id, status })),
+      s.stackOrder
+        .filter((id) => s.sheetsById[id]?.groupId === groupId)
+        .map((id) => ({ id, status: s.sheetsById[id]?.status })),
     (next, prev) => {
       next.forEach(({ id, status }) => {
         const prevStatus = prev.find((p) => p.id === id)?.status;
@@ -45,9 +45,8 @@ export function createSheetEventHandlers(sheetId: string) {
     useBottomSheetStore.getState();
 
   const handleAnimate = (fromIndex: number, toIndex: number) => {
-    const currentStatus = useBottomSheetStore
-      .getState()
-      .stack.find((s) => s.id === sheetId)?.status;
+    const state = useBottomSheetStore.getState();
+    const currentStatus = state.sheetsById[sheetId]?.status;
 
     // Sheet is closing (animating to -1)
     if (toIndex === -1) {
@@ -63,9 +62,8 @@ export function createSheetEventHandlers(sheetId: string) {
   };
 
   const handleClose = () => {
-    const currentStatus = useBottomSheetStore
-      .getState()
-      .stack.find((s) => s.id === sheetId)?.status;
+    const state = useBottomSheetStore.getState();
+    const currentStatus = state.sheetsById[sheetId]?.status;
 
     if (currentStatus !== 'hidden') {
       finishClosing(sheetId);

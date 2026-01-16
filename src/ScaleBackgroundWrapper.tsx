@@ -6,7 +6,6 @@ import Animated, {
   useDerivedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { shallow } from 'zustand/shallow';
 import { BottomSheetManagerContext } from './BottomSheetManager.context';
 import { useBottomSheetStore } from './bottomSheet.store';
 
@@ -54,15 +53,15 @@ export function ScaleBackgroundWrapper({
     duration = 300,
   } = config ?? {};
 
-  const hasActiveScaleSheet = useBottomSheetStore(
-    (store) =>
-      store.stack.some(
-        (sheet) =>
-          sheet.groupId === groupId &&
-          sheet.scaleBackground &&
-          sheet.status !== 'closing'
-      ),
-    shallow
+  const hasActiveScaleSheet = useBottomSheetStore((state) =>
+    state.stackOrder.some((id) => {
+      const sheet = state.sheetsById[id];
+      return (
+        sheet?.groupId === groupId &&
+        sheet?.scaleBackground &&
+        sheet?.status !== 'closing'
+      );
+    })
   );
 
   const animationProgress = useDerivedValue(() =>
