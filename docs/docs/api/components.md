@@ -1,0 +1,100 @@
+---
+sidebar_position: 1
+---
+
+# Components
+
+## BottomSheetManagerProvider
+
+Root provider that manages the bottom sheet stack.
+
+```tsx
+<BottomSheetManagerProvider
+  id="default"
+  scaleConfig={{ scale: 0.92, translateY: 0, borderRadius: 24 }}
+>
+  {children}
+</BottomSheetManagerProvider>
+```
+
+### Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | `string` | Yes | Unique identifier for this stack group |
+| `scaleConfig` | `ScaleConfig` | No | Scale animation configuration |
+| `children` | `ReactNode` | Yes | App content |
+
+---
+
+## BottomSheetHost
+
+Renders the bottom sheet stack. Must be placed inside `BottomSheetManagerProvider`.
+
+```tsx
+<BottomSheetManagerProvider id="default">
+  <BottomSheetScaleView>
+    <YourAppContent />
+  </BottomSheetScaleView>
+  <BottomSheetHost />
+</BottomSheetManagerProvider>
+```
+
+:::warning
+Place `BottomSheetHost` **outside** of `BottomSheetScaleView` to prevent sheets from scaling.
+:::
+
+---
+
+## BottomSheetScaleView
+
+Wrapper that applies scale animation to its children when sheets are opened with `scaleBackground: true`.
+
+```tsx
+<BottomSheetScaleView>
+  <YourAppContent />
+</BottomSheetScaleView>
+```
+
+---
+
+## BottomSheetManaged
+
+Drop-in replacement for `BottomSheet` from `@gorhom/bottom-sheet`. Accepts all the same props.
+
+```tsx
+const MySheet = forwardRef((props, ref) => {
+  return (
+    <BottomSheetManaged ref={ref} snapPoints={['50%', '90%']}>
+      <BottomSheetView>
+        {/* content */}
+      </BottomSheetView>
+    </BottomSheetManaged>
+  );
+});
+```
+
+### Props
+
+Inherits all props from [@gorhom/bottom-sheet](https://gorhom.dev/react-native-bottom-sheet/props).
+
+---
+
+## BottomSheetPortal
+
+Declares a portal-based bottom sheet that preserves React context.
+
+```tsx
+<BottomSheetPortal id="my-sheet">
+  <MySheet />
+</BottomSheetPortal>
+```
+
+### Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | `BottomSheetPortalId` | Yes | Unique identifier for this portal sheet |
+| `children` | `ReactElement` | Yes | The bottom sheet component to render |
+
+See [Type-Safe Portal IDs](/type-safe-ids) for type-safe ID configuration.
