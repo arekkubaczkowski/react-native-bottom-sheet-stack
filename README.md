@@ -120,6 +120,8 @@ Wrap your app content in `BottomSheetScaleView` to enable iOS-style scaling:
 </BottomSheetManagerProvider>
 ```
 
+> **Important:** `BottomSheetHost` must be **outside** of `BottomSheetScaleView`. If you wrap `BottomSheetHost` inside `BottomSheetScaleView`, the bottom sheets themselves will also scale, which is not the desired behavior.
+
 Open sheets with `scaleBackground: true`:
 
 ```tsx
