@@ -9,18 +9,10 @@ import { shallow } from 'zustand/shallow';
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
 
-  const {
-    pushBottomSheet,
-    replaceBottomSheet,
-    switchBottomSheet,
-    startClosing,
-    storeClearAll,
-  } = useBottomSheetStore(
+  const { storeOpen, startClosing, storeClearAll } = useBottomSheetStore(
     (store) => ({
+      storeOpen: store.open,
       storeClearAll: store.clearAll,
-      replaceBottomSheet: store.replace,
-      pushBottomSheet: store.push,
-      switchBottomSheet: store.switch,
       startClosing: store.startClosing,
     }),
     shallow
@@ -46,20 +38,15 @@ export const useBottomSheetManager = () => {
     // @ts-ignore
     const contentWithRef = React.cloneElement(content, { ref });
 
-    const sheetData = {
-      id,
-      groupId,
-      content: contentWithRef,
-      scaleBackground: options.scaleBackground,
-    };
-
-    if (options.mode === 'replace') {
-      replaceBottomSheet(sheetData);
-    } else if (options.mode === 'switch') {
-      switchBottomSheet(sheetData);
-    } else {
-      pushBottomSheet(sheetData);
-    }
+    storeOpen(
+      {
+        id,
+        groupId,
+        content: contentWithRef,
+        scaleBackground: options.scaleBackground,
+      },
+      options.mode
+    );
 
     return id;
   };
@@ -76,7 +63,5 @@ export const useBottomSheetManager = () => {
     clearAll,
     close,
     openBottomSheet,
-    pushBottomSheet,
-    replaceBottomSheet,
   };
 };

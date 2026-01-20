@@ -6,16 +6,12 @@ import { PortalHost } from 'react-native-teleport';
 
 import { shallow } from 'zustand/shallow';
 import { cleanupAnimatedIndex } from './animatedRegistry';
-import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { BottomSheetContext } from './BottomSheet.context';
 import { useBottomSheetStore } from './bottomSheet.store';
-import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
-import {
-  useScaleAnimatedStyle,
-  useScaleDepth,
-  type ScaleConfig,
-} from './useScaleAnimation';
+import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useScaleAnimatedStyle, type ScaleConfig } from './useScaleAnimation';
 
 function PortalHostWrapper({
   id,
@@ -83,8 +79,7 @@ function QueueItem({
   const { width, height } = useSafeAreaFrame();
   const value = { id };
 
-  const scaleDepth = useScaleDepth(groupId, id);
-  const scaleStyle = useScaleAnimatedStyle(scaleDepth, scaleConfig);
+  const scaleStyle = useScaleAnimatedStyle({ groupId, id }, scaleConfig);
 
   useEffect(() => {
     return () => {

@@ -5,5 +5,7 @@ declare module 'react-native-bottom-sheet-stack' {
     'context-portal-sheet': {
       greeting: string;
     };
+    'portal-mode-sheet-a': true;
+    'portal-mode-sheet-b': true;
   }
 }

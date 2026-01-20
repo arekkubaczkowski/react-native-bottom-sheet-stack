@@ -4,7 +4,7 @@ import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import {
   useBottomSheetStore,
   type BottomSheetStatus,
-  type PortalOpenOptions,
+  type OpenMode,
 } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import type {
@@ -14,8 +14,14 @@ import type {
 } from './portal.types';
 import { sheetRefs } from './refsMap';
 
+interface BaseOpenOptions<TParams> {
+  mode?: OpenMode;
+  scaleBackground?: boolean;
+  params?: TParams;
+}
+
 type OpenOptions<T extends BottomSheetPortalId> = Omit<
-  PortalOpenOptions<BottomSheetPortalParams<T>>,
+  BaseOpenOptions<BottomSheetPortalParams<T>>,
   'params'
 > &
   (HasParams<T> extends true
@@ -41,7 +47,7 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
 ): UseBottomSheetControlReturn<T> {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
 
-  const openPortal = useBottomSheetStore((state) => state.openPortal);
+  const storeOpen = useBottomSheetStore((state) => state.open);
   const startClosing = useBottomSheetStore((state) => state.startClosing);
   const storeUpdateParams = useBottomSheetStore((state) => state.updateParams);
   const sheetState = useBottomSheetStore((state) => state.sheetsById[id]);
@@ -53,7 +59,17 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
     const ref = React.createRef<BottomSheetMethods>();
     sheetRefs[id] = ref;
 
-    openPortal(id, groupId, options);
+    storeOpen(
+      {
+        id,
+        groupId,
+        content: null,
+        usePortal: true,
+        scaleBackground: options?.scaleBackground,
+        params: options?.params as Record<string, unknown>,
+      },
+      options?.mode
+    );
   };
 
   const close = () => {

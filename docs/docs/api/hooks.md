@@ -126,15 +126,17 @@ open({ scaleBackground: true });
 
 // Sheet with params (registry: 'user-sheet': { userId: string })
 open({
+  mode: 'push',
   scaleBackground: true,
   params: { userId: '123' }  // Required when params defined in registry
 });
 ```
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `scaleBackground` | `boolean` | Enable background scaling |
-| `params` | `BottomSheetPortalParams<T>` | Type-safe params (required if defined in registry) |
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `mode` | `'push' \| 'switch' \| 'replace'` | `'push'` | Navigation mode |
+| `scaleBackground` | `boolean` | `false` | Enable background scaling |
+| `params` | `BottomSheetPortalParams<T>` | - | Type-safe params (required if defined in registry) |
 
 ### Status Values
 

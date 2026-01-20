@@ -78,12 +78,21 @@ function HomeScreen() {
   const { top } = useSafeAreaInsets();
   const { openBottomSheet } = useBottomSheetManager();
   const portalSheetControl = useBottomSheetControl('context-portal-sheet');
+  const portalModeSheetA = useBottomSheetControl('portal-mode-sheet-a');
 
   return (
     <View style={styles.container}>
       {/* Portal-based sheet - rendered here in React tree, preserves context */}
       <BottomSheetPortal id="context-portal-sheet">
         <ContextSheetPortal />
+      </BottomSheetPortal>
+
+      {/* Portal-based sheets for mode demo */}
+      <BottomSheetPortal id="portal-mode-sheet-a">
+        <PortalModeSheetA />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="portal-mode-sheet-b">
+        <PortalModeSheetB />
       </BottomSheetPortal>
 
       <ScrollView
@@ -129,6 +138,13 @@ function HomeScreen() {
             onPress={() =>
               openBottomSheet(<SheetA />, { scaleBackground: true })
             }
+          />
+
+          <DemoCard
+            title="Portal Navigation Modes"
+            description="Push, Switch, Replace modes with portal-based API"
+            color="#f59e0b"
+            onPress={() => portalModeSheetA.open({ scaleBackground: true })}
           />
 
           <DemoCard
@@ -251,7 +267,7 @@ const ContextComparisonSheet = forwardRef<
   const { openBottomSheet } = useBottomSheetManager();
 
   return (
-    <BottomSheetManaged enableDynamicSizing ref={ref}>
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
       <BottomSheetView>
         <View style={styles.sheet}>
           <View style={[styles.levelBadge, { backgroundColor: '#10b981' }]}>
@@ -287,7 +303,7 @@ const ContextSheetImperative = forwardRef<BottomSheetMethods>((_, ref) => {
   const user = useUser();
 
   return (
-    <BottomSheetManaged enableDynamicSizing ref={ref}>
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
       <BottomSheetView>
         <View style={styles.sheet}>
           <View style={[styles.levelBadge, { backgroundColor: '#ef4444' }]}>
@@ -330,7 +346,7 @@ const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
   const [counter, setCounter] = useState(1);
 
   return (
-    <BottomSheetManaged enableDynamicSizing ref={ref}>
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
       <BottomSheetView>
         <View style={styles.sheet}>
           <View style={[styles.levelBadge, { backgroundColor: '#10b981' }]}>
@@ -399,7 +415,7 @@ const NestedImperativeSheet = forwardRef<BottomSheetMethods>((_, ref) => {
   const user = useUser();
 
   return (
-    <BottomSheetManaged enableDynamicSizing ref={ref}>
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
       <BottomSheetView>
         <View style={styles.sheet}>
           <View style={[styles.levelBadge, { backgroundColor: '#f59e0b' }]}>
@@ -432,6 +448,85 @@ const NestedImperativeSheet = forwardRef<BottomSheetMethods>((_, ref) => {
 });
 
 // ============================================================================
+// Portal Navigation Modes Demo
+// ============================================================================
+
+const PortalModeSheetA = forwardRef<BottomSheetMethods>((_, ref) => {
+  const { close } = useBottomSheetState();
+  const sheetBControl = useBottomSheetControl('portal-mode-sheet-b');
+
+  return (
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
+      <BottomSheetView>
+        <View style={styles.sheet}>
+          <View style={[styles.levelBadge, { backgroundColor: '#f59e0b' }]}>
+            <Text style={styles.levelBadgeText}>Portal Sheet A</Text>
+          </View>
+          <Text style={styles.h1}>Portal Navigation</Text>
+          <Text style={styles.text}>
+            This is a portal-based sheet. Use the buttons below to open Sheet B
+            with different navigation modes.
+          </Text>
+
+          <View style={{ gap: 12 }}>
+            <Button
+              title="Push Sheet B"
+              onPress={() =>
+                sheetBControl.open({ mode: 'push', scaleBackground: true })
+              }
+            />
+            <Button
+              title="Switch to Sheet B"
+              onPress={() =>
+                sheetBControl.open({ mode: 'switch', scaleBackground: true })
+              }
+            />
+            <Button
+              title="Replace with Sheet B"
+              onPress={() =>
+                sheetBControl.open({ mode: 'replace', scaleBackground: true })
+              }
+            />
+            <SecondaryButton title="Close" onPress={close} />
+          </View>
+        </View>
+      </BottomSheetView>
+    </BottomSheetManaged>
+  );
+});
+
+const PortalModeSheetB = forwardRef<BottomSheetMethods>((_, ref) => {
+  const { close } = useBottomSheetState();
+
+  return (
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
+      <BottomSheetView>
+        <View style={styles.sheet}>
+          <View style={[styles.levelBadge, { backgroundColor: '#f59e0b' }]}>
+            <Text style={styles.levelBadgeText}>Portal Sheet B</Text>
+          </View>
+          <Text style={styles.h1}>Sheet B (Portal)</Text>
+          <Text style={styles.text}>
+            This sheet was opened from Portal Sheet A. The navigation mode
+            determines what happens to Sheet A:{'\n\n'}•{' '}
+            <Text style={{ fontWeight: '600' }}>Push</Text> - Sheet A stays
+            visible underneath{'\n'}•{' '}
+            <Text style={{ fontWeight: '600' }}>Switch</Text> - Sheet A is
+            hidden, restored on close{'\n'}•{' '}
+            <Text style={{ fontWeight: '600' }}>Replace</Text> - Sheet A is
+            closed permanently
+          </Text>
+
+          <View style={{ gap: 12 }}>
+            <SecondaryButton title="Close" onPress={close} />
+          </View>
+        </View>
+      </BottomSheetView>
+    </BottomSheetManaged>
+  );
+});
+
+// ============================================================================
 // Navigation Flow Sheets
 // ============================================================================
 
@@ -440,7 +535,7 @@ const SheetA = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetState();
 
   return (
-    <BottomSheetManaged enableDynamicSizing ref={ref}>
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
       <BottomSheetView>
         <View style={styles.sheet}>
           <Text style={styles.h1}>Navigation Flow</Text>
@@ -466,7 +561,7 @@ const SheetB = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetState();
 
   return (
-    <BottomSheetManaged enableDynamicSizing ref={ref}>
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
       <BottomSheetView>
         <View style={styles.sheet}>
           <Text style={styles.h1}>Sheet B</Text>
@@ -492,7 +587,7 @@ const SheetC = forwardRef<BottomSheetMethods>((_, ref) => {
   const { openBottomSheet } = useBottomSheetManager();
 
   return (
-    <BottomSheetManaged enableDynamicSizing ref={ref}>
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
       <BottomSheetView>
         <View style={styles.sheet}>
           <Text style={styles.h1}>Sheet C</Text>
@@ -517,7 +612,7 @@ const SheetD = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetState();
 
   return (
-    <BottomSheetManaged enableDynamicSizing ref={ref}>
+    <BottomSheetManaged enableDynamicSizing ref={ref} handleStyle={styles.handle}>
       <BottomSheetView>
         <View style={styles.sheet}>
           <Text style={styles.h1}>Sheet D</Text>
@@ -605,7 +700,7 @@ const HeavySheet = forwardRef<BottomSheetMethods>((_, ref) => {
   }, []);
 
   return (
-    <BottomSheetManaged snapPoints={['80%']} ref={ref}>
+    <BottomSheetManaged snapPoints={['80%']} ref={ref} handleStyle={styles.handle}>
       <BottomSheetScrollView>
         <View style={styles.sheet}>
           <Text style={styles.h1}>Dynamic Content</Text>
@@ -665,6 +760,7 @@ const NestedSheet1 = forwardRef<BottomSheetMethods>((_, ref) => {
       enableDynamicSizing={false}
       topInset={top}
       ref={ref}
+      handleStyle={{ backgroundColor: '#1e1e3f', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
     >
       <BottomSheetView
         style={[styles.sheet, { flex: 1, backgroundColor: '#1e1e3f' }]}
@@ -705,6 +801,7 @@ const NestedSheet2 = forwardRef<BottomSheetMethods>((_, ref) => {
       enableDynamicSizing={false}
       topInset={top}
       ref={ref}
+      handleStyle={{ backgroundColor: '#252552', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
     >
       <BottomSheetView
         style={[styles.sheet, { flex: 1, backgroundColor: '#252552' }]}
@@ -745,6 +842,7 @@ const NestedSheet3 = forwardRef<BottomSheetMethods>((_, ref) => {
       enableDynamicSizing={false}
       topInset={top}
       ref={ref}
+      handleStyle={{ backgroundColor: '#2d2d6d', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
     >
       <BottomSheetView
         style={[styles.sheet, { flex: 1, backgroundColor: '#2d2d6d' }]}
@@ -937,6 +1035,11 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingBottom: 100,
     flexGrow: 1,
+  },
+  handle: {
+    backgroundColor: '#1a1a2e',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   h1: {
     fontSize: 24,

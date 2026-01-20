@@ -78,7 +78,12 @@ export function useScaleDepth(groupId: string, sheetId?: string): number {
  * Returns animated style for scale effect based on depth.
  * Uses power scaling: scale^depth for cascading effect.
  */
-export function useScaleAnimatedStyle(depth: number, config?: ScaleConfig) {
+export function useScaleAnimatedStyle(
+  { groupId, id }: { groupId: string; id?: string },
+  config?: ScaleConfig
+) {
+  const scaleDepth = useScaleDepth(groupId, id);
+
   const {
     scale = DEFAULT_CONFIG.scale,
     translateY = DEFAULT_CONFIG.translateY,
@@ -87,7 +92,7 @@ export function useScaleAnimatedStyle(depth: number, config?: ScaleConfig) {
   } = config ?? {};
 
   const progress = useDerivedValue(() => {
-    return withTiming(depth, { duration });
+    return withTiming(scaleDepth, { duration });
   });
 
   return useAnimatedStyle(() => {
