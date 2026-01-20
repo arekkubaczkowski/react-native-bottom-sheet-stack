@@ -71,11 +71,7 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
         handleStyle={handleStyle}
       >
         <Content style={scrollable ? undefined : contentStyle}>
-          {scrollable ? (
-            <View style={contentStyle}>{children}</View>
-          ) : (
-            children
-          )}
+          {scrollable ? <View style={contentStyle}>{children}</View> : children}
         </Content>
       </BottomSheetManaged>
     );

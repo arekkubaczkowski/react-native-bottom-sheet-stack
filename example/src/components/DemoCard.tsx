@@ -9,7 +9,12 @@ interface DemoCardProps {
   onPress: () => void;
 }
 
-export function DemoCard({ title, description, color, onPress }: DemoCardProps) {
+export function DemoCard({
+  title,
+  description,
+  color,
+  onPress,
+}: DemoCardProps) {
   return (
     <TouchableOpacity
       style={[styles.card, { borderLeftColor: color }]}

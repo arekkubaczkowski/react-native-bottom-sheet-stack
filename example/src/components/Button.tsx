@@ -1,4 +1,9 @@
-import { Text, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Text,
+  TouchableOpacity,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { sharedStyles } from '../styles/theme';
 
@@ -36,7 +41,12 @@ interface SmallButtonProps extends ButtonProps {
   color?: string;
 }
 
-export function SmallButton({ onPress, title, color, style }: SmallButtonProps) {
+export function SmallButton({
+  onPress,
+  title,
+  color,
+  style,
+}: SmallButtonProps) {
   return (
     <TouchableOpacity
       style={[

@@ -34,8 +34,11 @@ export default defineConfig([
   },
   {
     ignores: [
-      'node_modules/',
-      'lib/'
+      '**/node_modules/**',
+      '**/lib/**',
+      '**/.yarn/**',
+      '**/docs/.docusaurus/**',
+      '**/docs/build/**',
     ],
   },
 ]);
