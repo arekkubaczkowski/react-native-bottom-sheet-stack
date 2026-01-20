@@ -6,7 +6,7 @@ import { Portal } from 'react-native-teleport';
 import { BottomSheetContext } from './BottomSheet.context';
 import { useBottomSheetStore } from './bottomSheet.store';
 import type { BottomSheetPortalId } from './portal.types';
-import { sheetRefs } from './refsMap';
+import { getSheetRef } from './refsMap';
 
 interface BottomSheetPortalProps {
   id: BottomSheetPortalId;
@@ -22,13 +22,13 @@ export function BottomSheetPortal({ id, children }: BottomSheetPortalProps) {
   }
 
   // Get the ref that was created in useBottomSheetControl.open()
-  const ref = sheetRefs[id];
+  const ref = getSheetRef(id);
 
   // Clone the child element to add the ref
   // @ts-ignore - same pattern as useBottomSheetManager
   const childWithRef = React.cloneElement(children, { ref });
 
-  // Wrap with BottomSheetContext so useBottomSheetState() works inside portal content
+  // Wrap with BottomSheetContext so useBottomSheetContext() works inside portal content
   return (
     <Portal hostName={`bottomsheet-${id}`}>
       <BottomSheetContext.Provider value={{ id }}>

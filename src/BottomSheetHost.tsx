@@ -6,6 +6,7 @@ import { PortalHost } from 'react-native-teleport';
 
 import { shallow } from 'zustand/shallow';
 import { cleanupAnimatedIndex } from './animatedRegistry';
+import { cleanupSheetRef } from './refsMap';
 import { BottomSheetContext } from './BottomSheet.context';
 import { useBottomSheetStore } from './bottomSheet.store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
@@ -31,7 +32,7 @@ function PortalHostWrapper({
 
 function BottomSheetHostComp() {
   const queueIds = useQueueIds();
-  const clearAll = useBottomSheetStore((store) => store.clearAll);
+  const clearGroup = useBottomSheetStore((store) => store.clearGroup);
 
   const { groupId, scaleConfig } = useBottomSheetManagerContext();
 
@@ -44,9 +45,9 @@ function BottomSheetHostComp() {
 
   useEffect(() => {
     return () => {
-      clearAll();
+      clearGroup(groupId);
     };
-  }, [clearAll]);
+  }, [clearGroup, groupId]);
 
   return (
     <>
@@ -84,6 +85,7 @@ function QueueItem({
 
   useEffect(() => {
     return () => {
+      cleanupSheetRef(id);
       cleanupAnimatedIndex(id);
     };
   }, [id]);

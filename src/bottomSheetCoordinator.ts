@@ -1,5 +1,5 @@
 import { useBottomSheetStore } from './bottomSheet.store';
-import { sheetRefs } from './refsMap';
+import { getSheetRef } from './refsMap';
 
 export function initBottomSheetCoordinator(groupId: string) {
   return useBottomSheetStore.subscribe(
@@ -15,12 +15,12 @@ export function initBottomSheetCoordinator(groupId: string) {
           return;
         }
 
-        const ref = sheetRefs[id]?.current;
+        const ref = getSheetRef(id)?.current;
 
         switch (status) {
           case 'opening':
             requestAnimationFrame(() => {
-              sheetRefs[id]?.current?.expand();
+              getSheetRef(id)?.current?.expand();
             });
             break;
           case 'hidden':

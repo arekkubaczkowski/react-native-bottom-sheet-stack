@@ -4,6 +4,7 @@ const sidebars: SidebarsConfig = {
   docsSidebar: [
     'intro',
     'getting-started',
+    'api-comparison',
     'navigation-modes',
     'scale-animation',
     'context-preservation',

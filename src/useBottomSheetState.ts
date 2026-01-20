@@ -18,16 +18,17 @@ type ResolveParams<T> = T extends Unspecified
     ? BottomSheetPortalParams<T>
     : unknown;
 
-export interface UseBottomSheetStateReturn<T> {
+export interface UseBottomSheetContextReturn<T> {
   bottomSheetState: BottomSheetState;
   params: ResolveParams<T>;
   close: () => void;
+  /** @deprecated Use `close` instead */
   closeBottomSheet: () => void;
 }
 
-export function useBottomSheetState<
+export function useBottomSheetContext<
   T extends BottomSheetPortalId | Unspecified = Unspecified,
->(): UseBottomSheetStateReturn<T> {
+>(): UseBottomSheetContextReturn<T> {
   const context = useMaybeBottomSheetContext();
 
   const bottomSheetState = useBottomSheetStore(
@@ -38,7 +39,7 @@ export function useBottomSheetState<
 
   if (!bottomSheetState) {
     throw new Error(
-      'useBottomSheetState must be used within a BottomSheetProvider'
+      'useBottomSheetContext must be used within a BottomSheet component'
     );
   }
 
@@ -51,3 +52,8 @@ export function useBottomSheetState<
     closeBottomSheet: close,
   };
 }
+
+/**
+ * @deprecated Use `useBottomSheetContext` instead
+ */
+export const useBottomSheetState = useBottomSheetContext;
