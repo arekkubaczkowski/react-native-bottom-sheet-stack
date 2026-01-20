@@ -1,4 +1,5 @@
 import React, { type PropsWithChildren } from 'react';
+import { PortalProvider } from 'react-native-teleport';
 
 import {
   BottomSheetManagerContext,
@@ -19,9 +20,11 @@ export function BottomSheetManagerProvider({
   const value = { groupId: id, scaleConfig };
 
   return (
-    <BottomSheetManagerContext.Provider key={id} value={value}>
-      {children}
-    </BottomSheetManagerContext.Provider>
+    <PortalProvider>
+      <BottomSheetManagerContext.Provider key={id} value={value}>
+        {children}
+      </BottomSheetManagerContext.Provider>
+    </PortalProvider>
   );
 }
 
