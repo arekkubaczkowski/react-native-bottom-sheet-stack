@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
 import {
   useBottomSheetStore,
@@ -13,7 +12,7 @@ export function useBottomSheetState(): {
   const context = useMaybeBottomSheetContext();
 
   const bottomSheetState = useBottomSheetStore(
-    useCallback((state) => state.sheetsById[context?.id!], [context?.id])
+    (state) => state.sheetsById[context?.id!]
   );
 
   const startClosing = useBottomSheetStore((state) => state.startClosing);
@@ -24,10 +23,7 @@ export function useBottomSheetState(): {
     );
   }
 
-  const close = useCallback(
-    () => startClosing(bottomSheetState.id),
-    [bottomSheetState.id, startClosing]
-  );
+  const close = () => startClosing(bottomSheetState.id);
 
   return {
     bottomSheetState,

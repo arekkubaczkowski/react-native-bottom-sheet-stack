@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 
 import { useBottomSheetStore, type OpenMode } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
@@ -26,62 +26,51 @@ export const useBottomSheetManager = () => {
     shallow
   );
 
-  const openBottomSheet = useCallback(
-    (
-      content: React.ReactElement,
-      options: {
-        id?: string;
-        groupId?: string;
-        mode?: OpenMode;
-        scaleBackground?: boolean;
-      } = {}
-    ) => {
-      const groupId =
-        options.groupId || bottomSheetManagerContext?.groupId || 'default';
+  const openBottomSheet = (
+    content: React.ReactElement,
+    options: {
+      id?: string;
+      groupId?: string;
+      mode?: OpenMode;
+      scaleBackground?: boolean;
+    } = {}
+  ) => {
+    const groupId =
+      options.groupId || bottomSheetManagerContext?.groupId || 'default';
 
-      const id = options.id || Math.random().toString(36);
-      const ref = React.createRef<BottomSheetMethods>();
+    const id = options.id || Math.random().toString(36);
+    const ref = React.createRef<BottomSheetMethods>();
 
-      sheetRefs[id] = ref;
+    sheetRefs[id] = ref;
 
-      // @ts-ignore
-      const contentWithRef = React.cloneElement(content, { ref });
+    // @ts-ignore
+    const contentWithRef = React.cloneElement(content, { ref });
 
-      const sheetData = {
-        id,
-        groupId,
-        content: contentWithRef,
-        scaleBackground: options.scaleBackground,
-      };
+    const sheetData = {
+      id,
+      groupId,
+      content: contentWithRef,
+      scaleBackground: options.scaleBackground,
+    };
 
-      if (options.mode === 'replace') {
-        replaceBottomSheet(sheetData);
-      } else if (options.mode === 'switch') {
-        switchBottomSheet(sheetData);
-      } else {
-        pushBottomSheet(sheetData);
-      }
+    if (options.mode === 'replace') {
+      replaceBottomSheet(sheetData);
+    } else if (options.mode === 'switch') {
+      switchBottomSheet(sheetData);
+    } else {
+      pushBottomSheet(sheetData);
+    }
 
-      return id;
-    },
-    [
-      bottomSheetManagerContext?.groupId,
-      pushBottomSheet,
-      replaceBottomSheet,
-      switchBottomSheet,
-    ]
-  );
+    return id;
+  };
 
-  const close = useCallback(
-    (id: string) => {
-      startClosing(id);
-    },
-    [startClosing]
-  );
+  const close = (id: string) => {
+    startClosing(id);
+  };
 
-  const clearAll = useCallback(() => {
+  const clearAll = () => {
     storeClearAll();
-  }, [storeClearAll]);
+  };
 
   return {
     clearAll,

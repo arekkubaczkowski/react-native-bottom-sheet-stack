@@ -38,6 +38,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
+    "@babel/cli": "^7.28.6",
     "@commitlint/config-conventional": "^19.6.0",
     "@eslint/compat": "^1.2.7",
     "@eslint/eslintrc": "^3.3.0",
@@ -48,6 +49,7 @@
     "@release-it/conventional-changelog": "^9.0.2",
     "@types/jest": "^29.5.5",
     "@types/react": "^19.0.12",
+    "babel-plugin-react-compiler": "^1.0.0",
     "commitlint": "^19.6.1",
     "del-cli": "^5.1.0",
     "eslint": "^9.22.0",
@@ -121,7 +123,12 @@
     "source": "src",
     "output": "lib",
     "targets": [
-      "commonjs",
+      [
+        "commonjs",
+        {
+          "configFile": true
+        }
+      ],
       "typescript"
     ]
   },

@@ -3,7 +3,7 @@ import BottomSheetOriginal, {
   type BottomSheetProps,
 } from '@gorhom/bottom-sheet';
 import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 
 import { getAnimatedIndex } from './animatedRegistry';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
@@ -35,33 +35,27 @@ export const BottomSheetManaged = React.forwardRef<
     const { bottomSheetState } = useBottomSheetState();
 
     // Get or create shared animated index for this sheet
-    const animatedIndex = useMemo(
-      () => externalAnimatedIndex ?? getAnimatedIndex(bottomSheetState.id),
-      [bottomSheetState.id, externalAnimatedIndex]
+    const animatedIndex =
+      externalAnimatedIndex ?? getAnimatedIndex(bottomSheetState.id);
+
+    const { handleAnimate, handleClose } = createSheetEventHandlers(
+      bottomSheetState.id
     );
 
-    const { handleAnimate, handleClose } = useMemo(
-      () => createSheetEventHandlers(bottomSheetState.id),
-      [bottomSheetState.id]
-    );
+    const wrappedOnAnimate: BottomSheetProps['onAnimate'] = (
+      fromIndex: number,
+      toIndex: number,
+      fromPosition: number,
+      toPosition: number
+    ) => {
+      handleAnimate(fromIndex, toIndex);
+      onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
+    };
 
-    const wrappedOnAnimate: BottomSheetProps['onAnimate'] = useCallback(
-      (
-        fromIndex: number,
-        toIndex: number,
-        fromPosition: number,
-        toPosition: number
-      ) => {
-        handleAnimate(fromIndex, toIndex);
-        onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
-      },
-      [handleAnimate, onAnimate]
-    );
-
-    const wrappedOnClose = useCallback(() => {
+    const wrappedOnClose = () => {
       onClose?.();
       handleClose();
-    }, [handleClose, onClose]);
+    };
 
     const config = useBottomSheetSpringConfigs({
       stiffness: 400,
