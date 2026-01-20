@@ -16,19 +16,18 @@ export function initBottomSheetCoordinator(groupId: string) {
         }
 
         const ref = sheetRefs[id]?.current;
-        if (!ref) {
-          return;
-        }
 
         switch (status) {
           case 'opening':
-            ref.expand();
+            requestAnimationFrame(() => {
+              sheetRefs[id]?.current?.expand();
+            });
             break;
           case 'hidden':
-            ref.close();
+            if (ref) ref.close();
             break;
           case 'closing':
-            ref.close();
+            if (ref) ref.close();
             break;
         }
       });

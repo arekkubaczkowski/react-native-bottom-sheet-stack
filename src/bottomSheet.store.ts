@@ -30,136 +30,136 @@ interface BottomSheetStoreActions {
   clearAll(): void;
 }
 
+export type BottomSheetStore = BottomSheetStoreState & BottomSheetStoreActions;
+
 export const useBottomSheetStore = create(
-  subscribeWithSelector<BottomSheetStoreState & BottomSheetStoreActions>(
-    (set) => ({
-      sheetsById: {},
-      stackOrder: [],
+  subscribeWithSelector<BottomSheetStore>((set) => ({
+    sheetsById: {},
+    stackOrder: [],
 
-      push: (sheet) =>
-        set((state) => {
-          if (state.sheetsById[sheet.id]) {
-            return state;
-          }
-          return {
-            sheetsById: {
-              ...state.sheetsById,
-              [sheet.id]: { ...sheet, status: 'opening' },
-            },
-            stackOrder: [...state.stackOrder, sheet.id],
+    push: (sheet) =>
+      set((state) => {
+        if (state.sheetsById[sheet.id]) {
+          return state;
+        }
+        return {
+          sheetsById: {
+            ...state.sheetsById,
+            [sheet.id]: { ...sheet, status: 'opening' },
+          },
+          stackOrder: [...state.stackOrder, sheet.id],
+        };
+      }),
+
+    switch: (sheet) =>
+      set((state) => {
+        if (state.sheetsById[sheet.id]) {
+          return state;
+        }
+
+        const newSheetsById = { ...state.sheetsById };
+        const topId = state.stackOrder[state.stackOrder.length - 1];
+
+        if (topId && newSheetsById[topId]) {
+          newSheetsById[topId] = {
+            ...newSheetsById[topId],
+            status: 'hidden',
           };
-        }),
+        }
 
-      switch: (sheet) =>
-        set((state) => {
-          if (state.sheetsById[sheet.id]) {
-            return state;
-          }
+        newSheetsById[sheet.id] = { ...sheet, status: 'opening' };
 
-          const newSheetsById = { ...state.sheetsById };
-          const topId = state.stackOrder[state.stackOrder.length - 1];
+        return {
+          sheetsById: newSheetsById,
+          stackOrder: [...state.stackOrder, sheet.id],
+        };
+      }),
 
-          if (topId && newSheetsById[topId]) {
-            newSheetsById[topId] = {
-              ...newSheetsById[topId],
-              status: 'hidden',
-            };
-          }
+    replace: (sheet) =>
+      set((state) => {
+        if (state.sheetsById[sheet.id]) {
+          return state;
+        }
 
-          newSheetsById[sheet.id] = { ...sheet, status: 'opening' };
+        const newSheetsById = { ...state.sheetsById };
+        const topId = state.stackOrder[state.stackOrder.length - 1];
 
-          return {
-            sheetsById: newSheetsById,
-            stackOrder: [...state.stackOrder, sheet.id],
+        if (topId && newSheetsById[topId]) {
+          newSheetsById[topId] = {
+            ...newSheetsById[topId],
+            status: 'closing',
           };
-        }),
+        }
 
-      replace: (sheet) =>
-        set((state) => {
-          if (state.sheetsById[sheet.id]) {
-            return state;
-          }
+        newSheetsById[sheet.id] = { ...sheet, status: 'opening' };
 
-          const newSheetsById = { ...state.sheetsById };
-          const topId = state.stackOrder[state.stackOrder.length - 1];
+        return {
+          sheetsById: newSheetsById,
+          stackOrder: [...state.stackOrder, sheet.id],
+        };
+      }),
 
-          if (topId && newSheetsById[topId]) {
-            newSheetsById[topId] = {
-              ...newSheetsById[topId],
-              status: 'closing',
-            };
-          }
+    markOpen: (id) =>
+      set((state) => {
+        const sheet = state.sheetsById[id];
+        if (!sheet) {
+          return state;
+        }
+        return {
+          sheetsById: {
+            ...state.sheetsById,
+            [id]: { ...sheet, status: 'open' },
+          },
+        };
+      }),
 
-          newSheetsById[sheet.id] = { ...sheet, status: 'opening' };
+    startClosing: (id) =>
+      set((state) => {
+        const sheet = state.sheetsById[id];
+        if (!sheet || sheet.status === 'hidden') {
+          return state;
+        }
 
-          return {
-            sheetsById: newSheetsById,
-            stackOrder: [...state.stackOrder, sheet.id],
-          };
-        }),
+        const newSheetsById = { ...state.sheetsById };
+        newSheetsById[id] = { ...sheet, status: 'closing' };
 
-      markOpen: (id) =>
-        set((state) => {
-          const sheet = state.sheetsById[id];
-          if (!sheet) {
-            return state;
-          }
-          return {
-            sheetsById: {
-              ...state.sheetsById,
-              [id]: { ...sheet, status: 'open' },
-            },
-          };
-        }),
+        const index = state.stackOrder.indexOf(id);
+        const belowId = state.stackOrder[index - 1];
+        const belowSheet = belowId ? newSheetsById[belowId] : undefined;
 
-      startClosing: (id) =>
-        set((state) => {
-          const sheet = state.sheetsById[id];
-          if (!sheet || sheet.status === 'hidden') {
-            return state;
-          }
+        if (belowId && belowSheet && belowSheet.status === 'hidden') {
+          newSheetsById[belowId] = { ...belowSheet, status: 'opening' };
+        }
 
-          const newSheetsById = { ...state.sheetsById };
-          newSheetsById[id] = { ...sheet, status: 'closing' };
+        return { sheetsById: newSheetsById };
+      }),
 
-          const index = state.stackOrder.indexOf(id);
-          const belowId = state.stackOrder[index - 1];
-          const belowSheet = belowId ? newSheetsById[belowId] : undefined;
+    finishClosing: (id) =>
+      set((state) => {
+        if (!state.sheetsById[id]) {
+          return state;
+        }
 
-          if (belowId && belowSheet && belowSheet.status === 'hidden') {
-            newSheetsById[belowId] = { ...belowSheet, status: 'opening' };
-          }
+        const newSheetsById = { ...state.sheetsById };
+        delete newSheetsById[id];
 
-          return { sheetsById: newSheetsById };
-        }),
+        const newStackOrder = state.stackOrder.filter(
+          (sheetId) => sheetId !== id
+        );
 
-      finishClosing: (id) =>
-        set((state) => {
-          if (!state.sheetsById[id]) {
-            return state;
-          }
+        const topId = newStackOrder[newStackOrder.length - 1];
+        const topSheet = topId ? newSheetsById[topId] : undefined;
 
-          const newSheetsById = { ...state.sheetsById };
-          delete newSheetsById[id];
+        if (topId && topSheet && topSheet.status === 'hidden') {
+          newSheetsById[topId] = { ...topSheet, status: 'opening' };
+        }
 
-          const newStackOrder = state.stackOrder.filter(
-            (sheetId) => sheetId !== id
-          );
+        return {
+          sheetsById: newSheetsById,
+          stackOrder: newStackOrder,
+        };
+      }),
 
-          const topId = newStackOrder[newStackOrder.length - 1];
-          const topSheet = topId ? newSheetsById[topId] : undefined;
-
-          if (topId && topSheet && topSheet.status === 'hidden') {
-            newSheetsById[topId] = { ...topSheet, status: 'opening' };
-          }
-
-          return {
-            sheetsById: newSheetsById,
-            stackOrder: newStackOrder,
-          };
-        }),
-
-      clearAll: () => set(() => ({ sheetsById: {}, stackOrder: [] })),
-    })
-  )
+    clearAll: () => set(() => ({ sheetsById: {}, stackOrder: [] })),
+  }))
 );

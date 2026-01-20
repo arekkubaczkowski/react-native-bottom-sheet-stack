@@ -1,17 +1,28 @@
-import React, { type PropsWithChildren } from 'react';
+import React, { useMemo, type PropsWithChildren } from 'react';
 
 import {
   BottomSheetManagerContext,
   type BottomSheetManagerContextValue,
 } from './BottomSheetManager.context';
+import type { ScaleConfig } from './useScaleAnimation';
 
 interface ProviderProps extends PropsWithChildren {
   id: string;
+  scaleConfig?: ScaleConfig;
 }
 
-function BottomSheetManagerProviderComp({ id, children }: ProviderProps) {
+function BottomSheetManagerProviderComp({
+  id,
+  scaleConfig,
+  children,
+}: ProviderProps) {
+  const value = useMemo(
+    () => ({ groupId: id, scaleConfig }),
+    [id, scaleConfig]
+  );
+
   return (
-    <BottomSheetManagerContext.Provider key={id} value={{ groupId: id }}>
+    <BottomSheetManagerContext.Provider key={id} value={value}>
       {children}
     </BottomSheetManagerContext.Provider>
   );
