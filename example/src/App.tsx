@@ -322,8 +322,12 @@ const ContextSheetImperative = forwardRef<BottomSheetMethods>((_, ref) => {
 // This sheet uses the PORTAL API - context will be PRESERVED
 const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close, params } = useBottomSheetState<'context-portal-sheet'>();
+  const { updateParams, resetParams } = useBottomSheetControl(
+    'context-portal-sheet'
+  );
   const { openBottomSheet } = useBottomSheetManager();
   const user = useUser();
+  const [counter, setCounter] = useState(1);
 
   return (
     <BottomSheetManaged enableDynamicSizing ref={ref}>
@@ -355,6 +359,23 @@ const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
             <Text style={[styles.contextValue, { color: '#6366f1' }]}>
               Greeting: {params?.greeting ?? '❌ undefined'}
             </Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              <TouchableOpacity
+                style={styles.smallButton}
+                onPress={() => {
+                  setCounter((c) => c + 1);
+                  updateParams({ greeting: `Updated #${counter}` });
+                }}
+              >
+                <Text style={styles.smallButtonText}>Update</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.smallButton, { backgroundColor: '#ef4444' }]}
+                onPress={() => resetParams()}
+              >
+                <Text style={styles.smallButtonText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={{ gap: 12 }}>
@@ -1015,5 +1036,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 4,
     fontFamily: 'monospace',
+  },
+  smallButton: {
+    backgroundColor: '#6366f1',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  smallButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

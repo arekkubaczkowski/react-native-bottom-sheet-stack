@@ -30,6 +30,8 @@ type OpenFunction<T extends BottomSheetPortalId> =
 export interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
   open: OpenFunction<T>;
   close: () => void;
+  updateParams: (params: BottomSheetPortalParams<T>) => void;
+  resetParams: () => void;
   isOpen: boolean;
   status: BottomSheetStatus | null;
 }
@@ -41,6 +43,7 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
 
   const openPortal = useBottomSheetStore((state) => state.openPortal);
   const startClosing = useBottomSheetStore((state) => state.startClosing);
+  const storeUpdateParams = useBottomSheetStore((state) => state.updateParams);
   const sheetState = useBottomSheetStore((state) => state.sheetsById[id]);
 
   const open = (options?: OpenOptions<T>) => {
@@ -57,12 +60,22 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
     startClosing(id);
   };
 
+  const updateParams = (params: BottomSheetPortalParams<T>) => {
+    storeUpdateParams(id, params as Record<string, unknown>);
+  };
+
+  const resetParams = () => {
+    storeUpdateParams(id, undefined);
+  };
+
   const status = sheetState?.status ?? null;
   const isOpen = status === 'open' || status === 'opening';
 
   return {
     open: open as OpenFunction<T>,
     close,
+    updateParams,
+    resetParams,
     isOpen,
     status,
   };

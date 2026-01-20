@@ -35,6 +35,7 @@ interface BottomSheetStoreActions {
   markOpen(id: string): void;
   startClosing(id: string): void;
   finishClosing(id: string): void;
+  updateParams(id: string, params: Record<string, unknown> | undefined): void;
   clearAll(): void;
 }
 
@@ -187,6 +188,20 @@ export const useBottomSheetStore = create(
         return {
           sheetsById: newSheetsById,
           stackOrder: newStackOrder,
+        };
+      }),
+
+    updateParams: (id, params) =>
+      set((state) => {
+        const sheet = state.sheetsById[id];
+        if (!sheet) {
+          return state;
+        }
+        return {
+          sheetsById: {
+            ...state.sheetsById,
+            [id]: { ...sheet, params },
+          },
         };
       }),
 

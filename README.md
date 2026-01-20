@@ -294,14 +294,22 @@ Control portal-based sheets. Params are type-safe if registry is augmented:
 
 ```tsx
 const {
-  open,    // (options?) => void - options include typed params
-  close,   // () => void
-  isOpen,  // boolean
-  status,  // 'opening' | 'open' | 'closing' | 'hidden' | null
+  open,          // (options?) => void - options include typed params
+  close,         // () => void
+  updateParams,  // (params) => void - update params while open
+  resetParams,   // () => void - reset params to undefined
+  isOpen,        // boolean
+  status,        // 'opening' | 'open' | 'closing' | 'hidden' | null
 } = useBottomSheetControl('my-sheet');
 
 // Open with params (required if defined in registry)
 open({ params: { userId: '123' }, scaleBackground: true });
+
+// Update params while sheet is open
+updateParams({ userId: '456' });
+
+// Reset params
+resetParams();
 ```
 
 ### Types

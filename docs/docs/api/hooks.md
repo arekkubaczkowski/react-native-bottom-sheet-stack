@@ -110,6 +110,8 @@ const {
 |----------|------|-------------|
 | `open` | `(options?) => void` | Opens the sheet (see below for params) |
 | `close` | `() => void` | Closes the sheet |
+| `updateParams` | `(params) => void` | Updates the sheet's params |
+| `resetParams` | `() => void` | Resets params to `undefined` |
 | `isOpen` | `boolean` | Whether sheet is open or opening |
 | `status` | `BottomSheetStatus \| null` | Current status |
 
