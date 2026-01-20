@@ -1,18 +1,20 @@
 import BottomSheetOriginal, {
-  BottomSheetBackdrop,
   useBottomSheetSpringConfigs,
-  type BottomSheetBackdropProps,
   type BottomSheetProps,
 } from '@gorhom/bottom-sheet';
 import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React, { useCallback, useMemo } from 'react';
 
+import { getAnimatedIndex } from './animatedRegistry';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
 import { useBottomSheetState } from './useBottomSheetState';
 
 export interface BottomSheetRef extends BottomSheetMethods {}
 
 interface BottomSheetManagedProps extends BottomSheetProps {}
+
+// Null backdrop - we render our own backdrop separately in BottomSheetHost
+const nullBackdrop = () => null;
 
 export const BottomSheetManaged = React.forwardRef<
   BottomSheetRef,
@@ -24,12 +26,19 @@ export const BottomSheetManaged = React.forwardRef<
       onAnimate,
       onClose,
       enablePanDownToClose = true,
-      backdropComponent,
+      backdropComponent = nullBackdrop,
+      animatedIndex: externalAnimatedIndex,
       ...props
     },
     ref
   ) => {
     const { bottomSheetState } = useBottomSheetState();
+
+    // Get or create shared animated index for this sheet
+    const animatedIndex = useMemo(
+      () => externalAnimatedIndex ?? getAnimatedIndex(bottomSheetState.id),
+      [bottomSheetState.id, externalAnimatedIndex]
+    );
 
     const { handleAnimate, handleClose } = useMemo(
       () => createSheetEventHandlers(bottomSheetState.id),
@@ -60,25 +69,15 @@ export const BottomSheetManaged = React.forwardRef<
       mass: 0.7,
     });
 
-    const renderBackdropComponent = useCallback(
-      (backdropProps: BottomSheetBackdropProps) => (
-        <BottomSheetBackdrop
-          {...backdropProps}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-        />
-      ),
-      []
-    );
-
     return (
       <BottomSheetOriginal
         animationConfigs={config}
         ref={ref}
         {...props}
+        animatedIndex={animatedIndex}
         onClose={wrappedOnClose}
         onAnimate={wrappedOnAnimate}
-        backdropComponent={backdropComponent || renderBackdropComponent}
+        backdropComponent={backdropComponent}
         enablePanDownToClose={enablePanDownToClose}
       >
         {children}
