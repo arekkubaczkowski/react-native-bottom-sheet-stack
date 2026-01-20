@@ -63,12 +63,12 @@ type BottomSheetPortalId = string;
 
 ## BottomSheetPortalParams
 
-Type helper to extract params for a given portal sheet ID.
+Type helper to extract params for a given portal sheet ID. Always includes `undefined` since params can be reset with `resetParams()`.
 
 ```tsx
 // If registry defines: 'profile-sheet': { userId: string }
 type Params = BottomSheetPortalParams<'profile-sheet'>;
-// Result: { userId: string }
+// Result: { userId: string } | undefined
 
 // If registry defines: 'settings-sheet': true
 type Params = BottomSheetPortalParams<'settings-sheet'>;

@@ -27,6 +27,7 @@ export type BottomSheetPortalId = keyof BottomSheetPortalRegistry extends never
 /**
  * Extract params type for a given portal sheet ID.
  * Returns `undefined` if the sheet has no params (value is `true`).
+ * Always includes `undefined` since params can be reset.
  */
 export type BottomSheetPortalParams<T extends BottomSheetPortalId> =
   keyof BottomSheetPortalRegistry extends never
@@ -34,7 +35,7 @@ export type BottomSheetPortalParams<T extends BottomSheetPortalId> =
     : T extends keyof BottomSheetPortalRegistry
       ? BottomSheetPortalRegistry[T] extends true
         ? undefined
-        : BottomSheetPortalRegistry[T]
+        : BottomSheetPortalRegistry[T] | undefined
       : Record<string, unknown> | undefined;
 
 /**

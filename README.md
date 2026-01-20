@@ -324,7 +324,7 @@ Type for portal sheet IDs. If `BottomSheetPortalRegistry` is augmented, this is 
 
 #### `BottomSheetPortalParams<T>`
 
-Type helper to extract params for a given portal sheet ID. Returns `undefined` if the sheet has no params (`true` in registry), or the param type if defined.
+Type helper to extract params for a given portal sheet ID. Returns `undefined` if the sheet has no params (`true` in registry), or `ParamType | undefined` if defined (always includes `undefined` since params can be reset).
 
 ## Example
 
