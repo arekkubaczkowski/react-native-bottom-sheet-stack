@@ -1,6 +1,10 @@
-import { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetHandle,
+  BottomSheetScrollView,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, useCallback, useMemo, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { BottomSheetManaged } from 'react-native-bottom-sheet-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,11 +34,43 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
   ) => {
     const { top } = useSafeAreaInsets();
 
-    const handleStyle = {
-      backgroundColor,
-      borderTopLeftRadius: 12,
-      borderTopRightRadius: 12,
-    };
+    const handleStyle = useMemo(
+      () => ({
+        backgroundColor,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        paddingTop: 12,
+        paddingBottom: 8,
+      }),
+      [backgroundColor]
+    );
+
+    const backgroundStyle = useMemo(
+      () => ({
+        backgroundColor,
+      }),
+      [backgroundColor]
+    );
+
+    const handleIndicatorStyle = useMemo(
+      () => ({
+        backgroundColor: colors.border,
+        width: 40,
+        height: 4,
+      }),
+      []
+    );
+
+    const renderHandle = useCallback(
+      (props: any) => (
+        <BottomSheetHandle
+          {...props}
+          style={handleStyle}
+          indicatorStyle={handleIndicatorStyle}
+        />
+      ),
+      [handleStyle, handleIndicatorStyle]
+    );
 
     const contentStyle = [
       sharedStyles.sheetContent,
@@ -51,7 +87,8 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
           enableDynamicSizing={false}
           topInset={top}
           ref={ref}
-          handleStyle={handleStyle}
+          handleComponent={renderHandle}
+          backgroundStyle={backgroundStyle}
         >
           <Content style={scrollable ? undefined : [{ flex: 1 }, contentStyle]}>
             {scrollable ? (
@@ -68,7 +105,8 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
       <BottomSheetManaged
         enableDynamicSizing={enableDynamicSizing}
         ref={ref}
-        handleStyle={handleStyle}
+        handleComponent={renderHandle}
+        backgroundStyle={backgroundStyle}
       >
         <Content style={scrollable ? undefined : contentStyle}>
           {scrollable ? <View style={contentStyle}>{children}</View> : children}

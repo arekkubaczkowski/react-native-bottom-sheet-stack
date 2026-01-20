@@ -14,7 +14,7 @@ export const NestedSheet1 = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetState();
 
   return (
-    <Sheet ref={ref} snapPoints={['50%']} backgroundColor={colors.nested1}>
+    <Sheet ref={ref} snapPoints={['60%']} backgroundColor={colors.nested1}>
       <Badge label="Level 1" />
       <Text style={sharedStyles.h1}>Nested Scale</Text>
       <Text style={sharedStyles.text}>
@@ -44,7 +44,7 @@ export const NestedSheet2 = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetState();
 
   return (
-    <Sheet ref={ref} snapPoints={['48%']} backgroundColor={colors.nested2}>
+    <Sheet ref={ref} snapPoints={['58%']} backgroundColor={colors.nested2}>
       <Badge label="Level 2" color={colors.purple} />
       <Text style={sharedStyles.h1}>Going Deeper</Text>
       <Text style={sharedStyles.text}>
@@ -73,21 +73,23 @@ export const NestedSheet3 = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetState();
 
   return (
-    <Sheet ref={ref} snapPoints={['100%']} backgroundColor={colors.nested3}>
+    <Sheet ref={ref} backgroundColor={colors.nested3}>
       <Badge label="Level 3" color={colors.pink} />
       <Text style={sharedStyles.h1}>Maximum Depth</Text>
-      <Text style={sharedStyles.text}>
+      <Text style={[sharedStyles.text, { marginVertical: 12 }]}>
         You're now 3 levels deep. Each sheet behind is progressively more
-        scaled, creating a visual stack effect. Close sheets to go back.
+        scaled, creating a visual stack effect.
       </Text>
-      <View style={sharedStyles.scaleInfo}>
+      <View style={[sharedStyles.scaleInfo, { marginTop: 0 }]}>
         <Text style={sharedStyles.scaleInfoTitle}>Current Scale Values</Text>
         <Text style={sharedStyles.scaleInfoItem}>Background: scale²</Text>
         <Text style={sharedStyles.scaleInfoItem}>Level 1: scale²</Text>
         <Text style={sharedStyles.scaleInfoItem}>Level 2: scale¹</Text>
-        <Text style={sharedStyles.scaleInfoItem}>Level 3: no scale</Text>
+        <Text style={[sharedStyles.scaleInfoItem, { marginBottom: 0 }]}>
+          Level 3: no scale
+        </Text>
       </View>
-      <View style={{ gap: 12, marginTop: 'auto' }}>
+      <View style={{ gap: 12, marginTop: 16 }}>
         <Button title="Close" onPress={close} />
       </View>
     </Sheet>

@@ -42,7 +42,10 @@ export const ContextComparisonSheet = forwardRef<
         <Button
           title="Open Imperative Sheet"
           onPress={() =>
-            openBottomSheet(<ContextSheetImperative />, { mode: 'push' })
+            openBottomSheet(<ContextSheetImperative />, {
+              mode: 'push',
+              scaleBackground: true,
+            })
           }
         />
         <Button title="Open Portal Sheet" onPress={onOpenPortal} />

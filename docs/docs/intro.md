@@ -7,6 +7,12 @@ slug: /
 
 A stack manager for [@gorhom/bottom-sheet](https://github.com/gorhom/react-native-bottom-sheet) with `push`, `switch`, and `replace` navigation modes, iOS-style scale animations, and React context preservation.
 
+<div style={{textAlign: 'center', margin: '24px 0'}}>
+  <video controls width="300" autoPlay loop muted playsInline>
+    <source src={require('@site/static/videos/demo.mp4').default} type="video/mp4" />
+  </video>
+</div>
+
 ## Features
 
 - **Stack Navigation** — `push`, `switch`, and `replace` modes for managing multiple sheets

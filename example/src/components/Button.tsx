@@ -55,6 +55,7 @@ export function SmallButton({
         style,
       ]}
       onPress={onPress}
+      activeOpacity={0.8}
     >
       <Text style={sharedStyles.smallButtonText}>{title}</Text>
     </TouchableOpacity>

@@ -7,22 +7,15 @@ import { SecondaryButton, Sheet } from '../components';
 import { colors, sharedStyles } from '../styles/theme';
 
 function HeavyItem({ index }: { index: number }) {
+  const hue = (index * 20 + 250) % 360;
   return (
-    <View
-      style={[
-        styles.item,
-        { backgroundColor: `hsl(${(index * 25 + 220) % 360}, 50%, 25%)` },
-      ]}
-    >
+    <View style={[styles.item, { backgroundColor: `hsl(${hue}, 45%, 15%)` }]}>
       <View
-        style={[
-          styles.itemIcon,
-          { backgroundColor: `hsl(${(index * 25 + 220) % 360}, 50%, 35%)` },
-        ]}
+        style={[styles.itemIcon, { backgroundColor: `hsl(${hue}, 50%, 25%)` }]}
       >
         <Text style={styles.itemIconText}>{index + 1}</Text>
       </View>
-      <View>
+      <View style={styles.itemContent}>
         <Text style={styles.itemTitle}>Item {index + 1}</Text>
         <Text style={styles.itemSubtitle}>Dynamically loaded content</Text>
       </View>
@@ -104,30 +97,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   item: {
-    padding: 12,
+    padding: 14,
     marginVertical: 4,
-    borderRadius: 8,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   itemIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   itemIconText: {
     color: colors.text,
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  itemContent: {
+    flex: 1,
   },
   itemTitle: {
     color: colors.text,
     fontWeight: '600',
+    fontSize: 15,
+    marginBottom: 2,
   },
   itemSubtitle: {
-    color: colors.textSecondary,
+    color: colors.textMuted,
     fontSize: 12,
   },
 });
