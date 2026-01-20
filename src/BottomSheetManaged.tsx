@@ -7,7 +7,7 @@ import React from 'react';
 
 import { getAnimatedIndex } from './animatedRegistry';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
-import { useBottomSheetContext } from './useBottomSheetState';
+import { useBottomSheetContext } from './useBottomSheetContext';
 
 export interface BottomSheetRef extends BottomSheetMethods {}
 

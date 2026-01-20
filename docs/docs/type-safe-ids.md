@@ -78,12 +78,12 @@ profileControl.open({
 
 ### Reading Params in Sheet
 
-Use the generic parameter in `useBottomSheetState` to get typed params:
+Use the generic parameter in `useBottomSheetContext` to get typed params:
 
 ```tsx
 const ProfileSheet = forwardRef((props, ref) => {
   // Pass the sheet ID as generic to get typed params
-  const { close, params } = useBottomSheetState<'profile-sheet'>();
+  const { close, params } = useBottomSheetContext<'profile-sheet'>();
 
   return (
     <BottomSheetManaged ref={ref}>
@@ -111,7 +111,7 @@ declare module 'react-native-bottom-sheet-stack' {
 
 // 2. Create the sheet component
 const UserDetailsSheet = forwardRef((props, ref) => {
-  const { params, close } = useBottomSheetState<'user-details'>();
+  const { params, close } = useBottomSheetContext<'user-details'>();
 
   return (
     <BottomSheetManaged ref={ref} snapPoints={['50%']}>
@@ -155,7 +155,7 @@ const control = useBottomSheetControl('any-sheet');
 control.open({ params: { anything: 'goes' } });
 
 // Params are untyped (unknown) - requires type assertion or narrowing
-const { params } = useBottomSheetState();
+const { params } = useBottomSheetContext();
 // params is unknown
 ```
 

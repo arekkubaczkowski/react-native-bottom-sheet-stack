@@ -15,7 +15,7 @@ export {
   useBottomSheetContext,
   useBottomSheetState,
   type UseBottomSheetContextReturn,
-} from './useBottomSheetState';
+} from './useBottomSheetContext';
 export {
   useBottomSheetStatus,
   type UseBottomSheetStatusReturn,

@@ -21,7 +21,7 @@ import {
 } from 'react-native-bottom-sheet-stack';
 
 function MyComponent() {
-  const { open, close, isOpen } = useBottomSheetControl('my-sheet');
+  const { open, close } = useBottomSheetControl('my-sheet');
 
   return (
     <View>
@@ -115,18 +115,19 @@ You can update or reset params on an already open sheet using `updateParams` and
 import {
   BottomSheetPortal,
   useBottomSheetControl,
-  useBottomSheetParams,
+  useBottomSheetStatus,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 const UserSheet = forwardRef((props, ref) => {
-  const { userId } = useBottomSheetParams<'user-sheet'>();
+  const { params } = useBottomSheetContext<'user-sheet'>();
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    if (userId) {
-      fetchUser(userId).then(setUser);
+    if (params?.userId) {
+      fetchUser(params.userId).then(setUser);
     }
-  }, [userId]);
+  }, [params?.userId]);
 
   return (
     <BottomSheetManaged ref={ref} snapPoints={['50%']}>
@@ -138,7 +139,8 @@ const UserSheet = forwardRef((props, ref) => {
 });
 
 function UserList() {
-  const { open, updateParams, resetParams, isOpen } = useBottomSheetControl('user-sheet');
+  const { open, updateParams, resetParams } = useBottomSheetControl('user-sheet');
+  const { isOpen } = useBottomSheetStatus('user-sheet');
 
   const showUser = (userId: string) => {
     if (isOpen) {

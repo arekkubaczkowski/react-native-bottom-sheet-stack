@@ -61,11 +61,11 @@ import { View, Text, Button } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import {
   BottomSheetManaged,
-  useBottomSheetState,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 const MySheet = forwardRef((props, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
 
   return (
     <BottomSheetManaged ref={ref} snapPoints={['50%']}>
@@ -86,10 +86,10 @@ const MySheet = forwardRef((props, ref) => {
 import { useBottomSheetManager } from 'react-native-bottom-sheet-stack';
 
 function MyComponent() {
-  const { openBottomSheet } = useBottomSheetManager();
+  const { open } = useBottomSheetManager();
 
   const handleOpen = () => {
-    openBottomSheet(<MySheet />, {
+    open(<MySheet />, {
       mode: 'push', // 'push' | 'switch' | 'replace'
       scaleBackground: true,
     });
