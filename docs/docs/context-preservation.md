@@ -1,14 +1,18 @@
 ---
-sidebar_position: 5
+sidebar_position: 6
 ---
 
-# Context Preservation (Portal API)
+# Portal-based API
 
-The imperative `openBottomSheet()` API stores content in a Zustand store and renders it in `BottomSheetHost`. This means **React context from your component tree is lost**.
+The Portal API offers a **declarative way** to define bottom sheets. You declare the sheet in your component tree and control it imperatively via `useBottomSheetControl`.
 
-For cases where you need context (themes, auth, i18n, etc.), use the **portal-based API**.
+## Key Features
 
-## Portal API
+- **Context Preservation** - Sheet content stays in your React tree, so it has access to all context (theme, auth, i18n, navigation)
+- **Define Once, Open from Anywhere** - Declare a sheet in one place, open it from any other component within the same provider
+- **Declarative Definition** - Sheet structure is defined in JSX, making it easy to see what sheets exist
+
+## Basic Usage
 
 ```tsx
 import {
@@ -21,7 +25,7 @@ function MyComponent() {
 
   return (
     <View>
-      {/* Declare the portal - content is rendered here in your React tree */}
+      {/* Declare the portal - content stays in your React tree */}
       <BottomSheetPortal id="my-sheet">
         <MySheet />
       </BottomSheetPortal>
@@ -35,21 +39,49 @@ function MyComponent() {
 
 ## How It Works
 
-| API | Context | Use Case |
-|-----|---------|----------|
-| `openBottomSheet()` | Lost | Dynamic sheets, simple cases |
-| `BottomSheetPortal` | Preserved | Sheets needing theme, auth, i18n, etc. |
+The portal API uses [react-native-teleport](https://github.com/nicklockwood/react-native-teleport) to render content in your component tree while displaying it in `BottomSheetHost`. This preserves all React context from the definition site.
 
-The portal API uses [react-native-teleport](https://github.com/nicklockwood/react-native-teleport) to render content in your component tree while displaying it in `BottomSheetHost`.
+## Open from Anywhere
 
-## Example: Theme Context
+Define the sheet once, open it from a completely different part of your app:
+
+```tsx
+// In screens/Settings.tsx - define the sheet
+function SettingsScreen() {
+  return (
+    <View>
+      <BottomSheetPortal id="language-picker">
+        <LanguagePickerSheet />
+      </BottomSheetPortal>
+
+      {/* ... settings UI */}
+    </View>
+  );
+}
+
+// In components/Header.tsx - open from anywhere
+function Header() {
+  const { open } = useBottomSheetControl('language-picker');
+
+  return (
+    <TouchableOpacity onPress={() => open()}>
+      <LanguageIcon />
+    </TouchableOpacity>
+  );
+}
+```
+
+Both components must be rendered within the same `BottomSheetManagerProvider`.
+
+## Context Preservation
+
+Your sheet content retains access to React context:
 
 ```tsx
 import { useTheme } from './ThemeContext';
 
-// This sheet needs access to ThemeContext
 const ThemedSheet = forwardRef((props, ref) => {
-  const { colors } = useTheme(); // Works with Portal API!
+  const { colors } = useTheme(); // Context is preserved!
 
   return (
     <BottomSheetManaged ref={ref} snapPoints={['50%']}>
@@ -75,14 +107,64 @@ function App() {
 }
 ```
 
-## When to Use Each API
+## Updating Params
 
-### Use `openBottomSheet()` when:
-- Sheet content is simple and doesn't need context
-- You're generating sheets dynamically from data
-- You want quick, one-off sheets
+You can update or reset params on an already open sheet using `updateParams` and `resetParams`:
 
-### Use `BottomSheetPortal` when:
-- Sheet needs access to React context (theme, auth, i18n)
-- Sheet is pre-defined in your component tree
-- You need to pass props from parent component
+```tsx
+import {
+  BottomSheetPortal,
+  useBottomSheetControl,
+  useBottomSheetParams,
+} from 'react-native-bottom-sheet-stack';
+
+const UserSheet = forwardRef((props, ref) => {
+  const { userId } = useBottomSheetParams<'user-sheet'>();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    if (userId) {
+      fetchUser(userId).then(setUser);
+    }
+  }, [userId]);
+
+  return (
+    <BottomSheetManaged ref={ref} snapPoints={['50%']}>
+      <BottomSheetView>
+        {user && <Text>{user.name}</Text>}
+      </BottomSheetView>
+    </BottomSheetManaged>
+  );
+});
+
+function UserList() {
+  const { open, updateParams, resetParams, isOpen } = useBottomSheetControl('user-sheet');
+
+  const showUser = (userId: string) => {
+    if (isOpen) {
+      // Sheet already open - just update the params
+      updateParams({ userId });
+    } else {
+      // Open with initial params
+      open({ params: { userId } });
+    }
+  };
+
+  const clearSelection = () => {
+    // Reset params to undefined
+    resetParams();
+  };
+
+  return (
+    <View>
+      <BottomSheetPortal id="user-sheet">
+        <UserSheet />
+      </BottomSheetPortal>
+
+      <Button title="Show User 1" onPress={() => showUser('user-1')} />
+      <Button title="Show User 2" onPress={() => showUser('user-2')} />
+      <Button title="Clear" onPress={clearSelection} />
+    </View>
+  );
+}
+```

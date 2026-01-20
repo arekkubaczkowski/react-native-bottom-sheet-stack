@@ -22,16 +22,8 @@ interface BottomSheetStoreState {
   stackOrder: string[];
 }
 
-export interface PortalOpenOptions<TParams = Record<string, unknown>> {
-  scaleBackground?: boolean;
-  params?: TParams;
-}
-
 interface BottomSheetStoreActions {
-  push(sheet: TriggerState): void;
-  switch(sheet: TriggerState): void;
-  replace(sheet: TriggerState): void;
-  openPortal(id: string, groupId: string, options?: PortalOpenOptions): void;
+  open(sheet: TriggerState, mode?: OpenMode): void;
   markOpen(id: string): void;
   startClosing(id: string): void;
   finishClosing(id: string): void;
@@ -46,21 +38,7 @@ export const useBottomSheetStore = create(
     sheetsById: {},
     stackOrder: [],
 
-    push: (sheet) =>
-      set((state) => {
-        if (state.sheetsById[sheet.id]) {
-          return state;
-        }
-        return {
-          sheetsById: {
-            ...state.sheetsById,
-            [sheet.id]: { ...sheet, status: 'opening' },
-          },
-          stackOrder: [...state.stackOrder, sheet.id],
-        };
-      }),
-
-    switch: (sheet) =>
+    open: (sheet, mode = 'push') =>
       set((state) => {
         if (state.sheetsById[sheet.id]) {
           return state;
@@ -69,31 +47,14 @@ export const useBottomSheetStore = create(
         const newSheetsById = { ...state.sheetsById };
         const topId = state.stackOrder[state.stackOrder.length - 1];
 
-        if (topId && newSheetsById[topId]) {
+        if (mode === 'switch' && topId && newSheetsById[topId]) {
           newSheetsById[topId] = {
             ...newSheetsById[topId],
             status: 'hidden',
           };
         }
 
-        newSheetsById[sheet.id] = { ...sheet, status: 'opening' };
-
-        return {
-          sheetsById: newSheetsById,
-          stackOrder: [...state.stackOrder, sheet.id],
-        };
-      }),
-
-    replace: (sheet) =>
-      set((state) => {
-        if (state.sheetsById[sheet.id]) {
-          return state;
-        }
-
-        const newSheetsById = { ...state.sheetsById };
-        const topId = state.stackOrder[state.stackOrder.length - 1];
-
-        if (topId && newSheetsById[topId]) {
+        if (mode === 'replace' && topId && newSheetsById[topId]) {
           newSheetsById[topId] = {
             ...newSheetsById[topId],
             status: 'closing',
@@ -105,28 +66,6 @@ export const useBottomSheetStore = create(
         return {
           sheetsById: newSheetsById,
           stackOrder: [...state.stackOrder, sheet.id],
-        };
-      }),
-
-    openPortal: (id, groupId, options) =>
-      set((state) => {
-        if (state.sheetsById[id]) {
-          return state;
-        }
-        return {
-          sheetsById: {
-            ...state.sheetsById,
-            [id]: {
-              id,
-              groupId,
-              content: null,
-              status: 'opening',
-              usePortal: true,
-              scaleBackground: options?.scaleBackground,
-              params: options?.params,
-            },
-          },
-          stackOrder: [...state.stackOrder, id],
         };
       }),
 

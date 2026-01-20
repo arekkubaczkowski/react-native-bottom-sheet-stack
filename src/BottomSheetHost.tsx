@@ -6,16 +6,12 @@ import { PortalHost } from 'react-native-teleport';
 
 import { shallow } from 'zustand/shallow';
 import { cleanupAnimatedIndex } from './animatedRegistry';
-import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { BottomSheetContext } from './BottomSheet.context';
 import { useBottomSheetStore } from './bottomSheet.store';
-import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
-import {
-  useScaleAnimatedStyle,
-  useScaleDepth,
-  type ScaleConfig,
-} from './useScaleAnimation';
+import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useScaleAnimatedStyle, type ScaleConfig } from './useScaleAnimation';
 
 function PortalHostWrapper({
   id,
@@ -27,7 +23,7 @@ function PortalHostWrapper({
   height: number;
 }) {
   return (
-    <View style={{ flex: 1, width, height }}>
+    <View style={{ flex: 1, width, height }} pointerEvents="box-none">
       <PortalHost name={`bottomsheet-${id}`} style={{ width, height }} />
     </View>
   );
@@ -79,12 +75,12 @@ function QueueItem({
   stackIndex: number;
 }) {
   const sheet = useBottomSheetStore((state) => state.sheetsById[id]);
+  const startClosing = useBottomSheetStore((state) => state.startClosing);
 
   const { width, height } = useSafeAreaFrame();
   const value = { id };
 
-  const scaleDepth = useScaleDepth(groupId, id);
-  const scaleStyle = useScaleAnimatedStyle(scaleDepth, scaleConfig);
+  const scaleStyle = useScaleAnimatedStyle({ groupId, id }, scaleConfig);
 
   useEffect(() => {
     return () => {
@@ -98,7 +94,7 @@ function QueueItem({
   return (
     <BottomSheetContext.Provider value={value}>
       <View style={[StyleSheet.absoluteFillObject, { zIndex: backdropZIndex }]}>
-        <BottomSheetBackdrop sheetId={id} />
+        <BottomSheetBackdrop sheetId={id} onPress={() => startClosing(id)} />
       </View>
 
       {/* Sheet content - rendered with scaling */}

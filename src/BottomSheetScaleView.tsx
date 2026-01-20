@@ -2,7 +2,7 @@ import { useContext, type PropsWithChildren } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { BottomSheetManagerContext } from './BottomSheetManager.context';
-import { useScaleAnimatedStyle, useScaleDepth } from './useScaleAnimation';
+import { useScaleAnimatedStyle } from './useScaleAnimation';
 
 /**
  * Wraps your app content with iOS-style scale animation when a bottom sheet
@@ -24,8 +24,7 @@ export function BottomSheetScaleView({ children }: PropsWithChildren) {
   const groupId = context?.groupId ?? 'default';
   const scaleConfig = context?.scaleConfig;
 
-  const scaleDepth = useScaleDepth(groupId);
-  const animatedStyle = useScaleAnimatedStyle(scaleDepth, scaleConfig);
+  const animatedStyle = useScaleAnimatedStyle({ groupId }, scaleConfig);
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
