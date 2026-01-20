@@ -5,3 +5,9 @@ export { useBottomSheetState } from './useBottomSheetState';
 export { BottomSheetManaged } from './BottomSheetManaged';
 export { BottomSheetScaleView } from './BottomSheetScaleView';
 export { type ScaleConfig } from './useScaleAnimation';
+export { BottomSheetPortal } from './BottomSheetPortal';
+export { useBottomSheetControl } from './useBottomSheetControl';
+export type {
+  BottomSheetPortalRegistry,
+  BottomSheetPortalId,
+} from './portal.types';

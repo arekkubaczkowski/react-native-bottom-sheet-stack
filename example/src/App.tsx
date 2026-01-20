@@ -1,6 +1,12 @@
 import { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import { forwardRef, useEffect, useState } from 'react';
+import {
+  createContext,
+  forwardRef,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -12,7 +18,9 @@ import {
   BottomSheetHost,
   BottomSheetManaged,
   BottomSheetManagerProvider,
+  BottomSheetPortal,
   BottomSheetScaleView,
+  useBottomSheetControl,
   useBottomSheetManager,
   useBottomSheetState,
 } from 'react-native-bottom-sheet-stack';
@@ -21,6 +29,21 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+
+// ============================================================================
+// Demo Context - to prove context preservation works
+// ============================================================================
+
+interface UserContextValue {
+  username: string;
+  theme: string;
+}
+
+const UserContext = createContext<UserContextValue | null>(null);
+
+function useUser() {
+  return useContext(UserContext);
+}
 
 export default function App() {
   return (
@@ -31,7 +54,14 @@ export default function App() {
           scaleConfig={{ scale: 0.92, translateY: 0, borderRadius: 24 }}
         >
           <BottomSheetScaleView>
-            <HomeScreen />
+            {/* UserContext.Provider is INSIDE HomeScreen's parent, but OUTSIDE BottomSheetHost */}
+            {/* This means imperative sheets (rendered in BottomSheetHost) won't have access */}
+            {/* But portal sheets (rendered here, then teleported) will have access */}
+            <UserContext.Provider
+              value={{ username: 'John Doe', theme: 'dark' }}
+            >
+              <HomeScreen />
+            </UserContext.Provider>
           </BottomSheetScaleView>
           <BottomSheetHost />
         </BottomSheetManagerProvider>
@@ -47,9 +77,15 @@ export default function App() {
 function HomeScreen() {
   const { top } = useSafeAreaInsets();
   const { openBottomSheet } = useBottomSheetManager();
+  const portalSheetControl = useBottomSheetControl('context-portal-sheet');
 
   return (
     <View style={styles.container}>
+      {/* Portal-based sheet - rendered here in React tree, preserves context */}
+      <BottomSheetPortal id="context-portal-sheet">
+        <ContextSheetPortal />
+      </BottomSheetPortal>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingTop: top + 20 }]}
@@ -66,6 +102,22 @@ function HomeScreen() {
         {/* Demo Cards */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Demos</Text>
+
+          <DemoCard
+            title="Context Preservation"
+            description="Compare imperative vs portal API - portal preserves React context"
+            color="#10b981"
+            onPress={() =>
+              openBottomSheet(
+                <ContextComparisonSheet
+                  onOpenPortal={() =>
+                    portalSheetControl.open({ scaleBackground: true })
+                  }
+                />,
+                { scaleBackground: true }
+              )
+            }
+          />
 
           <DemoCard
             title="Navigation Flow"
@@ -182,6 +234,126 @@ const SecondaryButton = ({
     <Text style={styles.secondaryButtonText}>{title}</Text>
   </TouchableOpacity>
 );
+
+// ============================================================================
+// Context Preservation Demo
+// ============================================================================
+
+// Entry point sheet - just explains the demo and offers two options
+const ContextComparisonSheet = forwardRef<
+  BottomSheetMethods,
+  { onOpenPortal: () => void }
+>(({ onOpenPortal }, ref) => {
+  const { close } = useBottomSheetState();
+  const { openBottomSheet } = useBottomSheetManager();
+
+  return (
+    <BottomSheetManaged enableDynamicSizing ref={ref}>
+      <BottomSheetView>
+        <View style={styles.sheet}>
+          <View style={[styles.levelBadge, { backgroundColor: '#10b981' }]}>
+            <Text style={styles.levelBadgeText}>Context Demo</Text>
+          </View>
+          <Text style={styles.h1}>Context Preservation</Text>
+          <Text style={styles.text}>
+            This demo shows the difference between imperative and portal-based
+            APIs.
+            {'\n\n'}A UserContext with username "John Doe" is defined in the
+            app. Open each sheet below to see if it can access this context.
+          </Text>
+
+          <View style={{ gap: 12 }}>
+            <Button
+              title="Open Imperative Sheet"
+              onPress={() =>
+                openBottomSheet(<ContextSheetImperative />, { mode: 'push' })
+              }
+            />
+            <Button title="Open Portal Sheet" onPress={onOpenPortal} />
+            <SecondaryButton title="Close" onPress={close} />
+          </View>
+        </View>
+      </BottomSheetView>
+    </BottomSheetManaged>
+  );
+});
+
+// This sheet uses the IMPERATIVE API - context will be LOST
+const ContextSheetImperative = forwardRef<BottomSheetMethods>((_, ref) => {
+  const { close } = useBottomSheetState();
+  const user = useUser();
+
+  return (
+    <BottomSheetManaged enableDynamicSizing ref={ref}>
+      <BottomSheetView>
+        <View style={styles.sheet}>
+          <View style={[styles.levelBadge, { backgroundColor: '#ef4444' }]}>
+            <Text style={styles.levelBadgeText}>Imperative API</Text>
+          </View>
+          <Text style={styles.h1}>Context Lost ❌</Text>
+          <Text style={styles.text}>
+            This sheet was opened with openBottomSheet(). The content is stored
+            in Zustand and rendered in BottomSheetHost - outside the original
+            React tree. Context is NOT available.
+          </Text>
+
+          <View style={[styles.contextBox, { borderColor: '#ef4444' }]}>
+            <Text style={styles.contextTitle}>UserContext Access</Text>
+            <Text style={[styles.contextValue, { color: '#ef4444' }]}>
+              Username: {user?.username ?? '❌ undefined'}
+            </Text>
+            <Text style={[styles.contextValue, { color: '#ef4444' }]}>
+              Theme: {user?.theme ?? '❌ undefined'}
+            </Text>
+          </View>
+
+          <View style={{ gap: 12 }}>
+            <SecondaryButton title="Close" onPress={close} />
+          </View>
+        </View>
+      </BottomSheetView>
+    </BottomSheetManaged>
+  );
+});
+
+// This sheet uses the PORTAL API - context will be PRESERVED
+const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
+  const { close } = useBottomSheetState();
+  const user = useUser();
+
+  return (
+    <BottomSheetManaged enableDynamicSizing ref={ref}>
+      <BottomSheetView>
+        <View style={styles.sheet}>
+          <View style={[styles.levelBadge, { backgroundColor: '#10b981' }]}>
+            <Text style={styles.levelBadgeText}>Portal API</Text>
+          </View>
+          <Text style={styles.h1}>Context Preserved ✅</Text>
+          <Text style={styles.text}>
+            This sheet was opened with BottomSheetPortal +
+            useBottomSheetControl(). The content is rendered in its original
+            location in the React tree, then teleported to BottomSheetHost.
+            Context IS available!
+          </Text>
+
+          <View style={[styles.contextBox, { borderColor: '#10b981' }]}>
+            <Text style={styles.contextTitle}>UserContext Access</Text>
+            <Text style={[styles.contextValue, { color: '#10b981' }]}>
+              Username: {user?.username ?? '❌ undefined'}
+            </Text>
+            <Text style={[styles.contextValue, { color: '#10b981' }]}>
+              Theme: {user?.theme ?? '❌ undefined'}
+            </Text>
+          </View>
+
+          <View style={{ gap: 12 }}>
+            <SecondaryButton title="Close" onPress={close} />
+          </View>
+        </View>
+      </BottomSheetView>
+    </BottomSheetManaged>
+  );
+});
 
 // ============================================================================
 // Navigation Flow Sheets
@@ -766,5 +938,27 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontSize: 14,
     marginBottom: 4,
+  },
+
+  // Context Preservation Demo
+  contextBox: {
+    backgroundColor: '#1a1a3a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#3f3f5a',
+  },
+  contextTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  contextValue: {
+    color: '#9ca3af',
+    fontSize: 14,
+    marginBottom: 4,
+    fontFamily: 'monospace',
   },
 });

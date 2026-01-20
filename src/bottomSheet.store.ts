@@ -11,6 +11,7 @@ export interface BottomSheetState {
   content: ReactNode;
   status: BottomSheetStatus;
   scaleBackground?: boolean;
+  usePortal?: boolean;
 }
 
 type TriggerState = Omit<BottomSheetState, 'status'>;
@@ -20,10 +21,15 @@ interface BottomSheetStoreState {
   stackOrder: string[];
 }
 
+export interface PortalOpenOptions {
+  scaleBackground?: boolean;
+}
+
 interface BottomSheetStoreActions {
   push(sheet: TriggerState): void;
   switch(sheet: TriggerState): void;
   replace(sheet: TriggerState): void;
+  openPortal(id: string, groupId: string, options?: PortalOpenOptions): void;
   markOpen(id: string): void;
   startClosing(id: string): void;
   finishClosing(id: string): void;
@@ -96,6 +102,27 @@ export const useBottomSheetStore = create(
         return {
           sheetsById: newSheetsById,
           stackOrder: [...state.stackOrder, sheet.id],
+        };
+      }),
+
+    openPortal: (id, groupId, options) =>
+      set((state) => {
+        if (state.sheetsById[id]) {
+          return state;
+        }
+        return {
+          sheetsById: {
+            ...state.sheetsById,
+            [id]: {
+              id,
+              groupId,
+              content: null,
+              status: 'opening',
+              usePortal: true,
+              scaleBackground: options?.scaleBackground,
+            },
+          },
+          stackOrder: [...state.stackOrder, id],
         };
       }),
 

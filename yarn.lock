@@ -12121,6 +12121,7 @@ __metadata:
     react-native-gesture-handler: ^2.30.0
     react-native-reanimated: ^4.2.1
     react-native-safe-area-context: ^5.6.2
+    react-native-teleport: ^0.5.6
     react-native-web: ~0.19.13
     react-native-worklets: ^0.7.1
     use-sync-external-store: ^1.6.0
@@ -12157,6 +12158,7 @@ __metadata:
     react-native-gesture-handler: ^2.30.0
     react-native-reanimated: ^4.2.1
     react-native-safe-area-context: ^5.6.2
+    react-native-teleport: ^0.5.6
     react-native-worklets: ^0.7.1
     release-it: ^17.10.0
     typescript: ^5.2.2
@@ -12249,6 +12251,17 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 7b15cdd07df4f3650cf443fb322ee2d51b3ab45c652789cbea4cb48a8e6fd2b66e2be01e9f63e614ceaf28d9d228af681ca8857b2ed8dabe48f23964076d40c3
+  languageName: node
+  linkType: hard
+
+"react-native-teleport@npm:^0.5.6":
+  version: 0.5.6
+  resolution: "react-native-teleport@npm:0.5.6"
+  peerDependencies:
+    react: "*"
+    react-dom: "*"
+    react-native: "*"
+  checksum: febeec41d207b938f9c82c9623e5d9d96eab23685bcd8f5d1bef4c27ad4b24aa547a84d8385032de13a7104b4755366e29362af48f2f809a3bbc291daf99b529
   languageName: node
   linkType: hard
 

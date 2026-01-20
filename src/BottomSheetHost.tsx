@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
+import { PortalHost } from 'react-native-teleport';
 
 import { shallow } from 'zustand/shallow';
 import { cleanupAnimatedIndex } from './animatedRegistry';
@@ -15,6 +16,22 @@ import {
   useScaleDepth,
   type ScaleConfig,
 } from './useScaleAnimation';
+
+function PortalHostWrapper({
+  id,
+  width,
+  height,
+}: {
+  id: string;
+  width: number;
+  height: number;
+}) {
+  return (
+    <View style={{ flex: 1, width, height }}>
+      <PortalHost name={`bottomsheet-${id}`} style={{ width, height }} />
+    </View>
+  );
+}
 
 function BottomSheetHostComp() {
   const queueIds = useQueueIds();
@@ -58,7 +75,7 @@ function QueueItem({
   groupId: string;
   scaleConfig?: ScaleConfig;
 }) {
-  const content = useBottomSheetStore((state) => state.sheetsById[id]?.content);
+  const sheet = useBottomSheetStore((state) => state.sheetsById[id]);
 
   const { width, height } = useSafeAreaFrame();
   const value = { id };
@@ -89,7 +106,11 @@ function QueueItem({
           scaleStyle,
         ]}
       >
-        {content}
+        {sheet?.usePortal ? (
+          <PortalHostWrapper id={id} width={width} height={height} />
+        ) : (
+          sheet?.content
+        )}
       </Animated.View>
     </BottomSheetContext.Provider>
   );
