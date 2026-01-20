@@ -39,7 +39,7 @@ function MyComponent() {
 
 ## How It Works
 
-The portal API uses [react-native-teleport](https://github.com/nicklockwood/react-native-teleport) to render content in your component tree while displaying it in `BottomSheetHost`. This preserves all React context from the definition site.
+The portal API uses [react-native-teleport](https://github.com/kirillzyusko/react-native-teleport) to render content in your component tree while displaying it in `BottomSheetHost`. This preserves all React context from the definition site.
 
 ## Open from Anywhere
 

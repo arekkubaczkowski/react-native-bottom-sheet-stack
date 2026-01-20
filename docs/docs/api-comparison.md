@@ -83,7 +83,7 @@ function MyComponent() {
 
 **Characteristics:**
 - Sheet is declared as JSX in your component tree
-- Content stays in your React tree (via [react-native-teleport](https://github.com/nicklockwood/react-native-teleport))
+- Content stays in your React tree (via [react-native-teleport](https://github.com/kirillzyusko/react-native-teleport))
 - React context (theme, auth, i18n, navigation) is preserved
 - Can define sheet in one place and open from anywhere within the same provider
 
