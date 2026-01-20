@@ -42,13 +42,24 @@ openBottomSheet(<MySheet />, {
 
 ## useBottomSheetState
 
-Use inside a bottom sheet component to access its state and close function.
+Use inside a bottom sheet component to access its state, params, and close function.
 
 ```tsx
-const {
-  bottomSheetState,
-  close,
-} = useBottomSheetState();
+// Basic usage
+const { bottomSheetState, close } = useBottomSheetState();
+
+// With typed params (for portal sheets)
+const { params, close } = useBottomSheetState<'my-sheet'>();
+```
+
+### Generic Parameter
+
+Pass the portal sheet ID as a generic to get typed params:
+
+```tsx
+// If registry defines: 'user-sheet': { userId: string }
+const { params } = useBottomSheetState<'user-sheet'>();
+console.log(params.userId); // ✅ type-safe: string
 ```
 
 ### Returns
@@ -56,7 +67,9 @@ const {
 | Property | Type | Description |
 |----------|------|-------------|
 | `bottomSheetState` | `BottomSheetState` | Current sheet's state object |
+| `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided, `unknown` otherwise |
 | `close` | `() => void` | Closes this sheet |
+| `closeBottomSheet` | `() => void` | Alias for `close` |
 
 ### BottomSheetState
 
@@ -65,6 +78,7 @@ interface BottomSheetState {
   id: string;
   status: 'opening' | 'open' | 'closing' | 'hidden';
   groupId: string;
+  params?: Record<string, unknown>;
   // ...
 }
 ```
@@ -94,18 +108,31 @@ const {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `open` | `(options?) => void` | Opens the sheet |
+| `open` | `(options?) => void` | Opens the sheet (see below for params) |
 | `close` | `() => void` | Closes the sheet |
 | `isOpen` | `boolean` | Whether sheet is open or opening |
 | `status` | `BottomSheetStatus \| null` | Current status |
 
 ### open Options
 
+The `open` function accepts options including type-safe `params`:
+
 ```tsx
+// Sheet without params (registry: 'simple-sheet': true)
+open();
+open({ scaleBackground: true });
+
+// Sheet with params (registry: 'user-sheet': { userId: string })
 open({
-  scaleBackground: true,  // Enable background scaling
+  scaleBackground: true,
+  params: { userId: '123' }  // Required when params defined in registry
 });
 ```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `scaleBackground` | `boolean` | Enable background scaling |
+| `params` | `BottomSheetPortalParams<T>` | Type-safe params (required if defined in registry) |
 
 ### Status Values
 

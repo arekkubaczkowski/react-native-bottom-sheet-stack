@@ -12,6 +12,7 @@ export interface BottomSheetState {
   status: BottomSheetStatus;
   scaleBackground?: boolean;
   usePortal?: boolean;
+  params?: Record<string, unknown>;
 }
 
 type TriggerState = Omit<BottomSheetState, 'status'>;
@@ -21,8 +22,9 @@ interface BottomSheetStoreState {
   stackOrder: string[];
 }
 
-export interface PortalOpenOptions {
+export interface PortalOpenOptions<TParams = Record<string, unknown>> {
   scaleBackground?: boolean;
+  params?: TParams;
 }
 
 interface BottomSheetStoreActions {
@@ -120,6 +122,7 @@ export const useBottomSheetStore = create(
               status: 'opening',
               usePortal: true,
               scaleBackground: options?.scaleBackground,
+              params: options?.params,
             },
           },
           stackOrder: [...state.stackOrder, id],

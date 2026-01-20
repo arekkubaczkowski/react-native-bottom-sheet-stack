@@ -10,4 +10,5 @@ export { useBottomSheetControl } from './useBottomSheetControl';
 export type {
   BottomSheetPortalRegistry,
   BottomSheetPortalId,
+  BottomSheetPortalParams,
 } from './portal.types';

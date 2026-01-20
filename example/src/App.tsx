@@ -111,7 +111,10 @@ function HomeScreen() {
               openBottomSheet(
                 <ContextComparisonSheet
                   onOpenPortal={() =>
-                    portalSheetControl.open({ scaleBackground: true })
+                    portalSheetControl.open({
+                      scaleBackground: true,
+                      params: { greeting: 'Hello from params!' },
+                    })
                   }
                 />,
                 { scaleBackground: true }
@@ -318,7 +321,7 @@ const ContextSheetImperative = forwardRef<BottomSheetMethods>((_, ref) => {
 
 // This sheet uses the PORTAL API - context will be PRESERVED
 const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
+  const { close, params } = useBottomSheetState<'context-portal-sheet'>();
   const { openBottomSheet } = useBottomSheetManager();
   const user = useUser();
 
@@ -344,6 +347,13 @@ const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
             </Text>
             <Text style={[styles.contextValue, { color: '#10b981' }]}>
               Theme: {user?.theme ?? '❌ undefined'}
+            </Text>
+          </View>
+
+          <View style={[styles.contextBox, { borderColor: '#6366f1' }]}>
+            <Text style={styles.contextTitle}>Type-Safe Params</Text>
+            <Text style={[styles.contextValue, { color: '#6366f1' }]}>
+              Greeting: {params?.greeting ?? '❌ undefined'}
             </Text>
           </View>
 

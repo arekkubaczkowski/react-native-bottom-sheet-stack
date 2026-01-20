@@ -7,26 +7,43 @@ import {
   type PortalOpenOptions,
 } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
-import type { BottomSheetPortalId } from './portal.types';
+import type {
+  BottomSheetPortalId,
+  BottomSheetPortalParams,
+  HasParams,
+} from './portal.types';
 import { sheetRefs } from './refsMap';
 
-export interface UseBottomSheetControlReturn {
-  open: (options?: PortalOpenOptions) => void;
+type OpenOptions<T extends BottomSheetPortalId> = Omit<
+  PortalOpenOptions<BottomSheetPortalParams<T>>,
+  'params'
+> &
+  (HasParams<T> extends true
+    ? { params: BottomSheetPortalParams<T> }
+    : { params?: BottomSheetPortalParams<T> });
+
+type OpenFunction<T extends BottomSheetPortalId> =
+  HasParams<T> extends true
+    ? (options: OpenOptions<T>) => void
+    : (options?: OpenOptions<T>) => void;
+
+export interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
+  open: OpenFunction<T>;
   close: () => void;
   isOpen: boolean;
   status: BottomSheetStatus | null;
 }
 
-export function useBottomSheetControl(
-  id: BottomSheetPortalId
-): UseBottomSheetControlReturn {
+export function useBottomSheetControl<T extends BottomSheetPortalId>(
+  id: T
+): UseBottomSheetControlReturn<T> {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
 
   const openPortal = useBottomSheetStore((state) => state.openPortal);
   const startClosing = useBottomSheetStore((state) => state.startClosing);
   const sheetState = useBottomSheetStore((state) => state.sheetsById[id]);
 
-  const open = (options?: PortalOpenOptions) => {
+  const open = (options?: OpenOptions<T>) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';
 
     // Create ref when opening (same pattern as useBottomSheetManager)
@@ -44,7 +61,7 @@ export function useBottomSheetControl(
   const isOpen = status === 'open' || status === 'opening';
 
   return {
-    open,
+    open: open as OpenFunction<T>,
     close,
     isOpen,
     status,

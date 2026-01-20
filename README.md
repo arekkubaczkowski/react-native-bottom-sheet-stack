@@ -168,9 +168,9 @@ function MyComponent() {
 
 The portal API uses [react-native-teleport](https://github.com/nicklockwood/react-native-teleport) to render content in your component tree while displaying it in `BottomSheetHost`.
 
-### Type-Safe Portal IDs
+### Type-Safe Portal IDs & Params
 
-You can get autocomplete and type checking for portal sheet IDs by augmenting the `BottomSheetPortalRegistry` interface.
+You can get autocomplete and type checking for portal sheet IDs and their parameters by augmenting the `BottomSheetPortalRegistry` interface.
 
 **Step 1:** Create a type declaration file in your project (e.g., `src/types/bottom-sheet.d.ts`):
 
@@ -179,12 +179,16 @@ import 'react-native-bottom-sheet-stack';
 
 declare module 'react-native-bottom-sheet-stack' {
   interface BottomSheetPortalRegistry {
-    'settings-sheet': true;
-    'profile-sheet': true;
-    'confirm-dialog': true;
+    'settings-sheet': true;                    // no params
+    'profile-sheet': { userId: string };       // with required params
   }
 }
 ```
+
+| Value | Meaning |
+|-------|---------|
+| `true` | Sheet has no params |
+| `{ ... }` | Sheet has required params |
 
 **Step 2:** Make sure the file is included in your `tsconfig.json`:
 
@@ -200,19 +204,35 @@ declare module 'react-native-bottom-sheet-stack' {
 }
 ```
 
-**Step 3:** Now TypeScript will autocomplete and validate the `id` prop:
+**Step 3:** Now TypeScript will autocomplete and validate IDs and params:
 
 ```tsx
-// ✅ Valid - 'settings-sheet' is in registry
-<BottomSheetPortal id="settings-sheet">
-const control = useBottomSheetControl('settings-sheet');
+// ✅ No params required (defined as `true`)
+settingsControl.open();
 
-// ❌ Error - 'unknown-sheet' is not in registry
-<BottomSheetPortal id="unknown-sheet">
-const control = useBottomSheetControl('unknown-sheet');
+// ✅ Params required (defined as object)
+profileControl.open({ params: { userId: '123' } });
+
+// ❌ Error - missing required params
+profileControl.open();  // TypeScript error!
 ```
 
-If you don't augment the registry, the `id` accepts any `string` for flexibility.
+**Step 4:** Access typed params inside your sheet:
+
+```tsx
+const ProfileSheet = forwardRef((props, ref) => {
+  // Pass the sheet ID as generic to get typed params
+  const { params, close } = useBottomSheetState<'profile-sheet'>();
+
+  return (
+    <BottomSheetManaged ref={ref}>
+      <Text>User ID: {params.userId}</Text>  {/* ✅ type-safe */}
+    </BottomSheetManaged>
+  );
+});
+```
+
+If you don't augment the registry, the `id` accepts any `string` and `params` is `unknown`.
 
 ## API Reference
 
@@ -256,39 +276,47 @@ const {
 } = useBottomSheetManager();
 ```
 
-#### `useBottomSheetState()`
+#### `useBottomSheetState<T>()`
 
-Use inside a bottom sheet component:
+Use inside a bottom sheet component. Pass a portal ID as generic for typed params:
 
 ```tsx
 const {
   bottomSheetState,  // { id, status, groupId, ... }
+  params,            // typed if generic provided, unknown otherwise
   close,             // () => void
-} = useBottomSheetState();
+} = useBottomSheetState<'my-sheet'>();
 ```
 
-#### `useBottomSheetControl(id: BottomSheetPortalId)`
+#### `useBottomSheetControl<T>(id: T)`
 
-Control portal-based sheets:
+Control portal-based sheets. Params are type-safe if registry is augmented:
 
 ```tsx
 const {
-  open,    // (options?) => void
+  open,    // (options?) => void - options include typed params
   close,   // () => void
   isOpen,  // boolean
   status,  // 'opening' | 'open' | 'closing' | 'hidden' | null
 } = useBottomSheetControl('my-sheet');
+
+// Open with params (required if defined in registry)
+open({ params: { userId: '123' }, scaleBackground: true });
 ```
 
 ### Types
 
 #### `BottomSheetPortalRegistry`
 
-Interface to augment for type-safe portal IDs. See [Type-Safe Portal IDs](#type-safe-portal-ids).
+Interface to augment for type-safe portal IDs and params. See [Type-Safe Portal IDs & Params](#type-safe-portal-ids--params).
 
 #### `BottomSheetPortalId`
 
 Type for portal sheet IDs. If `BottomSheetPortalRegistry` is augmented, this is a union of registered keys. Otherwise, it's `string`.
+
+#### `BottomSheetPortalParams<T>`
+
+Type helper to extract params for a given portal sheet ID. Returns `undefined` if the sheet has no params (`true` in registry), or the param type if defined.
 
 ## Example
 
