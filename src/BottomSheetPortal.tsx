@@ -25,8 +25,9 @@ export function BottomSheetPortal({ id, children }: BottomSheetPortalProps) {
   const ref = getSheetRef(id);
 
   // Clone the child element to add the ref
-  // @ts-ignore - same pattern as useBottomSheetManager
-  const childWithRef = React.cloneElement(children, { ref });
+  const childWithRef = React.cloneElement(children, {
+    ref,
+  } as { ref: typeof ref });
 
   // Wrap with BottomSheetContext so useBottomSheetContext() works inside portal content
   return (

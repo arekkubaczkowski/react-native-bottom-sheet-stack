@@ -35,8 +35,9 @@ export const useBottomSheetManager = () => {
 
     setSheetRef(id, ref);
 
-    // @ts-ignore
-    const contentWithRef = React.cloneElement(content, { ref });
+    const contentWithRef = React.cloneElement(content, {
+      ref,
+    } as { ref: typeof ref });
 
     storeOpen(
       {

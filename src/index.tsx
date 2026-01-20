@@ -2,14 +2,24 @@
 export { BottomSheetManagerProvider } from './BottomSheetManager.provider';
 export { BottomSheetHost } from './BottomSheetHost';
 export { BottomSheetScaleView } from './BottomSheetScaleView';
-export { BottomSheetManaged } from './BottomSheetManaged';
+export { BottomSheetManaged, type BottomSheetRef } from './BottomSheetManaged';
 export { BottomSheetPortal } from './BottomSheetPortal';
 
 // Hooks
 export { useBottomSheetManager } from './useBottomSheetManager';
-export { useBottomSheetControl } from './useBottomSheetControl';
-export { useBottomSheetContext, useBottomSheetState } from './useBottomSheetState';
-export { useBottomSheetStatus } from './useBottomSheetStatus';
+export {
+  useBottomSheetControl,
+  type UseBottomSheetControlReturn,
+} from './useBottomSheetControl';
+export {
+  useBottomSheetContext,
+  useBottomSheetState,
+  type UseBottomSheetContextReturn,
+} from './useBottomSheetState';
+export {
+  useBottomSheetStatus,
+  type UseBottomSheetStatusReturn,
+} from './useBottomSheetStatus';
 
 // Types
 export type { ScaleConfig } from './useScaleAnimation';
