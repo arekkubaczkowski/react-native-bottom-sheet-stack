@@ -54,12 +54,13 @@ function BottomSheetHostComp() {
 
   return (
     <>
-      {queueIds.map((id) => (
+      {queueIds.map((id, index) => (
         <QueueItem
           key={id}
           id={id}
           groupId={groupId}
           scaleConfig={scaleConfig}
+          stackIndex={index}
         />
       ))}
     </>
@@ -70,10 +71,12 @@ function QueueItem({
   id,
   groupId,
   scaleConfig,
+  stackIndex,
 }: {
   id: string;
   groupId: string;
   scaleConfig?: ScaleConfig;
+  stackIndex: number;
 }) {
   const sheet = useBottomSheetStore((state) => state.sheetsById[id]);
 
@@ -83,17 +86,18 @@ function QueueItem({
   const scaleDepth = useScaleDepth(groupId, id);
   const scaleStyle = useScaleAnimatedStyle(scaleDepth, scaleConfig);
 
-  // Cleanup animated index when sheet is unmounted
   useEffect(() => {
     return () => {
       cleanupAnimatedIndex(id);
     };
   }, [id]);
 
+  const backdropZIndex = stackIndex * 2;
+  const contentZIndex = stackIndex * 2 + 1;
+
   return (
     <BottomSheetContext.Provider value={value}>
-      {/* Backdrop - rendered without scaling */}
-      <View style={[StyleSheet.absoluteFillObject, styles.backdropContainer]}>
+      <View style={[StyleSheet.absoluteFillObject, { zIndex: backdropZIndex }]}>
         <BottomSheetBackdrop sheetId={id} />
       </View>
 
@@ -102,7 +106,7 @@ function QueueItem({
         style={[
           StyleSheet.absoluteFillObject,
           styles.container,
-          { width, height },
+          { width, height, zIndex: contentZIndex },
           scaleStyle,
         ]}
       >
@@ -131,11 +135,7 @@ const useQueueIds = () => {
 export const BottomSheetHost = BottomSheetHostComp;
 
 const styles = StyleSheet.create({
-  backdropContainer: {
-    zIndex: 99_999_999,
-  },
   container: {
-    zIndex: 100_000_000,
     pointerEvents: 'box-none',
   },
 });

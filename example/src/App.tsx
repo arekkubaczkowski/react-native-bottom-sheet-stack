@@ -319,6 +319,7 @@ const ContextSheetImperative = forwardRef<BottomSheetMethods>((_, ref) => {
 // This sheet uses the PORTAL API - context will be PRESERVED
 const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetState();
+  const { openBottomSheet } = useBottomSheetManager();
   const user = useUser();
 
   return (
@@ -342,6 +343,50 @@ const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
               Username: {user?.username ?? '❌ undefined'}
             </Text>
             <Text style={[styles.contextValue, { color: '#10b981' }]}>
+              Theme: {user?.theme ?? '❌ undefined'}
+            </Text>
+          </View>
+
+          <View style={{ gap: 12 }}>
+            <Button
+              title="Open Nested Imperative Sheet"
+              onPress={() =>
+                openBottomSheet(<NestedImperativeSheet />, { mode: 'push' })
+              }
+            />
+            <SecondaryButton title="Close" onPress={close} />
+          </View>
+        </View>
+      </BottomSheetView>
+    </BottomSheetManaged>
+  );
+});
+
+// This sheet is opened from portal sheet using imperative API
+const NestedImperativeSheet = forwardRef<BottomSheetMethods>((_, ref) => {
+  const { close } = useBottomSheetState();
+  const user = useUser();
+
+  return (
+    <BottomSheetManaged enableDynamicSizing ref={ref}>
+      <BottomSheetView>
+        <View style={styles.sheet}>
+          <View style={[styles.levelBadge, { backgroundColor: '#f59e0b' }]}>
+            <Text style={styles.levelBadgeText}>Mixed APIs</Text>
+          </View>
+          <Text style={styles.h1}>Nested from Portal</Text>
+          <Text style={styles.text}>
+            This sheet was opened using the imperative API from within a
+            portal-based sheet. Notice that context is lost again - the
+            imperative API always renders in BottomSheetHost.
+          </Text>
+
+          <View style={[styles.contextBox, { borderColor: '#f59e0b' }]}>
+            <Text style={styles.contextTitle}>UserContext Access</Text>
+            <Text style={[styles.contextValue, { color: '#ef4444' }]}>
+              Username: {user?.username ?? '❌ undefined'}
+            </Text>
+            <Text style={[styles.contextValue, { color: '#ef4444' }]}>
               Theme: {user?.theme ?? '❌ undefined'}
             </Text>
           </View>
