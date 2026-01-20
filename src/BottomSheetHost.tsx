@@ -4,6 +4,7 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
 import { shallow } from 'zustand/shallow';
+import { cleanupAnimatedIndex } from './animatedRegistry';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { BottomSheetContext } from './BottomSheet.context';
 import { useBottomSheetStore } from './bottomSheet.store';
@@ -67,6 +68,13 @@ const QueueItem = React.memo(
 
     const scaleDepth = useScaleDepth(groupId, id);
     const scaleStyle = useScaleAnimatedStyle(scaleDepth, scaleConfig);
+
+    // Cleanup animated index when sheet is unmounted
+    useEffect(() => {
+      return () => {
+        cleanupAnimatedIndex(id);
+      };
+    }, [id]);
 
     return (
       <BottomSheetContext.Provider value={value}>

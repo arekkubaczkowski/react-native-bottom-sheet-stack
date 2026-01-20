@@ -5,6 +5,7 @@ import BottomSheetOriginal, {
 import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React, { useCallback, useMemo } from 'react';
 
+import { getAnimatedIndex } from './animatedRegistry';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
 import { useBottomSheetState } from './useBottomSheetState';
 
@@ -26,11 +27,18 @@ export const BottomSheetManaged = React.forwardRef<
       onClose,
       enablePanDownToClose = true,
       backdropComponent = nullBackdrop,
+      animatedIndex: externalAnimatedIndex,
       ...props
     },
     ref
   ) => {
     const { bottomSheetState } = useBottomSheetState();
+
+    // Get or create shared animated index for this sheet
+    const animatedIndex = useMemo(
+      () => externalAnimatedIndex ?? getAnimatedIndex(bottomSheetState.id),
+      [bottomSheetState.id, externalAnimatedIndex]
+    );
 
     const { handleAnimate, handleClose } = useMemo(
       () => createSheetEventHandlers(bottomSheetState.id),
@@ -66,6 +74,7 @@ export const BottomSheetManaged = React.forwardRef<
         animationConfigs={config}
         ref={ref}
         {...props}
+        animatedIndex={animatedIndex}
         onClose={wrappedOnClose}
         onAnimate={wrappedOnAnimate}
         backdropComponent={backdropComponent}

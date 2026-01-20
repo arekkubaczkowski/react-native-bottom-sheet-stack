@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, {
+  Extrapolation,
+  interpolate,
   useAnimatedStyle,
-  useDerivedValue,
-  withTiming,
 } from 'react-native-reanimated';
+import { getAnimatedIndex } from './animatedRegistry';
 import { useBottomSheetStore } from './bottomSheet.store';
 
 interface BottomSheetBackdropProps {
@@ -17,6 +18,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 /**
  * Custom backdrop component rendered separately from the scaled sheet content.
  * This ensures the backdrop doesn't scale with the sheet.
+ * Opacity is interpolated from the bottom sheet's animatedIndex for smooth animation.
  */
 export const BottomSheetBackdrop = React.memo(
   ({ sheetId, onPress }: BottomSheetBackdropProps) => {
@@ -24,16 +26,21 @@ export const BottomSheetBackdrop = React.memo(
       (state) => state.sheetsById[sheetId]?.status
     );
 
+    const animatedIndex = useMemo(() => getAnimatedIndex(sheetId), [sheetId]);
+
     const isVisible = status === 'opening' || status === 'open';
 
-    const opacity = useDerivedValue(() => {
-      return withTiming(isVisible ? 1 : 0, { duration: 300 });
-    });
-
     const animatedStyle = useAnimatedStyle(() => {
-      return {
-        opacity: opacity.value,
-      };
+      // Interpolate opacity based on animatedIndex
+      // -1 = closed, 0+ = open at snap point
+      const opacity = interpolate(
+        animatedIndex.value,
+        [-1, 0],
+        [0, 1],
+        Extrapolation.CLAMP
+      );
+
+      return { opacity };
     });
 
     return (
