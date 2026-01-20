@@ -7,7 +7,7 @@ import React from 'react';
 
 import { getAnimatedIndex } from './animatedRegistry';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
-import { useBottomSheetState } from './useBottomSheetState';
+import { useBottomSheetContext } from './useBottomSheetState';
 
 export interface BottomSheetRef extends BottomSheetMethods {}
 
@@ -32,7 +32,7 @@ export const BottomSheetManaged = React.forwardRef<
     },
     ref
   ) => {
-    const { bottomSheetState } = useBottomSheetState();
+    const { bottomSheetState } = useBottomSheetContext();
 
     // Get or create shared animated index for this sheet
     const animatedIndex =

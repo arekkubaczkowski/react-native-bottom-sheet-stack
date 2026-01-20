@@ -28,6 +28,7 @@ interface BottomSheetStoreActions {
   startClosing(id: string): void;
   finishClosing(id: string): void;
   updateParams(id: string, params: Record<string, unknown> | undefined): void;
+  clearGroup(groupId: string): void;
   clearAll(): void;
 }
 
@@ -141,6 +142,29 @@ export const useBottomSheetStore = create(
             ...state.sheetsById,
             [id]: { ...sheet, params },
           },
+        };
+      }),
+
+    clearGroup: (groupId) =>
+      set((state) => {
+        const idsToRemove = new Set(
+          state.stackOrder.filter(
+            (id) => state.sheetsById[id]?.groupId === groupId
+          )
+        );
+
+        if (idsToRemove.size === 0) {
+          return state;
+        }
+
+        const newSheetsById = { ...state.sheetsById };
+        idsToRemove.forEach((id) => {
+          delete newSheetsById[id];
+        });
+
+        return {
+          sheetsById: newSheetsById,
+          stackOrder: state.stackOrder.filter((id) => !idsToRemove.has(id)),
         };
       }),
 

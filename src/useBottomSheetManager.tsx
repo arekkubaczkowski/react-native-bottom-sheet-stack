@@ -2,17 +2,17 @@ import React from 'react';
 
 import { useBottomSheetStore, type OpenMode } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
-import { sheetRefs } from './refsMap';
+import { setSheetRef } from './refsMap';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { shallow } from 'zustand/shallow';
 
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
 
-  const { storeOpen, startClosing, storeClearAll } = useBottomSheetStore(
+  const { storeOpen, startClosing, storeClearGroup } = useBottomSheetStore(
     (store) => ({
       storeOpen: store.open,
-      storeClearAll: store.clearAll,
+      storeClearGroup: store.clearGroup,
       startClosing: store.startClosing,
     }),
     shallow
@@ -33,10 +33,11 @@ export const useBottomSheetManager = () => {
     const id = options.id || Math.random().toString(36);
     const ref = React.createRef<BottomSheetMethods>();
 
-    sheetRefs[id] = ref;
+    setSheetRef(id, ref);
 
-    // @ts-ignore
-    const contentWithRef = React.cloneElement(content, { ref });
+    const contentWithRef = React.cloneElement(content, {
+      ref,
+    } as { ref: typeof ref });
 
     storeOpen(
       {
@@ -55,13 +56,18 @@ export const useBottomSheetManager = () => {
     startClosing(id);
   };
 
-  const clearAll = () => {
-    storeClearAll();
+  const clear = () => {
+    const groupId = bottomSheetManagerContext?.groupId || 'default';
+    storeClearGroup(groupId);
   };
 
   return {
-    clearAll,
+    open: openBottomSheet,
     close,
+    clear,
+    /** @deprecated Use `open` instead */
     openBottomSheet,
+    /** @deprecated Use `clear` instead */
+    clearAll: clear,
   };
 };
