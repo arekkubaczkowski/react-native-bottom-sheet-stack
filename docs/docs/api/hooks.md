@@ -35,6 +35,8 @@ const { open, close, clear } = useBottomSheetManager();
 
 ```tsx
 open(<MySheet />, {
+  id: 'my-sheet-id',      // Custom ID (optional)
+  groupId: 'my-group',    // Custom group (optional)
   mode: 'push',           // 'push' | 'switch' | 'replace'
   scaleBackground: true,  // Enable scale animation
 });
@@ -42,6 +44,8 @@ open(<MySheet />, {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `id` | `string` | random | Custom sheet ID |
+| `groupId` | `string` | context or `'default'` | Group ID for the sheet |
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
 
@@ -64,7 +68,7 @@ This hook can **only** be used inside a `BottomSheetManaged` component. It reads
 
 ```tsx
 // Basic usage
-const { bottomSheetState, close } = useBottomSheetContext();
+const { id, params, close } = useBottomSheetContext();
 
 // With typed params (for portal sheets)
 const { params, close } = useBottomSheetContext<'my-sheet'>();
@@ -84,7 +88,7 @@ console.log(params.userId); // type-safe: string
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `bottomSheetState` | `BottomSheetState` | Current sheet's state object |
+| `id` | `string` | Current sheet's ID |
 | `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided |
 | `close` | `() => void` | Closes this sheet |
 

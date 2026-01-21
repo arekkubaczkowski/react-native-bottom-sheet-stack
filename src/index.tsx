@@ -22,7 +22,7 @@ export {
 } from './useBottomSheetStatus';
 
 // Types
-export type { ScaleConfig } from './useScaleAnimation';
+export type { ScaleConfig, ScaleAnimationConfig } from './useScaleAnimation';
 export type {
   BottomSheetStatus,
   OpenMode,

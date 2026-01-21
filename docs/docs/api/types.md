@@ -77,11 +77,39 @@ Configuration for scale animation.
 
 ```tsx
 interface ScaleConfig {
-  scale?: number;        // Scale factor (default: 0.92)
-  translateY?: number;   // Y translation in pixels (default: 10)
-  borderRadius?: number; // Border radius when scaled (default: 12)
-  duration?: number;     // Animation duration in ms (default: 300)
+  scale?: number;                  // Scale factor (default: 0.92)
+  translateY?: number;             // Y translation in pixels (default: 10)
+  borderRadius?: number;           // Border radius when scaled (default: 12)
+  animation?: ScaleAnimationConfig; // Animation config (default: timing 300ms)
 }
+```
+
+---
+
+### ScaleAnimationConfig
+
+Animation configuration for scale effect. Supports both timing and spring animations from Reanimated.
+
+```tsx
+type ScaleAnimationConfig =
+  | { type: 'timing'; config?: WithTimingConfig }
+  | { type: 'spring'; config?: WithSpringConfig };
+```
+
+**Examples:**
+
+```tsx
+// Timing animation (default)
+const timingConfig: ScaleAnimationConfig = {
+  type: 'timing',
+  config: { duration: 300, easing: Easing.bezier(0.25, 0.1, 0.25, 1) },
+};
+
+// Spring animation
+const springConfig: ScaleAnimationConfig = {
+  type: 'spring',
+  config: { damping: 15, stiffness: 150 },
+};
 ```
 
 ---
@@ -166,7 +194,7 @@ Return type of `useBottomSheetContext` hook.
 
 ```tsx
 interface UseBottomSheetContextReturn<TParams> {
-  bottomSheetState: BottomSheetState;
+  id: string;
   params: TParams;
   close: () => void;
 }

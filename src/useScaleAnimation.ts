@@ -3,12 +3,19 @@ import {
   useAnimatedStyle,
   useDerivedValue,
   withTiming,
+  withSpring,
+  type WithTimingConfig,
+  type WithSpringConfig,
 } from 'react-native-reanimated';
 import {
   useBottomSheetStore,
   type BottomSheetStore,
 } from './bottomSheet.store';
 import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+
+export type ScaleAnimationConfig =
+  | { type: 'timing'; config?: WithTimingConfig }
+  | { type: 'spring'; config?: WithSpringConfig };
 
 export interface ScaleConfig {
   /** Scale factor when sheet is open (default: 0.92) */
@@ -17,16 +24,21 @@ export interface ScaleConfig {
   translateY?: number;
   /** Border radius when sheet is open (default: 12) */
   borderRadius?: number;
-  /** Animation duration in ms (default: 300) */
-  duration?: number;
+  /** Animation config - timing or spring (default: timing with 300ms duration) */
+  animation?: ScaleAnimationConfig;
 }
 
-const DEFAULT_CONFIG: Required<ScaleConfig> = {
+const DEFAULT_ANIMATION: ScaleAnimationConfig = {
+  type: 'timing',
+  config: { duration: 300 },
+};
+
+const DEFAULT_CONFIG = {
   scale: 0.92,
   translateY: 10,
   borderRadius: 12,
-  duration: 300,
-};
+  animation: DEFAULT_ANIMATION,
+} satisfies Required<ScaleConfig>;
 
 /**
  * Returns the number of sheets with scaleBackground above a given element.
@@ -82,11 +94,14 @@ export function useScaleAnimatedStyle({ id }: { id?: string } = {}) {
     scale = DEFAULT_CONFIG.scale,
     translateY = DEFAULT_CONFIG.translateY,
     borderRadius = DEFAULT_CONFIG.borderRadius,
-    duration = DEFAULT_CONFIG.duration,
+    animation = DEFAULT_CONFIG.animation,
   } = scaleConfig ?? {};
 
   const progress = useDerivedValue(() => {
-    return withTiming(scaleDepth, { duration });
+    if (animation.type === 'spring') {
+      return withSpring(scaleDepth, animation.config);
+    }
+    return withTiming(scaleDepth, animation.config);
   });
 
   return useAnimatedStyle(() => {
