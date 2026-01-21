@@ -4,6 +4,7 @@ export { BottomSheetHost } from './BottomSheetHost';
 export { BottomSheetScaleView } from './BottomSheetScaleView';
 export { BottomSheetManaged, type BottomSheetRef } from './BottomSheetManaged';
 export { BottomSheetPortal } from './BottomSheetPortal';
+export { BottomSheetPersistent } from './BottomSheetPersistent';
 
 // Hooks
 export { useBottomSheetManager } from './useBottomSheetManager';

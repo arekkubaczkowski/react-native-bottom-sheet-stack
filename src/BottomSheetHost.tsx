@@ -27,7 +27,7 @@ function PortalHostWrapper({
 }
 
 function BottomSheetHostComp() {
-  const queueIds = useQueueIds();
+  const { activeIds, hiddenKeepMountedIds } = useAllSheetIds();
   const clearGroup = useBottomSheetStore((store) => store.clearGroup);
 
   const { groupId } = useBottomSheetManagerContext();
@@ -47,18 +47,30 @@ function BottomSheetHostComp() {
 
   return (
     <>
-      {queueIds.map((id, index) => (
-        <QueueItem key={id} id={id} stackIndex={index} />
+      {hiddenKeepMountedIds.map((id) => (
+        <QueueItem key={id} id={id} stackIndex={-1} isActive={false} />
+      ))}
+      {activeIds.map((id, index) => (
+        <QueueItem key={id} id={id} stackIndex={index} isActive={true} />
       ))}
     </>
   );
 }
 
-function QueueItem({ id, stackIndex }: { id: string; stackIndex: number }) {
-  const { content, usePortal, startClosing } = useBottomSheetStore(
+function QueueItem({
+  id,
+  stackIndex,
+  isActive,
+}: {
+  id: string;
+  stackIndex: number;
+  isActive: boolean;
+}) {
+  const { content, usePortal, startClosing, keepMounted } = useBottomSheetStore(
     (state) => ({
       content: state.sheetsById[id]?.content,
       usePortal: state.sheetsById[id]?.usePortal,
+      keepMounted: state.sheetsById[id]?.keepMounted,
       startClosing: state.startClosing,
     }),
     shallow
@@ -66,27 +78,34 @@ function QueueItem({ id, stackIndex }: { id: string; stackIndex: number }) {
 
   const { width, height } = useSafeAreaFrame();
   const value = { id };
-
   const scaleStyle = useScaleAnimatedStyle({ id });
 
   useEffect(() => {
     return () => {
-      cleanupSheetRef(id);
-      cleanupAnimatedIndex(id);
+      if (!keepMounted) {
+        cleanupSheetRef(id);
+        cleanupAnimatedIndex(id);
+      }
     };
-  }, [id]);
+  }, [id, keepMounted]);
 
   const backdropZIndex = stackIndex * 2;
   const contentZIndex = stackIndex * 2 + 1;
 
   return (
     <BottomSheetContext.Provider value={value}>
-      <View style={[StyleSheet.absoluteFillObject, { zIndex: backdropZIndex }]}>
-        <BottomSheetBackdrop sheetId={id} onPress={() => startClosing(id)} />
-      </View>
+      {isActive && (
+        <View
+          style={[StyleSheet.absoluteFillObject, { zIndex: backdropZIndex }]}
+          pointerEvents="box-none"
+        >
+          <BottomSheetBackdrop sheetId={id} onPress={() => startClosing(id)} />
+        </View>
+      )}
 
       {/* Sheet content - rendered with scaling */}
       <Animated.View
+        pointerEvents="box-none"
         style={[
           StyleSheet.absoluteFillObject,
           styles.container,
@@ -104,22 +123,36 @@ function QueueItem({ id, stackIndex }: { id: string; stackIndex: number }) {
   );
 }
 
-const useQueueIds = () => {
+const useAllSheetIds = () => {
   const { groupId } = useBottomSheetManagerContext();
 
-  return useBottomSheetStore(
-    (state) =>
-      state.stackOrder.filter(
-        (sheetId) => state.sheetsById[sheetId]?.groupId === groupId
-      ),
-    shallow
-  );
+  return useBottomSheetStore((state) => {
+    // Active sheets from stackOrder
+    const activeIds = state.stackOrder.filter(
+      (sheetId) => state.sheetsById[sheetId]?.groupId === groupId
+    );
+
+    // Hidden keepMounted sheets (in sheetsById but not in stackOrder)
+    const stackOrderSet = new Set(state.stackOrder);
+    const hiddenKeepMountedIds = Object.keys(state.sheetsById).filter(
+      (sheetId) => {
+        const sheet = state.sheetsById[sheetId];
+        return (
+          sheet &&
+          sheet.groupId === groupId &&
+          sheet.keepMounted &&
+          sheet.status === 'hidden' &&
+          !stackOrderSet.has(sheetId)
+        );
+      }
+    );
+
+    return { activeIds, hiddenKeepMountedIds };
+  }, shallow);
 };
 
 export const BottomSheetHost = BottomSheetHostComp;
 
 const styles = StyleSheet.create({
-  container: {
-    pointerEvents: 'box-none',
-  },
+  container: {},
 });

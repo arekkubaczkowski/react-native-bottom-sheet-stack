@@ -12,8 +12,6 @@ interface BottomSheetBackdropProps {
   onPress?: () => void;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 /**
  * Custom backdrop component rendered separately from the scaled sheet content.
  * This ensures the backdrop doesn't scale with the sheet.
@@ -28,7 +26,8 @@ export function BottomSheetBackdrop({
   );
 
   const animatedIndex = getAnimatedIndex(sheetId);
-  const isVisible = status === 'opening' || status === 'open';
+  // Only allow interaction when fully open - prevents animation conflicts
+  const isInteractive = status === 'open';
 
   const animatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
@@ -42,17 +41,23 @@ export function BottomSheetBackdrop({
   });
 
   return (
-    <AnimatedPressable
-      style={[styles.backdrop, animatedStyle]}
-      onPress={onPress}
-      pointerEvents={isVisible ? 'auto' : 'none'}
-    />
+    <Pressable
+      style={StyleSheet.absoluteFillObject}
+      onPress={() => {
+        if (isInteractive) {
+          onPress?.();
+        }
+      }}
+    >
+      <Animated.View
+        style={[StyleSheet.absoluteFillObject, animatedStyle, styles.backdrop]}
+      />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
 });

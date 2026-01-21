@@ -1,6 +1,7 @@
 import {
   BottomSheetHost,
   BottomSheetManagerProvider,
+  BottomSheetPersistent,
   BottomSheetScaleView,
 } from 'react-native-bottom-sheet-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -8,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { UserProvider } from './context/UserContext';
 import { HomeScreen } from './screens';
+import { ScannerSheet } from './sheets';
 import { sharedStyles } from './styles/theme';
 
 export default function App() {
@@ -24,6 +26,10 @@ export default function App() {
             </UserProvider>
           </BottomSheetScaleView>
           <BottomSheetHost />
+          {/* Persistent sheet - always mounted, opens instantly */}
+          <BottomSheetPersistent id="scanner-sheet">
+            <ScannerSheet />
+          </BottomSheetPersistent>
         </BottomSheetManagerProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>

@@ -13,6 +13,7 @@ export interface BottomSheetState {
   scaleBackground?: boolean;
   usePortal?: boolean;
   params?: Record<string, unknown>;
+  keepMounted?: boolean;
 }
 
 type TriggerState = Omit<BottomSheetState, 'status'>;
@@ -30,9 +31,44 @@ interface BottomSheetStoreActions {
   updateParams(id: string, params: Record<string, unknown> | undefined): void;
   clearGroup(groupId: string): void;
   clearAll(): void;
+  mount(sheet: Omit<BottomSheetState, 'status'>): void;
+  unmount(id: string): void;
 }
 
 export type BottomSheetStore = BottomSheetStoreState & BottomSheetStoreActions;
+
+// --- Pure helper functions (outside store for testability) ---
+
+const MODE_STATUS_MAP: Record<OpenMode, BottomSheetStatus | null> = {
+  push: null,
+  switch: 'hidden',
+  replace: 'closing',
+};
+
+function applyModeToTopSheet(
+  sheetsById: Record<string, BottomSheetState>,
+  stackOrder: string[],
+  mode: OpenMode
+): void {
+  const targetStatus = MODE_STATUS_MAP[mode];
+  if (!targetStatus) return;
+
+  const topId = stackOrder[stackOrder.length - 1];
+  if (!topId) return;
+
+  const topSheet = sheetsById[topId];
+  if (topSheet) {
+    sheetsById[topId] = { ...topSheet, status: targetStatus };
+  }
+}
+
+function isActivatableKeepMounted(
+  sheet: BottomSheetState | undefined
+): sheet is BottomSheetState {
+  return Boolean(sheet?.keepMounted && sheet.status === 'hidden');
+}
+
+// --- Store ---
 
 export const useBottomSheetStore = create(
   subscribeWithSelector<BottomSheetStore>((set) => ({
@@ -41,28 +77,27 @@ export const useBottomSheetStore = create(
 
     open: (sheet, mode = 'push') =>
       set((state) => {
-        if (state.sheetsById[sheet.id]) {
+        const existingSheet = state.sheetsById[sheet.id];
+
+        // Sheet already active - no-op
+        if (existingSheet && !isActivatableKeepMounted(existingSheet)) {
           return state;
         }
 
         const newSheetsById = { ...state.sheetsById };
-        const topId = state.stackOrder[state.stackOrder.length - 1];
+        applyModeToTopSheet(newSheetsById, state.stackOrder, mode);
 
-        if (mode === 'switch' && topId && newSheetsById[topId]) {
-          newSheetsById[topId] = {
-            ...newSheetsById[topId],
-            status: 'hidden',
-          };
-        }
+        const newSheet: BottomSheetState = existingSheet
+          ? {
+              ...existingSheet,
+              status: 'opening',
+              scaleBackground:
+                sheet.scaleBackground ?? existingSheet.scaleBackground,
+              params: sheet.params ?? existingSheet.params,
+            }
+          : { ...sheet, status: 'opening' };
 
-        if (mode === 'replace' && topId && newSheetsById[topId]) {
-          newSheetsById[topId] = {
-            ...newSheetsById[topId],
-            status: 'closing',
-          };
-        }
-
-        newSheetsById[sheet.id] = { ...sheet, status: 'opening' };
+        newSheetsById[sheet.id] = newSheet;
 
         return {
           sheetsById: newSheetsById,
@@ -107,12 +142,19 @@ export const useBottomSheetStore = create(
 
     finishClosing: (id) =>
       set((state) => {
-        if (!state.sheetsById[id]) {
+        const sheet = state.sheetsById[id];
+        if (!sheet) {
           return state;
         }
 
         const newSheetsById = { ...state.sheetsById };
-        delete newSheetsById[id];
+
+        // For keepMounted sheets, set status to 'hidden' instead of deleting
+        if (sheet.keepMounted) {
+          newSheetsById[id] = { ...sheet, status: 'hidden' };
+        } else {
+          delete newSheetsById[id];
+        }
 
         const newStackOrder = state.stackOrder.filter(
           (sheetId) => sheetId !== id
@@ -147,16 +189,16 @@ export const useBottomSheetStore = create(
 
     clearGroup: (groupId) =>
       set((state) => {
-        const idsToRemove = new Set(
-          state.stackOrder.filter(
-            (id) => state.sheetsById[id]?.groupId === groupId
-          )
+        // Find all sheets in this group (both in stackOrder and keepMounted hidden)
+        const idsInGroup = Object.keys(state.sheetsById).filter(
+          (id) => state.sheetsById[id]?.groupId === groupId
         );
 
-        if (idsToRemove.size === 0) {
+        if (idsInGroup.length === 0) {
           return state;
         }
 
+        const idsToRemove = new Set(idsInGroup);
         const newSheetsById = { ...state.sheetsById };
         idsToRemove.forEach((id) => {
           delete newSheetsById[id];
@@ -169,5 +211,41 @@ export const useBottomSheetStore = create(
       }),
 
     clearAll: () => set(() => ({ sheetsById: {}, stackOrder: [] })),
+
+    mount: (sheet) =>
+      set((state) => {
+        // Don't mount if already exists
+        if (state.sheetsById[sheet.id]) {
+          return state;
+        }
+
+        return {
+          sheetsById: {
+            ...state.sheetsById,
+            [sheet.id]: { ...sheet, status: 'hidden' },
+          },
+        };
+      }),
+
+    unmount: (id) =>
+      set((state) => {
+        const sheet = state.sheetsById[id];
+        if (!sheet) {
+          return state;
+        }
+
+        const newSheetsById = { ...state.sheetsById };
+        delete newSheetsById[id];
+
+        // Also remove from stackOrder if present
+        const newStackOrder = state.stackOrder.filter(
+          (sheetId) => sheetId !== id
+        );
+
+        return {
+          sheetsById: newSheetsById,
+          stackOrder: newStackOrder,
+        };
+      }),
   }))
 );

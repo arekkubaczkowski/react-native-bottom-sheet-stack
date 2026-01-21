@@ -6,6 +6,7 @@ import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import React from 'react';
 
 import { getAnimatedIndex } from './animatedRegistry';
+import { useBottomSheetStore } from './bottomSheet.store';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
 import { useBottomSheetContext } from './useBottomSheetContext';
 
@@ -23,18 +24,25 @@ export const BottomSheetManaged = React.forwardRef<
     {
       children,
       onAnimate,
+      onChange,
       onClose,
       enablePanDownToClose = true,
       backdropComponent = nullBackdrop,
       animatedIndex: externalAnimatedIndex,
+      index: externalIndex,
       ...props
     },
     ref
   ) => {
     const { id } = useBottomSheetContext();
 
+    const status = useBottomSheetStore((s) => s.sheetsById[id]?.status);
+    const shouldBeClosed = status === 'hidden' || status === 'closing';
+    const index = externalIndex ?? (shouldBeClosed ? -1 : 0);
+
     const animatedIndex = externalAnimatedIndex ?? getAnimatedIndex(id);
-    const { handleAnimate, handleClose } = createSheetEventHandlers(id);
+    const { handleAnimate, handleChange, handleClose } =
+      createSheetEventHandlers(id);
 
     const wrappedOnAnimate: BottomSheetProps['onAnimate'] = (
       fromIndex: number,
@@ -44,6 +52,15 @@ export const BottomSheetManaged = React.forwardRef<
     ) => {
       handleAnimate(fromIndex, toIndex);
       onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
+    };
+
+    const wrappedOnChange: BottomSheetProps['onChange'] = (
+      index: number,
+      position: number,
+      type
+    ) => {
+      handleChange(index);
+      onChange?.(index, position, type);
     };
 
     const wrappedOnClose = () => {
@@ -62,7 +79,9 @@ export const BottomSheetManaged = React.forwardRef<
         animationConfigs={config}
         ref={ref}
         {...props}
+        index={index}
         animatedIndex={animatedIndex}
+        onChange={wrappedOnChange}
         onClose={wrappedOnClose}
         onAnimate={wrappedOnAnimate}
         backdropComponent={backdropComponent}

@@ -8,7 +8,7 @@ import type {
   BottomSheetPortalParams,
   HasParams,
 } from './portal.types';
-import { setSheetRef } from './refsMap';
+import { getSheetRef, setSheetRef } from './refsMap';
 
 interface BaseOpenOptions<TParams> {
   mode?: OpenMode;
@@ -48,8 +48,12 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
   const open = (options?: OpenOptions<T>) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';
 
-    const ref = React.createRef<BottomSheetMethods>();
-    setSheetRef(id, ref);
+    // Only create ref if it doesn't exist (keepMounted sheets already have one)
+    const existingRef = getSheetRef(id);
+    if (!existingRef) {
+      const ref = React.createRef<BottomSheetMethods>();
+      setSheetRef(id, ref);
+    }
 
     storeOpen(
       {
