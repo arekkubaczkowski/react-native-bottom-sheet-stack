@@ -1,12 +1,15 @@
-import React, { cloneElement, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Portal } from 'react-native-teleport';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 
 import { BottomSheetContext } from './BottomSheet.context';
+import { BottomSheetRefContext } from './BottomSheetRef.context';
 import { useBottomSheetStore } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import type { BottomSheetPortalId } from './portal.types';
 import { setSheetRef, cleanupSheetRef } from './refsMap';
+import { cleanupAnimatedIndex } from './animatedRegistry';
+import { useEvent } from './useEvent';
 
 interface BottomSheetPersistentProps {
   id: BottomSheetPortalId;
@@ -26,44 +29,39 @@ export function BottomSheetPersistent({
   );
 
   const sheetRef = useRef<BottomSheetMethods>(null);
-  const [childWithRef, setChildWithRef] = useState<React.ReactElement | null>(
-    null
-  );
+  const groupId = bottomSheetManagerContext?.groupId || 'default';
 
-  // Clone element with ref in useEffect (not during render)
-  useEffect(() => {
-    setChildWithRef(
-      cloneElement(children, { ref: sheetRef } as { ref: typeof sheetRef })
-    );
-  }, [children]);
-
-  // Mount sheet and sync ref to global refsMap
-  useEffect(() => {
-    const groupId = bottomSheetManagerContext?.groupId || 'default';
-
+  const mountSheet = useEvent(() => {
     setSheetRef(id, sheetRef);
-    mount({
-      id,
-      groupId,
-      content: null,
-      usePortal: true,
-      keepMounted: true,
-    });
+    mount({ id, groupId, content: null, usePortal: true, keepMounted: true });
+  });
 
+  useLayoutEffect(() => {
+    mountSheet();
     return () => {
       unmount(id);
       cleanupSheetRef(id);
+      cleanupAnimatedIndex(id);
     };
-  }, [id, bottomSheetManagerContext?.groupId, mount, unmount]);
+  }, [id, groupId, mount, unmount, mountSheet]);
 
-  if (!sheetExists || !childWithRef) {
+  // Re-mount if sheet was removed externally (e.g., by clearGroup during fast refresh)
+  useEffect(() => {
+    if (!sheetExists) {
+      mountSheet();
+    }
+  }, [sheetExists, id, groupId, mount, mountSheet]);
+
+  if (!sheetExists) {
     return null;
   }
 
   return (
     <Portal hostName={`bottomsheet-${id}`}>
       <BottomSheetContext.Provider value={{ id }}>
-        {childWithRef}
+        <BottomSheetRefContext.Provider value={sheetRef}>
+          {children}
+        </BottomSheetRefContext.Provider>
       </BottomSheetContext.Provider>
     </Portal>
   );

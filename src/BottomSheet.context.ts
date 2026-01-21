@@ -9,7 +9,5 @@ export const BottomSheetContext = createContext<
 >(undefined);
 
 export function useMaybeBottomSheetContext() {
-  const context = useContext(BottomSheetContext);
-
-  return context;
+  return useContext(BottomSheetContext);
 }

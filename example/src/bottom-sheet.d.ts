@@ -7,6 +7,9 @@ declare module 'react-native-bottom-sheet-stack' {
     };
     'portal-mode-sheet-a': true;
     'portal-mode-sheet-b': true;
-    'scanner-sheet': true;
+    'scanner-sheet': {
+      source: 'home' | 'navigation';
+      title?: string;
+    };
   }
 }

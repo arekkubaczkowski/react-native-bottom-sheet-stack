@@ -66,7 +66,8 @@ export function useScaleDepth(groupId: string, sheetId?: string): number {
         sheet &&
         sheet.groupId === groupId &&
         sheet.scaleBackground &&
-        sheet.status !== 'closing'
+        sheet.status !== 'closing' &&
+        sheet.status !== 'hidden'
       ) {
         depth++;
         if (!sheetId) {

@@ -8,6 +8,7 @@ import React from 'react';
 import { getAnimatedIndex } from './animatedRegistry';
 import { useBottomSheetStore } from './bottomSheet.store';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
+import { useBottomSheetRefContext } from './BottomSheetRef.context';
 import { useBottomSheetContext } from './useBottomSheetContext';
 
 export interface BottomSheetRef extends BottomSheetMethods {}
@@ -32,9 +33,11 @@ export const BottomSheetManaged = React.forwardRef<
       index: externalIndex,
       ...props
     },
-    ref
+    forwardedRef
   ) => {
     const { id } = useBottomSheetContext();
+    const contextRef = useBottomSheetRefContext();
+    const ref = contextRef ?? forwardedRef;
 
     const status = useBottomSheetStore((s) => s.sheetsById[id]?.status);
     const shouldBeClosed = status === 'hidden' || status === 'closing';

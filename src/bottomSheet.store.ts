@@ -8,7 +8,7 @@ export type OpenMode = 'push' | 'switch' | 'replace';
 export interface BottomSheetState {
   groupId: string;
   id: string;
-  content: ReactNode;
+  content?: ReactNode;
   status: BottomSheetStatus;
   scaleBackground?: boolean;
   usePortal?: boolean;

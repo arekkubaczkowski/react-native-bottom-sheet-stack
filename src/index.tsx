@@ -34,3 +34,7 @@ export type {
   BottomSheetPortalId,
   BottomSheetPortalParams,
 } from './portal.types';
+
+// Testing utilities (internal use)
+export { __resetSheetRefs } from './refsMap';
+export { __resetAnimatedIndexes } from './animatedRegistry';

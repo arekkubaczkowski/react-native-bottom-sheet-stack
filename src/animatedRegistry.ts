@@ -20,3 +20,11 @@ export function getAnimatedIndex(sheetId: string): SharedValue<number> {
 export function cleanupAnimatedIndex(sheetId: string): void {
   animatedIndexRegistry.delete(sheetId);
 }
+
+/**
+ * Reset all animated indexes. Useful for testing.
+ * @internal
+ */
+export function __resetAnimatedIndexes(): void {
+  animatedIndexRegistry.clear();
+}

@@ -118,7 +118,12 @@ export function HomeScreen() {
             title="Persistent Scanner"
             description="Pre-mounted sheet with keepMounted - opens instantly"
             color={colors.cyan}
-            onPress={() => scannerControl.open({ scaleBackground: true })}
+            onPress={() =>
+              scannerControl.open({
+                scaleBackground: true,
+                params: { source: 'home', title: 'Scanner from Home' },
+              })
+            }
           />
         </View>
 

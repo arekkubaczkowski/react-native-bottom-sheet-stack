@@ -11,10 +11,14 @@ import { ScannerNestedSheet1 } from './ScannerNestedSheets';
 import { colors, sharedStyles } from '../styles/theme';
 
 export const ScannerSheet = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetContext();
+  const { close, params } = useBottomSheetContext<'scanner-sheet'>();
   const { openBottomSheet } = useBottomSheetManager();
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
+
+  const title = params?.title ?? 'QR Scanner';
+  const sourceLabel =
+    params?.source === 'navigation' ? 'From Navigation' : 'From Home';
 
   const handleStartScan = useCallback(() => {
     setIsScanning(true);
@@ -36,8 +40,16 @@ export const ScannerSheet = forwardRef<BottomSheetMethods>((_, ref) => {
 
   return (
     <Sheet ref={ref} enableDynamicSizing>
-      <Badge label="Persistent Sheet" color={colors.cyan} />
-      <Text style={sharedStyles.h1}>QR Scanner</Text>
+      <View style={styles.badgeRow}>
+        <Badge label="Persistent" color={colors.cyan} />
+        <Badge
+          label={sourceLabel}
+          color={
+            params?.source === 'navigation' ? colors.purple : colors.primary
+          }
+        />
+      </View>
+      <Text style={sharedStyles.h1}>{title}</Text>
       <Text style={sharedStyles.text}>
         This sheet is always mounted (keepMounted). It opens instantly without
         mount delay and preserves state between open/close cycles.
@@ -113,6 +125,10 @@ export const ScannerSheet = forwardRef<BottomSheetMethods>((_, ref) => {
 ScannerSheet.displayName = 'ScannerSheet';
 
 const styles = StyleSheet.create({
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   scannerViewport: {
     height: 180,
     backgroundColor: colors.background,
