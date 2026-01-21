@@ -2,7 +2,7 @@
 
 A stack manager for [@gorhom/bottom-sheet](https://github.com/gorhom/react-native-bottom-sheet) with navigation modes, iOS-style scale animations, and React context preservation.
 
-## Documentation
+## 📚 Documentation
 
 **[View Full Documentation](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/)**
 
@@ -10,16 +10,18 @@ A stack manager for [@gorhom/bottom-sheet](https://github.com/gorhom/react-nativ
 - [Navigation Modes](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/navigation-modes)
 - [Scale Animation](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/scale-animation)
 - [Portal API (Context Preservation)](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/context-preservation)
+- [Persistent Sheets](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/persistent-sheets)
 - [Type-Safe IDs & Params](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/type-safe-ids)
 - [API Reference](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/api/components)
 
-## Features
+## ✨ Features
 
-- **Stack Navigation** - `push`, `switch`, and `replace` modes for managing multiple sheets
-- **Scale Animation** - iOS-style background scaling effect when sheets are stacked
-- **Context Preservation** - Portal-based API that preserves React context in bottom sheets
-- **Type-Safe** - Full TypeScript support with type-safe portal IDs and params
-- **Group Support** - Isolated stacks for different parts of your app
+- 📚 **Stack Navigation** - `push`, `switch`, and `replace` modes for managing multiple sheets
+- 🎭 **Scale Animation** - iOS-style background scaling effect when sheets are stacked
+- 🔗 **Context Preservation** - Portal-based API that preserves React context in bottom sheets
+- ⚡ **Persistent Sheets** - Pre-mounted sheets that open instantly and preserve state
+- 🔒 **Type-Safe** - Full TypeScript support with type-safe portal IDs and params
+- 📦 **Group Support** - Isolated stacks for different parts of your app
 
 ## Installation
 

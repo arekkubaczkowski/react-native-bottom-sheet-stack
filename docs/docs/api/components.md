@@ -98,3 +98,52 @@ Declares a portal-based bottom sheet that preserves React context.
 | `children` | `ReactElement` | Yes | The bottom sheet component to render |
 
 See [Type-Safe Portal IDs](/type-safe-ids) for type-safe ID configuration.
+
+---
+
+## BottomSheetPersistent
+
+Declares a persistent bottom sheet that stays mounted even when closed. Opens instantly and preserves internal state between open/close cycles.
+
+```tsx
+<BottomSheetPersistent id="scanner">
+  <ScannerSheet />
+</BottomSheetPersistent>
+```
+
+### Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | `BottomSheetPortalId` | Yes | Unique identifier for this persistent sheet |
+| `children` | `ReactElement` | Yes | The bottom sheet component to render |
+
+### Placement
+
+Can be placed anywhere inside `BottomSheetManagerProvider`. Must stay mounted to be accessible.
+
+```tsx
+// At app root - always available
+<BottomSheetManagerProvider id="main">
+  <BottomSheetScaleView>
+    <App />
+  </BottomSheetScaleView>
+  <BottomSheetHost />
+  <BottomSheetPersistent id="scanner">
+    <ScannerSheet />
+  </BottomSheetPersistent>
+</BottomSheetManagerProvider>
+
+// Or on a specific screen
+function HomeScreen() {
+  return (
+    <View>
+      <BottomSheetPersistent id="quick-actions">
+        <QuickActionsSheet />
+      </BottomSheetPersistent>
+    </View>
+  );
+}
+```
+
+See [Persistent Sheets](/persistent-sheets) for detailed usage.
