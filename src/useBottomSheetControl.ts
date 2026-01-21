@@ -48,7 +48,6 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
   const open = (options?: OpenOptions<T>) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';
 
-    // Create ref when opening (same pattern as useBottomSheetManager)
     const ref = React.createRef<BottomSheetMethods>();
     setSheetRef(id, ref);
 

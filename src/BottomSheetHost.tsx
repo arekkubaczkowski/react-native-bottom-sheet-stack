@@ -6,13 +6,13 @@ import { PortalHost } from 'react-native-teleport';
 
 import { shallow } from 'zustand/shallow';
 import { cleanupAnimatedIndex } from './animatedRegistry';
-import { cleanupSheetRef } from './refsMap';
 import { BottomSheetContext } from './BottomSheet.context';
 import { useBottomSheetStore } from './bottomSheet.store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
 import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
-import { useScaleAnimatedStyle, type ScaleConfig } from './useScaleAnimation';
+import { cleanupSheetRef } from './refsMap';
+import { useScaleAnimatedStyle } from './useScaleAnimation';
 
 function PortalHostWrapper({
   id,
@@ -23,18 +23,14 @@ function PortalHostWrapper({
   width: number;
   height: number;
 }) {
-  return (
-    <View style={{ flex: 1, width, height }} pointerEvents="box-none">
-      <PortalHost name={`bottomsheet-${id}`} style={{ width, height }} />
-    </View>
-  );
+  return <PortalHost name={`bottomsheet-${id}`} style={{ width, height }} />;
 }
 
 function BottomSheetHostComp() {
   const queueIds = useQueueIds();
   const clearGroup = useBottomSheetStore((store) => store.clearGroup);
 
-  const { groupId, scaleConfig } = useBottomSheetManagerContext();
+  const { groupId } = useBottomSheetManagerContext();
 
   useEffect(() => {
     const unsubscribe = initBottomSheetCoordinator(groupId);
@@ -52,36 +48,26 @@ function BottomSheetHostComp() {
   return (
     <>
       {queueIds.map((id, index) => (
-        <QueueItem
-          key={id}
-          id={id}
-          groupId={groupId}
-          scaleConfig={scaleConfig}
-          stackIndex={index}
-        />
+        <QueueItem key={id} id={id} stackIndex={index} />
       ))}
     </>
   );
 }
 
-function QueueItem({
-  id,
-  groupId,
-  scaleConfig,
-  stackIndex,
-}: {
-  id: string;
-  groupId: string;
-  scaleConfig?: ScaleConfig;
-  stackIndex: number;
-}) {
-  const sheet = useBottomSheetStore((state) => state.sheetsById[id]);
-  const startClosing = useBottomSheetStore((state) => state.startClosing);
+function QueueItem({ id, stackIndex }: { id: string; stackIndex: number }) {
+  const { content, usePortal, startClosing } = useBottomSheetStore(
+    (state) => ({
+      content: state.sheetsById[id]?.content,
+      usePortal: state.sheetsById[id]?.usePortal,
+      startClosing: state.startClosing,
+    }),
+    shallow
+  );
 
   const { width, height } = useSafeAreaFrame();
   const value = { id };
 
-  const scaleStyle = useScaleAnimatedStyle({ groupId, id }, scaleConfig);
+  const scaleStyle = useScaleAnimatedStyle({ id });
 
   useEffect(() => {
     return () => {
@@ -108,10 +94,10 @@ function QueueItem({
           scaleStyle,
         ]}
       >
-        {sheet?.usePortal ? (
+        {usePortal ? (
           <PortalHostWrapper id={id} width={width} height={height} />
         ) : (
-          sheet?.content
+          content
         )}
       </Animated.View>
     </BottomSheetContext.Provider>

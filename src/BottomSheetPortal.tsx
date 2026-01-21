@@ -14,22 +14,20 @@ interface BottomSheetPortalProps {
 }
 
 export function BottomSheetPortal({ id, children }: BottomSheetPortalProps) {
-  const sheetState = useBottomSheetStore((state) => state.sheetsById[id]);
+  const usePortal = useBottomSheetStore(
+    (state) => state.sheetsById[id]?.usePortal
+  );
 
-  // Only render when the sheet is active and using portal
-  if (!sheetState?.usePortal) {
+  if (!usePortal) {
     return null;
   }
 
-  // Get the ref that was created in useBottomSheetControl.open()
   const ref = getSheetRef(id);
 
-  // Clone the child element to add the ref
   const childWithRef = React.cloneElement(children, {
     ref,
   } as { ref: typeof ref });
 
-  // Wrap with BottomSheetContext so useBottomSheetContext() works inside portal content
   return (
     <Portal hostName={`bottomsheet-${id}`}>
       <BottomSheetContext.Provider value={{ id }}>

@@ -1,7 +1,6 @@
-import { useContext, type PropsWithChildren } from 'react';
+import { type PropsWithChildren } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { BottomSheetManagerContext } from './BottomSheetManager.context';
 import { useScaleAnimatedStyle } from './useScaleAnimation';
 
 /**
@@ -20,11 +19,7 @@ import { useScaleAnimatedStyle } from './useScaleAnimation';
  * ```
  */
 export function BottomSheetScaleView({ children }: PropsWithChildren) {
-  const context = useContext(BottomSheetManagerContext);
-  const groupId = context?.groupId ?? 'default';
-  const scaleConfig = context?.scaleConfig;
-
-  const animatedStyle = useScaleAnimatedStyle({ groupId }, scaleConfig);
+  const animatedStyle = useScaleAnimatedStyle();
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>

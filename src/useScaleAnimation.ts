@@ -8,6 +8,7 @@ import {
   useBottomSheetStore,
   type BottomSheetStore,
 } from './bottomSheet.store';
+import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
 
 export interface ScaleConfig {
   /** Scale factor when sheet is open (default: 0.92) */
@@ -39,12 +40,9 @@ export function useScaleDepth(groupId: string, sheetId?: string): number {
   const scaleDepthSelector = (state: BottomSheetStore) => {
     const { stackOrder, sheetsById } = state;
 
-    // For background: check if ANY scaleBackground sheet is active (binary 0/1)
-    // For a sheet: count scaleBackground sheets above it in the stack
     const startIndex = sheetId ? stackOrder.indexOf(sheetId) + 1 : 0;
 
     if (sheetId && startIndex === 0) {
-      // Sheet not found in stack, return previous value to avoid flicker
       return prevDepthRef.current;
     }
 
@@ -59,8 +57,6 @@ export function useScaleDepth(groupId: string, sheetId?: string): number {
         sheet.status !== 'closing'
       ) {
         depth++;
-        // For background wrapper (no sheetId), we only need to know if there's at least one
-        // Don't accumulate - background scales once, sheets below scale cumulatively
         if (!sheetId) {
           break;
         }
@@ -78,10 +74,8 @@ export function useScaleDepth(groupId: string, sheetId?: string): number {
  * Returns animated style for scale effect based on depth.
  * Uses power scaling: scale^depth for cascading effect.
  */
-export function useScaleAnimatedStyle(
-  { groupId, id }: { groupId: string; id?: string },
-  config?: ScaleConfig
-) {
+export function useScaleAnimatedStyle({ id }: { id?: string } = {}) {
+  const { groupId, scaleConfig } = useBottomSheetManagerContext();
   const scaleDepth = useScaleDepth(groupId, id);
 
   const {
@@ -89,7 +83,7 @@ export function useScaleAnimatedStyle(
     translateY = DEFAULT_CONFIG.translateY,
     borderRadius = DEFAULT_CONFIG.borderRadius,
     duration = DEFAULT_CONFIG.duration,
-  } = config ?? {};
+  } = scaleConfig ?? {};
 
   const progress = useDerivedValue(() => {
     return withTiming(scaleDepth, { duration });

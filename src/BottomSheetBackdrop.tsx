@@ -28,12 +28,9 @@ export function BottomSheetBackdrop({
   );
 
   const animatedIndex = getAnimatedIndex(sheetId);
-
   const isVisible = status === 'opening' || status === 'open';
 
   const animatedStyle = useAnimatedStyle(() => {
-    // Interpolate opacity based on animatedIndex
-    // -1 = closed, 0+ = open at snap point
     const opacity = interpolate(
       animatedIndex.value,
       [-1, 0],

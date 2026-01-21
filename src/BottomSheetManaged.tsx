@@ -13,7 +13,6 @@ export interface BottomSheetRef extends BottomSheetMethods {}
 
 interface BottomSheetManagedProps extends BottomSheetProps {}
 
-// Null backdrop - we render our own backdrop separately in BottomSheetHost
 const nullBackdrop = () => null;
 
 export const BottomSheetManaged = React.forwardRef<
@@ -32,15 +31,10 @@ export const BottomSheetManaged = React.forwardRef<
     },
     ref
   ) => {
-    const { bottomSheetState } = useBottomSheetContext();
+    const { id } = useBottomSheetContext();
 
-    // Get or create shared animated index for this sheet
-    const animatedIndex =
-      externalAnimatedIndex ?? getAnimatedIndex(bottomSheetState.id);
-
-    const { handleAnimate, handleClose } = createSheetEventHandlers(
-      bottomSheetState.id
-    );
+    const animatedIndex = externalAnimatedIndex ?? getAnimatedIndex(id);
+    const { handleAnimate, handleClose } = createSheetEventHandlers(id);
 
     const wrappedOnAnimate: BottomSheetProps['onAnimate'] = (
       fromIndex: number,

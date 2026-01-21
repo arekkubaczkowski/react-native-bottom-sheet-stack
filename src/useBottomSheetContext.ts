@@ -1,15 +1,13 @@
+import { shallow } from 'zustand/shallow';
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
-import {
-  useBottomSheetStore,
-  type BottomSheetState,
-} from './bottomSheet.store';
+import { useBottomSheetStore } from './bottomSheet.store';
 import type {
   BottomSheetPortalId,
   BottomSheetPortalParams,
 } from './portal.types';
 
 export interface UseBottomSheetContextReturn<TParams> {
-  bottomSheetState: BottomSheetState;
+  id: string;
   params: TParams;
   close: () => void;
   /** @deprecated Use `close` instead */
@@ -27,23 +25,27 @@ export function useBottomSheetContext<
 >(): UseBottomSheetContextReturn<BottomSheetPortalParams<T> | unknown> {
   const context = useMaybeBottomSheetContext();
 
-  const bottomSheetState = useBottomSheetStore(
-    (state) => state.sheetsById[context?.id!]
+  const { id, params } = useBottomSheetStore(
+    (state) => ({
+      id: state.sheetsById[context?.id!]?.id,
+      params: state.sheetsById[context?.id!]?.params,
+    }),
+    shallow
   );
 
   const startClosing = useBottomSheetStore((state) => state.startClosing);
 
-  if (!bottomSheetState) {
+  if (!id) {
     throw new Error(
       'useBottomSheetContext must be used within a BottomSheet component'
     );
   }
 
-  const close = () => startClosing(bottomSheetState.id);
+  const close = () => startClosing(id);
 
   return {
-    bottomSheetState,
-    params: bottomSheetState.params as BottomSheetPortalParams<T>,
+    id,
+    params: params as BottomSheetPortalParams<T>,
     close,
     closeBottomSheet: close,
   };
