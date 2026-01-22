@@ -2,6 +2,7 @@ import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import { forwardRef } from 'react';
 import { Text, View } from 'react-native';
 import {
+  useBottomSheetControl,
   useBottomSheetManager,
   useBottomSheetState,
 } from 'react-native-bottom-sheet-stack';
@@ -12,6 +13,7 @@ import { colors, sharedStyles } from '../styles/theme';
 export const SheetA = forwardRef<BottomSheetMethods>((_, ref) => {
   const { openBottomSheet } = useBottomSheetManager();
   const { close } = useBottomSheetState();
+  const scannerSheet = useBottomSheetControl('scanner-sheet');
 
   return (
     <Sheet ref={ref}>
@@ -42,6 +44,18 @@ export const SheetA = forwardRef<BottomSheetMethods>((_, ref) => {
         <Button
           title="Switch to Sheet B"
           onPress={() => openBottomSheet(<SheetB />, { mode: 'switch' })}
+        />
+        <Button
+          title="Open Scanner (Persistent)"
+          onPress={() =>
+            scannerSheet.open({
+              scaleBackground: true,
+              params: {
+                source: 'navigation',
+                title: 'Scanner from Navigation',
+              },
+            })
+          }
         />
         <SecondaryButton title="Close" onPress={close} />
       </View>

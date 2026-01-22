@@ -1,25 +1,15 @@
-import {
-  useBottomSheetStore,
-  type BottomSheetStatus,
-} from './bottomSheet.store';
-import type { BottomSheetPortalId } from './portal.types';
+import { useSheetStatus, type BottomSheetStatus } from './bottomSheet.store';
 
 export interface UseBottomSheetStatusReturn {
   status: BottomSheetStatus | null;
   isOpen: boolean;
 }
 
-export function useBottomSheetStatus(
-  id: BottomSheetPortalId
-): UseBottomSheetStatusReturn {
-  const status = useBottomSheetStore(
-    (state) => state.sheetsById[id]?.status ?? null
-  );
-
-  const isOpen = status === 'open' || status === 'opening';
+export function useBottomSheetStatus(id: string): UseBottomSheetStatusReturn {
+  const status = useSheetStatus(id) ?? null;
 
   return {
     status,
-    isOpen,
+    isOpen: status === 'open' || status === 'opening',
   };
 }

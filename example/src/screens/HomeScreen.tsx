@@ -1,4 +1,4 @@
-import { StyleSheet, ScrollView, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   BottomSheetPortal,
   useBottomSheetControl,
@@ -23,6 +23,7 @@ export function HomeScreen() {
   const { openBottomSheet } = useBottomSheetManager();
   const portalSheetControl = useBottomSheetControl('context-portal-sheet');
   const portalModeSheetA = useBottomSheetControl('portal-mode-sheet-a');
+  const scannerControl = useBottomSheetControl('scanner-sheet');
 
   return (
     <View style={sharedStyles.container}>
@@ -110,6 +111,18 @@ export function HomeScreen() {
             color={colors.pink}
             onPress={() =>
               openBottomSheet(<HeavySheet />, { scaleBackground: true })
+            }
+          />
+
+          <DemoCard
+            title="Persistent Scanner"
+            description="Pre-mounted sheet with keepMounted - opens instantly"
+            color={colors.cyan}
+            onPress={() =>
+              scannerControl.open({
+                scaleBackground: true,
+                params: { source: 'home', title: 'Scanner from Home' },
+              })
             }
           />
         </View>

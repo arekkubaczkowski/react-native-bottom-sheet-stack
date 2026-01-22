@@ -43,19 +43,20 @@ export function createSheetEventHandlers(sheetId: string) {
   const { startClosing, finishClosing, markOpen } =
     useBottomSheetStore.getState();
 
-  const handleAnimate = (fromIndex: number, toIndex: number) => {
+  const handleAnimate = (_fromIndex: number, toIndex: number) => {
     const state = useBottomSheetStore.getState();
     const currentStatus = state.sheetsById[sheetId]?.status;
 
-    // Sheet is closing (animating to -1)
-    if (toIndex === -1) {
-      if (currentStatus === 'open' || currentStatus === 'opening') {
-        startClosing(sheetId);
-      }
+    if (toIndex === -1 && currentStatus === 'open') {
+      startClosing(sheetId);
     }
+  };
 
-    // Sheet finished opening (animating from -1 to visible)
-    if (fromIndex === -1 && toIndex >= 0) {
+  const handleChange = (index: number) => {
+    const state = useBottomSheetStore.getState();
+    const currentStatus = state.sheetsById[sheetId]?.status;
+
+    if (index >= 0 && currentStatus === 'opening') {
       markOpen(sheetId);
     }
   };
@@ -71,6 +72,7 @@ export function createSheetEventHandlers(sheetId: string) {
 
   return {
     handleAnimate,
+    handleChange,
     handleClose,
   };
 }

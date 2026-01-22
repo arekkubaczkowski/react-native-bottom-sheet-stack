@@ -8,6 +8,7 @@ const sidebars: SidebarsConfig = {
     'navigation-modes',
     'scale-animation',
     'context-preservation',
+    'persistent-sheets',
     'type-safe-ids',
     {
       type: 'category',

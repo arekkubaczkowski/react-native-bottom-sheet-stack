@@ -16,3 +16,11 @@ export function setSheetRef(sheetId: string, ref: SheetRef): void {
 export function cleanupSheetRef(sheetId: string): void {
   sheetRefsMap.delete(sheetId);
 }
+
+/**
+ * Reset all sheet refs. Useful for testing.
+ * @internal
+ */
+export function __resetSheetRefs(): void {
+  sheetRefsMap.clear();
+}

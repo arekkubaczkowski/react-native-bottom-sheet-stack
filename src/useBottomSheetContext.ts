@@ -1,6 +1,5 @@
-import { shallow } from 'zustand/shallow';
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
-import { useBottomSheetStore } from './bottomSheet.store';
+import { useSheetParams, useStartClosing } from './bottomSheet.store';
 import type {
   BottomSheetPortalId,
   BottomSheetPortalParams,
@@ -24,27 +23,19 @@ export function useBottomSheetContext<
   T extends BottomSheetPortalId,
 >(): UseBottomSheetContextReturn<BottomSheetPortalParams<T> | unknown> {
   const context = useMaybeBottomSheetContext();
+  const params = useSheetParams(context?.id || '');
+  const startClosing = useStartClosing();
 
-  const { id, params } = useBottomSheetStore(
-    (state) => ({
-      id: state.sheetsById[context?.id!]?.id,
-      params: state.sheetsById[context?.id!]?.params,
-    }),
-    shallow
-  );
-
-  const startClosing = useBottomSheetStore((state) => state.startClosing);
-
-  if (!id) {
+  if (!context?.id) {
     throw new Error(
       'useBottomSheetContext must be used within a BottomSheet component'
     );
   }
 
-  const close = () => startClosing(id);
+  const close = () => startClosing(context.id);
 
   return {
-    id,
+    id: context.id,
     params: params as BottomSheetPortalParams<T>,
     close,
     closeBottomSheet: close,
