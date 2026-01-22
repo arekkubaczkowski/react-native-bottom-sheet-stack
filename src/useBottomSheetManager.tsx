@@ -1,22 +1,21 @@
 import React from 'react';
 
-import { useBottomSheetStore, type OpenMode } from './bottomSheet.store';
+import {
+  useOpen,
+  useStartClosing,
+  useClearGroup,
+  type OpenMode,
+} from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import { setSheetRef } from './refsMap';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import { shallow } from 'zustand/shallow';
 
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
 
-  const { storeOpen, startClosing, storeClearGroup } = useBottomSheetStore(
-    (store) => ({
-      storeOpen: store.open,
-      storeClearGroup: store.clearGroup,
-      startClosing: store.startClosing,
-    }),
-    shallow
-  );
+  const storeOpen = useOpen();
+  const startClosing = useStartClosing();
+  const storeClearGroup = useClearGroup();
 
   const openBottomSheet = (
     content: React.ReactElement,

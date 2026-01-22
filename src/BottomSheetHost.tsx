@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { useBottomSheetStore } from './bottomSheet.store';
+import { useClearGroup } from './bottomSheet.store';
 import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
 import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
 import { QueueItem } from './QueueItem';
@@ -8,7 +8,7 @@ import { useSheetRenderData } from './useSheetRenderData';
 
 export function BottomSheetHost() {
   const sheetRenderData = useSheetRenderData();
-  const clearGroup = useBottomSheetStore((store) => store.clearGroup);
+  const clearGroup = useClearGroup();
   const { groupId } = useBottomSheetManagerContext();
 
   useEffect(() => {

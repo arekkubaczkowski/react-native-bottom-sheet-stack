@@ -4,7 +4,7 @@ import React from 'react';
 import { Portal } from 'react-native-teleport';
 
 import { BottomSheetContext } from './BottomSheet.context';
-import { useBottomSheetStore } from './bottomSheet.store';
+import { useSheetUsePortal } from './bottomSheet.store';
 import type { BottomSheetPortalId } from './portal.types';
 import { getSheetRef } from './refsMap';
 
@@ -14,9 +14,7 @@ interface BottomSheetPortalProps {
 }
 
 export function BottomSheetPortal({ id, children }: BottomSheetPortalProps) {
-  const usePortal = useBottomSheetStore(
-    (state) => state.sheetsById[id]?.usePortal
-  );
+  const usePortal = useSheetUsePortal(id);
 
   if (!usePortal) {
     return null;

@@ -4,7 +4,7 @@ import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 
 import { BottomSheetContext } from './BottomSheet.context';
 import { BottomSheetRefContext } from './BottomSheetRef.context';
-import { useBottomSheetStore } from './bottomSheet.store';
+import { useMount, useUnmount, useSheetExists } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import type { BottomSheetPortalId } from './portal.types';
 import { setSheetRef, cleanupSheetRef } from './refsMap';
@@ -21,12 +21,9 @@ export function BottomSheetPersistent({
   children,
 }: BottomSheetPersistentProps) {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
-  const mount = useBottomSheetStore((state) => state.mount);
-  const unmount = useBottomSheetStore((state) => state.unmount);
-
-  const sheetExists = useBottomSheetStore(
-    (state) => !!state.sheetsById[id]?.id
-  );
+  const mount = useMount();
+  const unmount = useUnmount();
+  const sheetExists = useSheetExists(id);
 
   const sheetRef = useRef<BottomSheetMethods>(null);
   const groupId = bottomSheetManagerContext?.groupId || 'default';

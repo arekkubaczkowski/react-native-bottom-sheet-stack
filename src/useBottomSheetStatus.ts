@@ -1,5 +1,6 @@
 import {
-  useBottomSheetStore,
+  useSheetStatus,
+  useIsSheetOpen,
   type BottomSheetStatus,
 } from './bottomSheet.store';
 import type { BottomSheetPortalId } from './portal.types';
@@ -12,11 +13,8 @@ export interface UseBottomSheetStatusReturn {
 export function useBottomSheetStatus(
   id: BottomSheetPortalId
 ): UseBottomSheetStatusReturn {
-  const status = useBottomSheetStore(
-    (state) => state.sheetsById[id]?.status ?? null
-  );
-
-  const isOpen = status === 'open' || status === 'opening';
+  const status = useSheetStatus(id) ?? null;
+  const isOpen = useIsSheetOpen(id);
 
   return {
     status,

@@ -1,7 +1,12 @@
 import React from 'react';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 
-import { useBottomSheetStore, type OpenMode } from './bottomSheet.store';
+import {
+  useOpen,
+  useStartClosing,
+  useUpdateParams,
+  type OpenMode,
+} from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import type {
   BottomSheetPortalId,
@@ -41,9 +46,9 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
 ): UseBottomSheetControlReturn<T> {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
 
-  const storeOpen = useBottomSheetStore((state) => state.open);
-  const startClosing = useBottomSheetStore((state) => state.startClosing);
-  const storeUpdateParams = useBottomSheetStore((state) => state.updateParams);
+  const storeOpen = useOpen();
+  const startClosing = useStartClosing();
+  const storeUpdateParams = useUpdateParams();
 
   const open = (options?: OpenOptions<T>) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';

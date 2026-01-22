@@ -3,11 +3,15 @@ import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 import { PortalHost } from 'react-native-teleport';
-import { shallow } from 'zustand/shallow';
 
 import { cleanupAnimatedIndex } from './animatedRegistry';
 import { BottomSheetContext } from './BottomSheet.context';
-import { useBottomSheetStore } from './bottomSheet.store';
+import {
+  useSheetContent,
+  useSheetUsePortal,
+  useSheetKeepMounted,
+  useStartClosing,
+} from './bottomSheet.store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { cleanupSheetRef } from './refsMap';
 import { useScaleAnimatedStyle } from './useScaleAnimation';
@@ -19,15 +23,10 @@ interface QueueItemProps {
 }
 
 export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
-  const { content, usePortal, startClosing, keepMounted } = useBottomSheetStore(
-    (state) => ({
-      content: state.sheetsById[id]?.content,
-      usePortal: state.sheetsById[id]?.usePortal,
-      keepMounted: state.sheetsById[id]?.keepMounted,
-      startClosing: state.startClosing,
-    }),
-    shallow
-  );
+  const content = useSheetContent(id);
+  const usePortal = useSheetUsePortal(id);
+  const keepMounted = useSheetKeepMounted(id);
+  const startClosing = useStartClosing();
 
   const { width, height } = useSafeAreaFrame();
   const scaleStyle = useScaleAnimatedStyle({ id });

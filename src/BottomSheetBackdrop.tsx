@@ -5,25 +5,18 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { getAnimatedIndex } from './animatedRegistry';
-import { useBottomSheetStore } from './bottomSheet.store';
+import { useSheetStatus } from './bottomSheet.store';
 
 interface BottomSheetBackdropProps {
   sheetId: string;
   onPress?: () => void;
 }
 
-/**
- * Custom backdrop component rendered separately from the scaled sheet content.
- * This ensures the backdrop doesn't scale with the sheet.
- * Opacity is interpolated from the bottom sheet's animatedIndex for smooth animation.
- */
 export function BottomSheetBackdrop({
   sheetId,
   onPress,
 }: BottomSheetBackdropProps) {
-  const status = useBottomSheetStore(
-    (state) => state.sheetsById[sheetId]?.status
-  );
+  const status = useSheetStatus(sheetId);
 
   const animatedIndex = getAnimatedIndex(sheetId);
   // Only allow interaction when fully open - prevents animation conflicts
