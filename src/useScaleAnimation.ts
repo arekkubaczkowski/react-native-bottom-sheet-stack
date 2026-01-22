@@ -47,11 +47,10 @@ function useBackgroundScaleDepth(groupId: string): number {
       if (
         sheet &&
         sheet.groupId === groupId &&
-        sheet.scaleBackground &&
         sheet.status !== 'closing' &&
         sheet.status !== 'hidden'
       ) {
-        return 1;
+        return sheet.scaleBackground ? 1 : 0;
       }
     }
     return 0;
