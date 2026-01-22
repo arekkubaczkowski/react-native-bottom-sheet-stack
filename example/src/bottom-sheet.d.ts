@@ -11,5 +11,9 @@ declare module 'react-native-bottom-sheet-stack' {
       source: 'home' | 'navigation';
       title?: string;
     };
+    'persistent-with-portal': true;
+    'nested-portal-in-persistent': {
+      message: string;
+    };
   }
 }

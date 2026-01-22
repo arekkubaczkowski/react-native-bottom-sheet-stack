@@ -24,6 +24,9 @@ export function HomeScreen() {
   const portalSheetControl = useBottomSheetControl('context-portal-sheet');
   const portalModeSheetA = useBottomSheetControl('portal-mode-sheet-a');
   const scannerControl = useBottomSheetControl('scanner-sheet');
+  const persistentWithPortalControl = useBottomSheetControl(
+    'persistent-with-portal'
+  );
 
   return (
     <View style={sharedStyles.container}>
@@ -123,6 +126,15 @@ export function HomeScreen() {
                 scaleBackground: true,
                 params: { source: 'home', title: 'Scanner from Home' },
               })
+            }
+          />
+
+          <DemoCard
+            title="Persistent + Nested Portal"
+            description="Persistent sheet with portal-based sheet defined inside"
+            color={colors.purple}
+            onPress={() =>
+              persistentWithPortalControl.open({ scaleBackground: true })
             }
           />
         </View>
