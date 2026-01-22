@@ -19,9 +19,7 @@ export function initBottomSheetCoordinator(groupId: string) {
 
         switch (status) {
           case 'opening':
-            requestAnimationFrame(() => {
-              getSheetRef(id)?.current?.expand();
-            });
+            getSheetRef(id)?.current?.expand();
             break;
           case 'hidden':
             if (ref) ref.close();

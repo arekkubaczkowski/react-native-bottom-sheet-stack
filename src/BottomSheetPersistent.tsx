@@ -2,12 +2,13 @@ import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import React, { useEffect, useRef } from 'react';
 
 import { useMount, useSheetExists, useUnmount } from './bottomSheet.store';
+import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import { BottomSheetPortal } from './BottomSheetPortal';
 import { BottomSheetRefContext } from './BottomSheetRef.context';
 import type { BottomSheetPortalId } from './portal.types';
-import { useEvent } from './useEvent';
 import { setSheetRef } from './refsMap';
+import { useEvent } from './useEvent';
 
 interface BottomSheetPersistentProps {
   id: BottomSheetPortalId;
@@ -49,9 +50,11 @@ export function BottomSheetPersistent({
 
   return (
     <BottomSheetPortal id={id}>
-      <BottomSheetRefContext.Provider value={sheetRef}>
-        {children}
-      </BottomSheetRefContext.Provider>
+      <BottomSheetDefaultIndexContext.Provider value={{ defaultIndex: -1 }}>
+        <BottomSheetRefContext.Provider value={sheetRef}>
+          {children}
+        </BottomSheetRefContext.Provider>
+      </BottomSheetDefaultIndexContext.Provider>
     </BottomSheetPortal>
   );
 }

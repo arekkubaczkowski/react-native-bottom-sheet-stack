@@ -33,9 +33,9 @@ export const useBottomSheetStore = create(
           mode
         );
 
-        // Get next portalSession from registry for portal-based sheets
-        // Registry persists across sheet deletions to ensure unique Portal/PortalHost names
-        const nextPortalSession = sheet.usePortal
+        const shouldGetNewPortalSession =
+          sheet.usePortal && (!existingSheet || !existingSheet.keepMounted);
+        const nextPortalSession = shouldGetNewPortalSession
           ? getNextPortalSession(sheet.id)
           : undefined;
 
@@ -46,7 +46,9 @@ export const useBottomSheetStore = create(
               scaleBackground:
                 sheet.scaleBackground ?? existingSheet.scaleBackground,
               params: sheet.params ?? existingSheet.params,
-              portalSession: nextPortalSession ?? existingSheet.portalSession,
+              portalSession: existingSheet.keepMounted
+                ? existingSheet.portalSession
+                : (nextPortalSession ?? existingSheet.portalSession),
             }
           : { ...sheet, status: 'opening', portalSession: nextPortalSession };
 
@@ -144,10 +146,16 @@ export const useBottomSheetStore = create(
       set((state) => {
         if (state.sheetsById[sheet.id]) return state;
 
+        // For portal-based persistent sheets, set initial portalSession
+        // This session will be reused across open/close cycles
+        const portalSession = sheet.usePortal
+          ? getNextPortalSession(sheet.id)
+          : undefined;
+
         return {
           sheetsById: {
             ...state.sheetsById,
-            [sheet.id]: { ...sheet, status: 'hidden' },
+            [sheet.id]: { ...sheet, status: 'hidden', portalSession },
           },
         };
       }),
