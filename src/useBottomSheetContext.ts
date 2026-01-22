@@ -1,5 +1,5 @@
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
-import { useSheet, useStartClosing } from './bottomSheet.store';
+import { useSheetParams, useStartClosing } from './bottomSheet.store';
 import type {
   BottomSheetPortalId,
   BottomSheetPortalParams,
@@ -23,22 +23,19 @@ export function useBottomSheetContext<
   T extends BottomSheetPortalId,
 >(): UseBottomSheetContextReturn<BottomSheetPortalParams<T> | unknown> {
   const context = useMaybeBottomSheetContext();
-  const sheet = useSheet(context?.id ?? '');
+  const params = useSheetParams(context?.id || '');
   const startClosing = useStartClosing();
 
-  const id = sheet?.id;
-  const params = sheet?.params;
-
-  if (!id) {
+  if (!context?.id) {
     throw new Error(
       'useBottomSheetContext must be used within a BottomSheet component'
     );
   }
 
-  const close = () => startClosing(id);
+  const close = () => startClosing(context.id);
 
   return {
-    id,
+    id: context.id,
     params: params as BottomSheetPortalParams<T>,
     close,
     closeBottomSheet: close,

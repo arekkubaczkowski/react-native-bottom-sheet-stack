@@ -2,15 +2,12 @@ import { useRef } from 'react';
 import {
   useAnimatedStyle,
   useDerivedValue,
-  withTiming,
   withSpring,
-  type WithTimingConfig,
+  withTiming,
   type WithSpringConfig,
+  type WithTimingConfig,
 } from 'react-native-reanimated';
-import {
-  useBottomSheetStore,
-  type BottomSheetStore,
-} from './bottomSheet.store';
+import { useBottomSheetStore } from './bottomSheet.store';
 import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
 
 export type ScaleAnimationConfig =
@@ -40,26 +37,47 @@ const DEFAULT_CONFIG = {
   animation: DEFAULT_ANIMATION,
 } satisfies Required<ScaleConfig>;
 
-/**
- * Returns the number of sheets with scaleBackground above a given element.
- * For background wrapper, pass undefined as sheetId - returns 0 or 1 (binary).
- * For sheets, returns the count of scaleBackground sheets above it.
- * Uses shallow comparison internally for optimal re-renders.
- */
-export function useScaleDepth(groupId: string, sheetId?: string): number {
-  const prevDepthRef = useRef(0);
-
-  const scaleDepthSelector = (state: BottomSheetStore) => {
+function useBackgroundScaleDepth(groupId: string): number {
+  return useBottomSheetStore((state) => {
     const { stackOrder, sheetsById } = state;
 
-    const startIndex = sheetId ? stackOrder.indexOf(sheetId) + 1 : 0;
+    for (let i = 0; i < stackOrder.length; i++) {
+      const id = stackOrder[i]!;
+      const sheet = sheetsById[id];
+      if (
+        sheet &&
+        sheet.groupId === groupId &&
+        sheet.scaleBackground &&
+        sheet.status !== 'closing' &&
+        sheet.status !== 'hidden'
+      ) {
+        return 1;
+      }
+    }
+    return 0;
+  });
+}
 
-    if (sheetId && startIndex === 0) {
+function useSheetScaleDepth(
+  groupId: string,
+  sheetId: string | undefined
+): number {
+  const prevDepthRef = useRef(0);
+
+  return useBottomSheetStore((state) => {
+    if (!sheetId) {
+      return 0;
+    }
+
+    const { stackOrder, sheetsById } = state;
+    const sheetIndex = stackOrder.indexOf(sheetId);
+
+    if (sheetIndex === -1) {
       return prevDepthRef.current;
     }
 
     let depth = 0;
-    for (let i = startIndex; i < stackOrder.length; i++) {
+    for (let i = sheetIndex + 1; i < stackOrder.length; i++) {
       const id = stackOrder[i]!;
       const sheet = sheetsById[id];
       if (
@@ -70,26 +88,16 @@ export function useScaleDepth(groupId: string, sheetId?: string): number {
         sheet.status !== 'hidden'
       ) {
         depth++;
-        if (!sheetId) {
-          break;
-        }
       }
     }
 
     prevDepthRef.current = depth;
     return depth;
-  };
-
-  return useBottomSheetStore(scaleDepthSelector);
+  });
 }
 
-/**
- * Returns animated style for scale effect based on depth.
- * Uses power scaling: scale^depth for cascading effect.
- */
 export function useScaleAnimatedStyle({ id }: { id?: string } = {}) {
   const { groupId, scaleConfig } = useBottomSheetManagerContext();
-  const scaleDepth = useScaleDepth(groupId, id);
 
   const {
     scale = DEFAULT_CONFIG.scale,
@@ -98,6 +106,14 @@ export function useScaleAnimatedStyle({ id }: { id?: string } = {}) {
     animation = DEFAULT_CONFIG.animation,
   } = scaleConfig ?? {};
 
+  const isBackground = id === undefined;
+
+  const backgroundDepth = useBackgroundScaleDepth(groupId);
+  const sheetDepth = useSheetScaleDepth(groupId, id);
+
+  const scaleDepth = isBackground ? backgroundDepth : sheetDepth;
+
+  // Animate the depth change
   const progress = useDerivedValue(() => {
     if (animation.type === 'spring') {
       return withSpring(scaleDepth, animation.config);

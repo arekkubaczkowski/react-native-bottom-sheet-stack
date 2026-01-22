@@ -261,8 +261,17 @@ const { id, params, close } = useBottomSheetContext<'user-sheet'>();
 #### `useBottomSheetStatus.ts` - Sheet Status Monitoring
 **Purpose**: Observe sheet status from outside the sheet.
 
+**Works with all sheet types**: Portal, persistent, and inline sheets.
+
 ```typescript
+// Portal/persistent sheet (registered ID)
 const { status, isOpen } = useBottomSheetStatus('user-sheet');
+
+// Inline sheet (dynamic ID from useBottomSheetManager)
+const { open } = useBottomSheetManager();
+const sheetId = open(<MySheet />);
+// Later...
+const { status, isOpen } = useBottomSheetStatus(sheetId);
 ```
 
 #### `useScaleAnimation.ts` - Scale Animation Logic

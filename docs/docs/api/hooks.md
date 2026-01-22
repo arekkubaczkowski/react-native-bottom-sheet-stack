@@ -155,19 +155,26 @@ open({
 
 Subscribe to any sheet's status from anywhere in your app. Pass the sheet ID to identify which sheet to observe.
 
-:::tip When to Use
-Use this when you need to show UI based on whether a sheet is open, or react to status changes. Separate from `useBottomSheetControl` to avoid unnecessary re-renders in components that only need to trigger sheets.
+:::tip Works with All Sheet Types
+This hook accepts any string ID, so it works with portal sheets, persistent sheets, and inline sheets (using the ID returned from `useBottomSheetManager().open()`).
 :::
 
 ```tsx
+// Portal/persistent sheet
 const { status, isOpen } = useBottomSheetStatus('my-sheet');
+
+// Inline sheet (using ID from open())
+const { open } = useBottomSheetManager();
+const sheetId = open(<MySheet />);
+// ...
+const { status, isOpen } = useBottomSheetStatus(sheetId);
 ```
 
 ### Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `id` | `BottomSheetPortalId` | The sheet ID to observe |
+| `id` | `string` | The sheet ID to observe (portal ID or inline sheet ID) |
 
 ### Returns
 

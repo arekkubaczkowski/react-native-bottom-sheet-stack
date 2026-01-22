@@ -12,6 +12,12 @@ export interface BottomSheetState {
   usePortal?: boolean;
   params?: Record<string, unknown>;
   keepMounted?: boolean;
+  /**
+   * Incremented each time a portal-based sheet is opened.
+   * Used to create unique Portal/PortalHost names to work around
+   * react-native-teleport connection issues after replace flows.
+   */
+  portalSession?: number;
 }
 
 export type TriggerState = Omit<BottomSheetState, 'status'>;

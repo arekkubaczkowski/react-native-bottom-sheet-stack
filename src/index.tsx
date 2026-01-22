@@ -38,3 +38,4 @@ export type {
 // Testing utilities (internal use)
 export { __resetSheetRefs } from './refsMap';
 export { __resetAnimatedIndexes } from './animatedRegistry';
+export { __resetPortalSessions } from './portalSessionRegistry';

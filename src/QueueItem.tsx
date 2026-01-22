@@ -10,6 +10,7 @@ import {
   useSheetContent,
   useSheetUsePortal,
   useSheetKeepMounted,
+  useSheetPortalSession,
   useStartClosing,
 } from './bottomSheet.store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
@@ -26,6 +27,7 @@ export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
   const keepMounted = useSheetKeepMounted(id);
+  const portalSession = useSheetPortalSession(id);
   const startClosing = useStartClosing();
 
   const { width, height } = useSafeAreaFrame();
@@ -64,7 +66,10 @@ export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
         ]}
       >
         {usePortal ? (
-          <PortalHost name={`bottomsheet-${id}`} style={{ width, height }} />
+          <PortalHost
+            name={`bottomsheet-${id}-${portalSession}`}
+            style={{ width, height }}
+          />
         ) : (
           <BottomSheetContext.Provider value={{ id }}>
             {content}

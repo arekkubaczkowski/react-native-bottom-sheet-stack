@@ -10,6 +10,7 @@ import {
   removeFromStack,
   updateSheet,
 } from './helpers';
+import { getNextPortalSession } from '../portalSessionRegistry';
 import type { BottomSheetState, BottomSheetStore } from './types';
 
 export const useBottomSheetStore = create(
@@ -31,6 +32,12 @@ export const useBottomSheetStore = create(
           mode
         );
 
+        // Get next portalSession from registry for portal-based sheets
+        // Registry persists across sheet deletions to ensure unique Portal/PortalHost names
+        const nextPortalSession = sheet.usePortal
+          ? getNextPortalSession(sheet.id)
+          : undefined;
+
         const newSheet: BottomSheetState = existingSheet
           ? {
               ...existingSheet,
@@ -38,8 +45,9 @@ export const useBottomSheetStore = create(
               scaleBackground:
                 sheet.scaleBackground ?? existingSheet.scaleBackground,
               params: sheet.params ?? existingSheet.params,
+              portalSession: nextPortalSession ?? existingSheet.portalSession,
             }
-          : { ...sheet, status: 'opening' };
+          : { ...sheet, status: 'opening', portalSession: nextPortalSession };
 
         return {
           sheetsById: { ...updatedSheetsById, [sheet.id]: newSheet },

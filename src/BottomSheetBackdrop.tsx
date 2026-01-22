@@ -17,9 +17,7 @@ export function BottomSheetBackdrop({
   onPress,
 }: BottomSheetBackdropProps) {
   const status = useSheetStatus(sheetId);
-
   const animatedIndex = getAnimatedIndex(sheetId);
-  // Only allow interaction when fully open - prevents animation conflicts
   const isInteractive = status === 'open';
 
   const animatedStyle = useAnimatedStyle(() => {
