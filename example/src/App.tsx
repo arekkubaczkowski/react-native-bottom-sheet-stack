@@ -7,6 +7,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { BottomSheetDebugMonitor } from './components/BottomSheetDebugMonitor';
 import { UserProvider } from './context/UserContext';
 import { HomeScreen } from './screens';
 import { PersistentWithPortalSheet, ScannerSheet } from './sheets';
@@ -34,6 +35,8 @@ export default function App() {
           <BottomSheetPersistent id="persistent-with-portal">
             <PersistentWithPortalSheet />
           </BottomSheetPersistent>
+          {/* Debug Monitor */}
+          <BottomSheetDebugMonitor />
         </BottomSheetManagerProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>

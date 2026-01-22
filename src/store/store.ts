@@ -11,6 +11,7 @@ import {
   removeFromStack,
   updateSheet,
 } from './helpers';
+import { ensureAnimatedIndex } from '../animatedRegistry';
 import { getNextPortalSession } from '../portalSessionRegistry';
 import type { BottomSheetState, BottomSheetStore } from './types';
 
@@ -38,6 +39,8 @@ export const useBottomSheetStore = create(
         const nextPortalSession = shouldGetNewPortalSession
           ? getNextPortalSession(sheet.id)
           : undefined;
+
+        ensureAnimatedIndex(sheet.id);
 
         const newSheet: BottomSheetState = existingSheet
           ? {
@@ -145,6 +148,8 @@ export const useBottomSheetStore = create(
     mount: (sheet) =>
       set((state) => {
         if (state.sheetsById[sheet.id]) return state;
+
+        ensureAnimatedIndex(sheet.id);
 
         // For portal-based persistent sheets, set initial portalSession
         // This session will be reused across open/close cycles

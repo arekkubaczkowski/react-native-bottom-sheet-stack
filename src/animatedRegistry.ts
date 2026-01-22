@@ -2,18 +2,28 @@ import { makeMutable, type SharedValue } from 'react-native-reanimated';
 
 /**
  * Registry for shared animated values per sheet.
- * This allows backdrop to access the animatedIndex from the bottom sheet.
+ * AnimatedIndex is created eagerly in store actions (open/mount)
+ * before any component renders, ensuring it's always available.
  */
 const animatedIndexRegistry = new Map<string, SharedValue<number>>();
 
-export function getAnimatedIndex(sheetId: string): SharedValue<number> {
-  let animatedIndex = animatedIndexRegistry.get(sheetId);
-
-  if (!animatedIndex) {
-    animatedIndex = makeMutable(-1);
-    animatedIndexRegistry.set(sheetId, animatedIndex);
+export function ensureAnimatedIndex(sheetId: string): SharedValue<number> {
+  const existing = animatedIndexRegistry.get(sheetId);
+  if (existing) {
+    console.log(
+      `[AnimatedRegistry] ensureAnimatedIndex[${sheetId}] REPLACING existing value: ${existing.value}`
+    );
   }
 
+  const animatedIndex = makeMutable(-1);
+  animatedIndexRegistry.set(sheetId, animatedIndex);
+  return animatedIndex;
+}
+
+export function getAnimatedIndex(
+  sheetId: string
+): SharedValue<number> | undefined {
+  const animatedIndex = animatedIndexRegistry.get(sheetId);
   return animatedIndex;
 }
 
@@ -27,4 +37,12 @@ export function cleanupAnimatedIndex(sheetId: string): void {
  */
 export function __resetAnimatedIndexes(): void {
   animatedIndexRegistry.clear();
+}
+
+/**
+ * Get all animated indexes for debugging.
+ * @internal
+ */
+export function __getAllAnimatedIndexes(): Map<string, SharedValue<number>> {
+  return animatedIndexRegistry;
 }

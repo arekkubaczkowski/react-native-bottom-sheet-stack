@@ -35,7 +35,12 @@ export type {
   BottomSheetPortalParams,
 } from './portal.types';
 
+export { useBottomSheetStore } from './bottomSheet.store';
+
 // Testing utilities (internal use)
 export { __resetSheetRefs } from './refsMap';
-export { __resetAnimatedIndexes } from './animatedRegistry';
+export {
+  __resetAnimatedIndexes,
+  __getAllAnimatedIndexes,
+} from './animatedRegistry';
 export { __resetPortalSessions } from './portalSessionRegistry';

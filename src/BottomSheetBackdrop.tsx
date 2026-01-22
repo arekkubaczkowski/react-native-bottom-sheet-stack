@@ -4,18 +4,25 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import { getAnimatedIndex } from './animatedRegistry';
+import { useBottomSheetAnimatedIndexContext } from './BottomSheetAnimatedIndex.context';
+import { useStartClosing } from './store';
+import { useEffect, useState } from 'react';
 
 interface BottomSheetBackdropProps {
   sheetId: string;
-  onPress?: () => void;
 }
 
-export function BottomSheetBackdrop({
-  sheetId,
-  onPress,
-}: BottomSheetBackdropProps) {
-  const animatedIndex = getAnimatedIndex(sheetId);
+export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
+  const animatedIndex = useBottomSheetAnimatedIndexContext();
+  const startClosing = useStartClosing();
+
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setInitialized(true);
+    }, 64);
+  }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
@@ -28,12 +35,14 @@ export function BottomSheetBackdrop({
     return { opacity };
   });
 
+  if (!initialized) {
+    return null;
+  }
+
   return (
     <Pressable
       style={StyleSheet.absoluteFillObject}
-      onPress={() => {
-        onPress?.();
-      }}
+      onPress={() => startClosing(sheetId)}
     >
       <Animated.View
         style={[StyleSheet.absoluteFillObject, animatedStyle, styles.backdrop]}

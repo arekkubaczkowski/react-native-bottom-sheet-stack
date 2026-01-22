@@ -1,20 +1,22 @@
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React, { useEffect, useRef } from 'react';
 
+import { getAnimatedIndex } from './animatedRegistry';
+import { BottomSheetContext } from './BottomSheet.context';
+import { BottomSheetAnimatedIndexContext } from './BottomSheetAnimatedIndex.context';
+import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
+import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { BottomSheetRefContext } from './BottomSheetRef.context';
 import {
   useMount,
   useSheetExists,
   useSheetPortalSession,
   useUnmount,
 } from './bottomSheet.store';
-import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
-import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
-import { BottomSheetRefContext } from './BottomSheetRef.context';
 import type { BottomSheetPortalId } from './portal.types';
 import { setSheetRef } from './refsMap';
 import { useEvent } from './useEvent';
 import { Portal } from 'react-native-teleport';
-import { BottomSheetContext } from './BottomSheet.context';
 
 interface BottomSheetPersistentProps {
   id: BottomSheetPortalId;
@@ -50,19 +52,23 @@ export function BottomSheetPersistent({
     };
   }, [id, unmount]);
 
-  if (!sheetExists) {
+  const animatedIndex = getAnimatedIndex(id);
+
+  if (!sheetExists || !animatedIndex) {
     return null;
   }
 
   return (
     <Portal hostName={`bottomsheet-${id}-${portalSession}`}>
-      <BottomSheetContext.Provider value={{ id }}>
-        <BottomSheetDefaultIndexContext.Provider value={{ defaultIndex: -1 }}>
-          <BottomSheetRefContext.Provider value={sheetRef}>
-            {children}
-          </BottomSheetRefContext.Provider>
-        </BottomSheetDefaultIndexContext.Provider>
-      </BottomSheetContext.Provider>
+      <BottomSheetAnimatedIndexContext.Provider value={animatedIndex}>
+        <BottomSheetContext.Provider value={{ id }}>
+          <BottomSheetDefaultIndexContext.Provider value={{ defaultIndex: -1 }}>
+            <BottomSheetRefContext.Provider value={sheetRef}>
+              {children}
+            </BottomSheetRefContext.Provider>
+          </BottomSheetDefaultIndexContext.Provider>
+        </BottomSheetContext.Provider>
+      </BottomSheetAnimatedIndexContext.Provider>
     </Portal>
   );
 }
