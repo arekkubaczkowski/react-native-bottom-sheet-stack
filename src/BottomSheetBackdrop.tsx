@@ -5,7 +5,6 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { getAnimatedIndex } from './animatedRegistry';
-import { useSheetStatus } from './bottomSheet.store';
 
 interface BottomSheetBackdropProps {
   sheetId: string;
@@ -16,9 +15,7 @@ export function BottomSheetBackdrop({
   sheetId,
   onPress,
 }: BottomSheetBackdropProps) {
-  const status = useSheetStatus(sheetId);
   const animatedIndex = getAnimatedIndex(sheetId);
-  const isInteractive = status === 'open';
 
   const animatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
@@ -35,9 +32,7 @@ export function BottomSheetBackdrop({
     <Pressable
       style={StyleSheet.absoluteFillObject}
       onPress={() => {
-        if (isInteractive) {
-          onPress?.();
-        }
+        onPress?.();
       }}
     >
       <Animated.View

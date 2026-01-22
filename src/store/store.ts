@@ -7,6 +7,7 @@ import {
   getTopSheetId,
   isActivatableKeepMounted,
   isHidden,
+  isOpening,
   removeFromStack,
   updateSheet,
 } from './helpers';
@@ -66,7 +67,7 @@ export const useBottomSheetStore = create(
     startClosing: (id) =>
       set((state) => {
         const sheet = state.sheetsById[id];
-        if (!sheet || isHidden(sheet)) return state;
+        if (!sheet || isHidden(sheet) || isOpening(sheet)) return state;
 
         let updatedSheetsById = updateSheet(state.sheetsById, id, {
           status: 'closing',

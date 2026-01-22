@@ -16,6 +16,10 @@ export function isHidden(sheet: BottomSheetState | undefined): boolean {
   return sheet?.status === 'hidden';
 }
 
+export function isOpening(sheet: BottomSheetState | undefined): boolean {
+  return sheet?.status === 'opening';
+}
+
 export function updateSheet(
   sheetsById: Record<string, BottomSheetState>,
   id: string,
