@@ -1,14 +1,20 @@
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React, { useEffect, useRef } from 'react';
 
-import { useMount, useSheetExists, useUnmount } from './bottomSheet.store';
+import {
+  useMount,
+  useSheetExists,
+  useSheetPortalSession,
+  useUnmount,
+} from './bottomSheet.store';
 import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
-import { BottomSheetPortal } from './BottomSheetPortal';
 import { BottomSheetRefContext } from './BottomSheetRef.context';
 import type { BottomSheetPortalId } from './portal.types';
 import { setSheetRef } from './refsMap';
 import { useEvent } from './useEvent';
+import { Portal } from 'react-native-teleport';
+import { BottomSheetContext } from './BottomSheet.context';
 
 interface BottomSheetPersistentProps {
   id: BottomSheetPortalId;
@@ -23,7 +29,7 @@ export function BottomSheetPersistent({
   const mount = useMount();
   const unmount = useUnmount();
   const sheetExists = useSheetExists(id);
-
+  const portalSession = useSheetPortalSession(id);
   const sheetRef = useRef<BottomSheetMethods>(null);
   const groupId = bottomSheetManagerContext?.groupId || 'default';
 
@@ -49,12 +55,14 @@ export function BottomSheetPersistent({
   }
 
   return (
-    <BottomSheetPortal id={id}>
-      <BottomSheetDefaultIndexContext.Provider value={{ defaultIndex: -1 }}>
-        <BottomSheetRefContext.Provider value={sheetRef}>
-          {children}
-        </BottomSheetRefContext.Provider>
-      </BottomSheetDefaultIndexContext.Provider>
-    </BottomSheetPortal>
+    <Portal hostName={`bottomsheet-${id}-${portalSession}`}>
+      <BottomSheetContext.Provider value={{ id }}>
+        <BottomSheetDefaultIndexContext.Provider value={{ defaultIndex: -1 }}>
+          <BottomSheetRefContext.Provider value={sheetRef}>
+            {children}
+          </BottomSheetRefContext.Provider>
+        </BottomSheetDefaultIndexContext.Provider>
+      </BottomSheetContext.Provider>
+    </Portal>
   );
 }
