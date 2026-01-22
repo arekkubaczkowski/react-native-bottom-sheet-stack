@@ -1,4 +1,3 @@
-import { shallow } from 'zustand/shallow';
 import {
   useBottomSheetStore,
   type BottomSheetState,
@@ -9,6 +8,31 @@ export interface SheetRenderItem {
   id: string;
   stackIndex: number;
   isActive: boolean;
+}
+
+/**
+ * Deep comparison for SheetRenderItem arrays.
+ * Returns true if arrays have same items with same values.
+ */
+function sheetRenderDataEqual(
+  a: SheetRenderItem[],
+  b: SheetRenderItem[]
+): boolean {
+  if (a.length !== b.length) return false;
+
+  for (let i = 0; i < a.length; i++) {
+    const itemA = a[i]!;
+    const itemB = b[i]!;
+    if (
+      itemA.id !== itemB.id ||
+      itemA.stackIndex !== itemB.stackIndex ||
+      itemA.isActive !== itemB.isActive
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -29,7 +53,7 @@ export function useSheetRenderData(): SheetRenderItem[] {
     const active = getActiveSheets(state, groupId);
 
     return [...hiddenPersistent, ...active];
-  }, shallow);
+  }, sheetRenderDataEqual);
 }
 
 function getHiddenPersistentSheets(

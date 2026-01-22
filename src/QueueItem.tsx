@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { memo, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import {
 } from './bottomSheet.store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { cleanupSheetRef } from './refsMap';
-import { useScaleAnimatedStyle } from './useScaleAnimation';
+import { useSheetScaleAnimatedStyle } from './useScaleAnimation';
 
 interface QueueItemProps {
   id: string;
@@ -23,7 +23,11 @@ interface QueueItemProps {
   isActive: boolean;
 }
 
-export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
+export const QueueItem = memo(function QueueItem({
+  id,
+  stackIndex,
+  isActive,
+}: QueueItemProps) {
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
   const keepMounted = useSheetKeepMounted(id);
@@ -31,7 +35,7 @@ export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
   const startClosing = useStartClosing();
 
   const { width, height } = useSafeAreaFrame();
-  const scaleStyle = useScaleAnimatedStyle({ id });
+  const scaleStyle = useSheetScaleAnimatedStyle(id);
 
   useEffect(() => {
     return () => {
@@ -76,7 +80,7 @@ export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
       </Animated.View>
     </>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {},
