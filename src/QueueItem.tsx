@@ -35,10 +35,8 @@ export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
 
   useEffect(() => {
     return () => {
-      if (!keepMounted) {
-        cleanupSheetRef(id);
-        cleanupAnimatedIndex(id);
-      }
+      cleanupSheetRef(id);
+      cleanupAnimatedIndex(id);
     };
   }, [id, keepMounted]);
 
