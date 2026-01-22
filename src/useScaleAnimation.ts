@@ -38,7 +38,7 @@ const DEFAULT_CONFIG = {
 } satisfies Required<ScaleConfig>;
 
 function useBackgroundScaleDepth(groupId: string): number {
-  return useBottomSheetStore((state) => {
+  const depth = useBottomSheetStore((state) => {
     const { stackOrder, sheetsById } = state;
 
     for (let i = 0; i < stackOrder.length; i++) {
@@ -55,6 +55,7 @@ function useBackgroundScaleDepth(groupId: string): number {
     }
     return 0;
   });
+  return depth;
 }
 
 function useSheetScaleDepth(
@@ -63,7 +64,7 @@ function useSheetScaleDepth(
 ): number {
   const prevDepthRef = useRef(0);
 
-  return useBottomSheetStore((state) => {
+  const result = useBottomSheetStore((state) => {
     if (!sheetId) {
       return 0;
     }
@@ -93,10 +94,11 @@ function useSheetScaleDepth(
     prevDepthRef.current = depth;
     return depth;
   });
+  return result;
 }
 
-export function useScaleAnimatedStyle({ id }: { id?: string } = {}) {
-  const { groupId, scaleConfig } = useBottomSheetManagerContext();
+function useScaleAnimatedStyleInternal(scaleDepth: number) {
+  const { scaleConfig } = useBottomSheetManagerContext();
 
   const {
     scale = DEFAULT_CONFIG.scale,
@@ -105,14 +107,6 @@ export function useScaleAnimatedStyle({ id }: { id?: string } = {}) {
     animation = DEFAULT_CONFIG.animation,
   } = scaleConfig ?? {};
 
-  const isBackground = id === undefined;
-
-  const backgroundDepth = useBackgroundScaleDepth(groupId);
-  const sheetDepth = useSheetScaleDepth(groupId, id);
-
-  const scaleDepth = isBackground ? backgroundDepth : sheetDepth;
-
-  // Animate the depth change
   const progress = useDerivedValue(() => {
     if (animation.type === 'spring') {
       return withSpring(scaleDepth, animation.config);
@@ -141,4 +135,16 @@ export function useScaleAnimatedStyle({ id }: { id?: string } = {}) {
       overflow: 'hidden',
     };
   });
+}
+
+export function useBackgroundScaleAnimatedStyle() {
+  const { groupId } = useBottomSheetManagerContext();
+  const scaleDepth = useBackgroundScaleDepth(groupId);
+  return useScaleAnimatedStyleInternal(scaleDepth);
+}
+
+export function useSheetScaleAnimatedStyle(sheetId: string) {
+  const { groupId } = useBottomSheetManagerContext();
+  const scaleDepth = useSheetScaleDepth(groupId, sheetId);
+  return useScaleAnimatedStyleInternal(scaleDepth);
 }

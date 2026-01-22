@@ -32,6 +32,31 @@ export const useIsSheetOpen = (id: string) =>
     return status === 'open' || status === 'opening';
   }, shallow);
 
+export const useHasScaleBackgroundAbove = (id: string) =>
+  useBottomSheetStore((state) => {
+    const { stackOrder, sheetsById } = state;
+    const sheetIndex = stackOrder.indexOf(id);
+
+    if (sheetIndex === -1) {
+      return false;
+    }
+
+    // Check if any sheet above this one has scaleBackground
+    for (let i = sheetIndex + 1; i < stackOrder.length; i++) {
+      const aboveId = stackOrder[i]!;
+      const aboveSheet = sheetsById[aboveId];
+      if (
+        aboveSheet &&
+        aboveSheet.scaleBackground &&
+        aboveSheet.status !== 'closing' &&
+        aboveSheet.status !== 'hidden'
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }, shallow);
+
 // Action hooks
 
 export const useOpen = () => useBottomSheetStore((state) => state.open);
