@@ -6,7 +6,7 @@ import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import React from 'react';
 
 import { getAnimatedIndex } from './animatedRegistry';
-import { useSheetStatus } from './bottomSheet.store';
+import { useBottomSheetDefaultIndex } from './BottomSheetDefaultIndex.context';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
 import { useBottomSheetRefContext } from './BottomSheetRef.context';
 import { useBottomSheetContext } from './useBottomSheetContext';
@@ -30,7 +30,6 @@ export const BottomSheetManaged = React.forwardRef<
       enablePanDownToClose = true,
       backdropComponent = nullBackdrop,
       animatedIndex: externalAnimatedIndex,
-      index: externalIndex,
       ...props
     },
     forwardedRef
@@ -39,9 +38,7 @@ export const BottomSheetManaged = React.forwardRef<
     const contextRef = useBottomSheetRefContext();
     const ref = contextRef ?? forwardedRef;
 
-    const status = useSheetStatus(id);
-    const shouldBeClosed = status === 'hidden' || status === 'closing';
-    const index = externalIndex ?? (shouldBeClosed ? -1 : 0);
+    const defaultIndex = useBottomSheetDefaultIndex();
 
     const animatedIndex = externalAnimatedIndex ?? getAnimatedIndex(id);
     const { handleAnimate, handleChange, handleClose } =
@@ -82,7 +79,7 @@ export const BottomSheetManaged = React.forwardRef<
         animationConfigs={config}
         ref={ref}
         {...props}
-        index={index}
+        index={defaultIndex}
         animatedIndex={animatedIndex}
         onChange={wrappedOnChange}
         onClose={wrappedOnClose}
