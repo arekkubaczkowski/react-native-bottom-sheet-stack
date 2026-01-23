@@ -1,22 +1,30 @@
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import { useBottomSheetAnimatedIndexContext } from './BottomSheetAnimatedIndex.context';
+import { getAnimatedIndex } from './animatedRegistry';
 import { useStartClosing } from './store';
-import { useEffect, useState } from 'react';
 
 interface BottomSheetBackdropProps {
   sheetId: string;
 }
 
 export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
-  const animatedIndex = useBottomSheetAnimatedIndexContext();
+  const animatedIndex = getAnimatedIndex(sheetId);
   const startClosing = useStartClosing();
 
+  if (!animatedIndex) {
+    throw new Error('animatedIndex must be defined in BottomSheetBackdrop');
+  }
+
   const [initialized, setInitialized] = useState(false);
+
+  if (sheetId === 'persistent-with-portal') {
+    console.log('🚀 ~ BottomSheetBackdrop ~ initialized:', initialized);
+  }
 
   useEffect(() => {
     setTimeout(() => {
@@ -25,6 +33,13 @@ export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
+    if (sheetId === 'persistent-with-portal') {
+      console.log(
+        '🚀 ~ BottomSheetBackdrop ~ initialized:',
+        animatedIndex.value
+      );
+    }
+
     const opacity = interpolate(
       animatedIndex.value,
       [-1, 0],

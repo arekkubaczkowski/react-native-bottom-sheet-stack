@@ -6,7 +6,7 @@ import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import React from 'react';
 
 import { useAnimatedReaction } from 'react-native-reanimated';
-import { useBottomSheetAnimatedIndexContext } from './BottomSheetAnimatedIndex.context';
+import { getAnimatedIndex } from './animatedRegistry';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from './BottomSheetDefaultIndex.context';
 import { useBottomSheetRefContext } from './BottomSheetRef.context';
@@ -40,7 +40,11 @@ export const BottomSheetManaged = React.forwardRef<
     const ref = contextRef ?? forwardedRef;
 
     const defaultIndex = useBottomSheetDefaultIndex();
-    const contextAnimatedIndex = useBottomSheetAnimatedIndexContext();
+    const contextAnimatedIndex = getAnimatedIndex(id);
+
+    if (!contextAnimatedIndex) {
+      throw new Error('animatedIndex must be defined in BottomSheetManaged');
+    }
 
     useAnimatedReaction(
       () => contextAnimatedIndex.value,

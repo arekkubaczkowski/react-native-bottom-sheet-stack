@@ -10,9 +10,7 @@ const animatedIndexRegistry = new Map<string, SharedValue<number>>();
 export function ensureAnimatedIndex(sheetId: string): SharedValue<number> {
   const existing = animatedIndexRegistry.get(sheetId);
   if (existing) {
-    console.log(
-      `[AnimatedRegistry] ensureAnimatedIndex[${sheetId}] REPLACING existing value: ${existing.value}`
-    );
+    return existing;
   }
 
   const animatedIndex = makeMutable(-1);

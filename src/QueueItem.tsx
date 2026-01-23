@@ -12,7 +12,6 @@ import {
   useSheetPortalSession,
   useSheetUsePortal,
 } from './bottomSheet.store';
-import { BottomSheetAnimatedIndexContext } from './BottomSheetAnimatedIndex.context';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { cleanupSheetRef } from './refsMap';
 import { useSheetScaleAnimatedStyle } from './useScaleAnimation';
@@ -37,7 +36,6 @@ export const QueueItem = memo(function QueueItem({
 
   const animatedIndex = getAnimatedIndex(id);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       cleanupSheetRef(id);
@@ -53,7 +51,7 @@ export const QueueItem = memo(function QueueItem({
   }
 
   return (
-    <BottomSheetAnimatedIndexContext.Provider value={animatedIndex}>
+    <>
       {isActive && (
         <View
           style={[StyleSheet.absoluteFillObject, { zIndex: backdropZIndex }]}
@@ -75,7 +73,7 @@ export const QueueItem = memo(function QueueItem({
           </BottomSheetContext.Provider>
         )}
       </ScaleWrapper>
-    </BottomSheetAnimatedIndexContext.Provider>
+    </>
   );
 });
 
