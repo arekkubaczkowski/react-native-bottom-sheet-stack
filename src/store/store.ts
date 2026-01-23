@@ -7,7 +7,6 @@ import {
   getTopSheetId,
   isActivatableKeepMounted,
   isHidden,
-  isOpening,
   removeFromStack,
   updateSheet,
 } from './helpers';
@@ -25,6 +24,13 @@ export const useBottomSheetStore = create(
         const existingSheet = state.sheetsById[sheet.id];
 
         if (existingSheet && !isActivatableKeepMounted(existingSheet)) {
+          return state;
+        }
+
+        const hasOpeningInGroup = Object.values(state.sheetsById).some(
+          (s) => s.groupId === sheet.groupId && s.status === 'opening'
+        );
+        if (hasOpeningInGroup) {
           return state;
         }
 
@@ -72,7 +78,7 @@ export const useBottomSheetStore = create(
     startClosing: (id) =>
       set((state) => {
         const sheet = state.sheetsById[id];
-        if (!sheet || isHidden(sheet) || isOpening(sheet)) return state;
+        if (!sheet || isHidden(sheet)) return state;
 
         let updatedSheetsById = updateSheet(state.sheetsById, id, {
           status: 'closing',
