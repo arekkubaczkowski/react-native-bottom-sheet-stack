@@ -1,6 +1,8 @@
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React, { useEffect, useRef } from 'react';
 
+import { Portal } from 'react-native-teleport';
+import { BottomSheetContext } from './BottomSheet.context';
 import {
   useMount,
   useSheetExists,
@@ -13,8 +15,6 @@ import { BottomSheetRefContext } from './BottomSheetRef.context';
 import type { BottomSheetPortalId } from './portal.types';
 import { setSheetRef } from './refsMap';
 import { useEvent } from './useEvent';
-import { Portal } from 'react-native-teleport';
-import { BottomSheetContext } from './BottomSheet.context';
 
 interface BottomSheetPersistentProps {
   id: BottomSheetPortalId;

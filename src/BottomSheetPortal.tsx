@@ -4,9 +4,9 @@ import React from 'react';
 import { Portal } from 'react-native-teleport';
 
 import { BottomSheetContext } from './BottomSheet.context';
+import { useSheetPortalSession } from './bottomSheet.store';
 import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
 import { BottomSheetRefContext } from './BottomSheetRef.context';
-import { useSheetPortalSession } from './bottomSheet.store';
 import type { BottomSheetPortalId } from './portal.types';
 import { getSheetRef } from './refsMap';
 
@@ -23,8 +23,10 @@ export function BottomSheetPortal({ id, children }: BottomSheetPortalProps) {
     return null;
   }
 
+  const portalName = `bottomsheet-${id}-${portalSession}`;
+
   return (
-    <Portal hostName={`bottomsheet-${id}-${portalSession}`}>
+    <Portal hostName={portalName}>
       <BottomSheetContext.Provider value={{ id }}>
         <BottomSheetDefaultIndexContext.Provider value={{ defaultIndex: 0 }}>
           <BottomSheetRefContext.Provider value={ref}>

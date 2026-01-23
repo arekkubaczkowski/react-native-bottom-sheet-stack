@@ -45,7 +45,10 @@ export function createSheetEventHandlers(sheetId: string) {
     const state = useBottomSheetStore.getState();
     const currentStatus = state.sheetsById[sheetId]?.status;
 
-    if (toIndex === -1 && currentStatus === 'open') {
+    if (
+      toIndex === -1 &&
+      (currentStatus === 'open' || currentStatus === 'opening')
+    ) {
       startClosing(sheetId);
     }
   };

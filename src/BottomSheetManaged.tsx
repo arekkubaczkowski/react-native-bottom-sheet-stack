@@ -5,9 +5,10 @@ import BottomSheetOriginal, {
 import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React from 'react';
 
+import { useAnimatedReaction } from 'react-native-reanimated';
 import { getAnimatedIndex } from './animatedRegistry';
-import { useBottomSheetDefaultIndex } from './BottomSheetDefaultIndex.context';
 import { createSheetEventHandlers } from './bottomSheetCoordinator';
+import { useBottomSheetDefaultIndex } from './BottomSheetDefaultIndex.context';
 import { useBottomSheetRefContext } from './BottomSheetRef.context';
 import { useBottomSheetContext } from './useBottomSheetContext';
 
@@ -39,24 +40,35 @@ export const BottomSheetManaged = React.forwardRef<
     const ref = contextRef ?? forwardedRef;
 
     const defaultIndex = useBottomSheetDefaultIndex();
+    const contextAnimatedIndex = getAnimatedIndex(id);
 
-    const animatedIndex = externalAnimatedIndex ?? getAnimatedIndex(id);
+    if (!contextAnimatedIndex) {
+      throw new Error('animatedIndex must be defined in BottomSheetManaged');
+    }
+
+    useAnimatedReaction(
+      () => contextAnimatedIndex.value,
+      (value) => {
+        externalAnimatedIndex?.set(value);
+      }
+    );
+
     const { handleAnimate, handleChange, handleClose } =
       createSheetEventHandlers(id);
 
     const wrappedOnAnimate: BottomSheetProps['onAnimate'] = (
-      fromIndex: number,
-      toIndex: number,
-      fromPosition: number,
-      toPosition: number
+      fromIndex,
+      toIndex,
+      fromPosition,
+      toPosition
     ) => {
       handleAnimate(fromIndex, toIndex);
       onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
     };
 
     const wrappedOnChange: BottomSheetProps['onChange'] = (
-      index: number,
-      position: number,
+      index,
+      position,
       type
     ) => {
       handleChange(index);
@@ -80,7 +92,7 @@ export const BottomSheetManaged = React.forwardRef<
         ref={ref}
         {...props}
         index={defaultIndex}
-        animatedIndex={animatedIndex}
+        animatedIndex={contextAnimatedIndex}
         onChange={wrappedOnChange}
         onClose={wrappedOnClose}
         onAnimate={wrappedOnAnimate}

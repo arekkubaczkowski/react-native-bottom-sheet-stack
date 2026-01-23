@@ -1,17 +1,16 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, type PropsWithChildren } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 import { PortalHost } from 'react-native-teleport';
 
-import { cleanupAnimatedIndex } from './animatedRegistry';
+import { cleanupAnimatedIndex, getAnimatedIndex } from './animatedRegistry';
 import { BottomSheetContext } from './BottomSheet.context';
 import {
   useSheetContent,
-  useSheetUsePortal,
   useSheetKeepMounted,
   useSheetPortalSession,
-  useStartClosing,
+  useSheetUsePortal,
 } from './bottomSheet.store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { cleanupSheetRef } from './refsMap';
@@ -32,10 +31,10 @@ export const QueueItem = memo(function QueueItem({
   const usePortal = useSheetUsePortal(id);
   const keepMounted = useSheetKeepMounted(id);
   const portalSession = useSheetPortalSession(id);
-  const startClosing = useStartClosing();
 
   const { width, height } = useSafeAreaFrame();
-  const scaleStyle = useSheetScaleAnimatedStyle(id);
+
+  const animatedIndex = getAnimatedIndex(id);
 
   useEffect(() => {
     return () => {
@@ -47,6 +46,10 @@ export const QueueItem = memo(function QueueItem({
   const backdropZIndex = stackIndex * 2;
   const contentZIndex = stackIndex * 2 + 1;
 
+  if (!animatedIndex) {
+    return null;
+  }
+
   return (
     <>
       {isActive && (
@@ -54,19 +57,11 @@ export const QueueItem = memo(function QueueItem({
           style={[StyleSheet.absoluteFillObject, { zIndex: backdropZIndex }]}
           pointerEvents="box-none"
         >
-          <BottomSheetBackdrop sheetId={id} onPress={() => startClosing(id)} />
+          <BottomSheetBackdrop sheetId={id} />
         </View>
       )}
 
-      <Animated.View
-        pointerEvents="box-none"
-        style={[
-          StyleSheet.absoluteFillObject,
-          styles.container,
-          { width, height, zIndex: contentZIndex },
-          scaleStyle,
-        ]}
-      >
+      <ScaleWrapper id={id} zIndex={contentZIndex}>
         {usePortal ? (
           <PortalHost
             name={`bottomsheet-${id}-${portalSession}`}
@@ -77,11 +72,27 @@ export const QueueItem = memo(function QueueItem({
             {content}
           </BottomSheetContext.Provider>
         )}
-      </Animated.View>
+      </ScaleWrapper>
     </>
   );
 });
 
-const styles = StyleSheet.create({
-  container: {},
-});
+const ScaleWrapper = ({
+  id,
+  zIndex,
+  children,
+}: PropsWithChildren<{
+  id: string;
+  zIndex: number;
+}>) => {
+  const scaleStyle = useSheetScaleAnimatedStyle(id);
+
+  return (
+    <Animated.View
+      pointerEvents="box-none"
+      style={[StyleSheet.absoluteFillObject, { zIndex }, scaleStyle]}
+    >
+      {children}
+    </Animated.View>
+  );
+};
