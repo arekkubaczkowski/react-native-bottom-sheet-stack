@@ -22,10 +22,6 @@ export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
 
   const [initialized, setInitialized] = useState(false);
 
-  if (sheetId === 'persistent-with-portal') {
-    console.log('🚀 ~ BottomSheetBackdrop ~ initialized:', initialized);
-  }
-
   useEffect(() => {
     setTimeout(() => {
       setInitialized(true);
@@ -33,13 +29,6 @@ export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
-    if (sheetId === 'persistent-with-portal') {
-      console.log(
-        '🚀 ~ BottomSheetBackdrop ~ initialized:',
-        animatedIndex.value
-      );
-    }
-
     const opacity = interpolate(
       animatedIndex.value,
       [-1, 0],
