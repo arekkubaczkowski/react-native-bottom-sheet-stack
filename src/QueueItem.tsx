@@ -43,8 +43,10 @@ export const QueueItem = memo(function QueueItem({
     };
   }, [id, keepMounted]);
 
-  const backdropZIndex = stackIndex * 2;
-  const contentZIndex = stackIndex * 2 + 1;
+  const baseZIndex = 100_000_000;
+
+  const backdropZIndex = baseZIndex + stackIndex * 2;
+  const contentZIndex = baseZIndex + stackIndex * 2 + 1;
 
   if (!animatedIndex) {
     return null;
