@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'react-native-bottom-sheet-stack',
   tagline:
-    'Stack manager for @gorhom/bottom-sheet with push, switch, replace navigation and iOS-style scale animations',
+    'Library-agnostic stack manager for bottom sheets and modals with push, switch, replace navigation and iOS-style scale animations',
   favicon: 'img/favicon.ico',
 
   future: {

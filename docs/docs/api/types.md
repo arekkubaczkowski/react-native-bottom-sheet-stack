@@ -59,12 +59,59 @@ interface BottomSheetState {
 
 ### BottomSheetRef
 
-Ref type for `BottomSheetManaged` component.
+Backward-compatible alias for `SheetAdapterRef`. Ref type for `BottomSheetManaged` (and all adapters).
 
 ```tsx
 import type { BottomSheetRef } from 'react-native-bottom-sheet-stack';
 
 const sheetRef = useRef<BottomSheetRef>(null);
+```
+
+---
+
+## Adapter Types
+
+### SheetAdapterRef
+
+The core adapter interface. Every adapter implements these two methods via `useImperativeHandle`.
+
+```tsx
+interface SheetAdapterRef {
+  expand(): void;  // Called by coordinator to show the sheet
+  close(): void;   // Called by coordinator to hide the sheet
+}
+```
+
+The coordinator calls `expand()` when the store status transitions to `'opening'`, and `close()` when status transitions to `'closing'` or `'hidden'`.
+
+---
+
+### SheetAdapterEvents
+
+Lifecycle events that adapters call back to the store. Returned by `createSheetEventHandlers(sheetId)`.
+
+```tsx
+interface SheetAdapterEvents {
+  handleDismiss(): void;   // User-initiated dismiss (swipe, backdrop, back button)
+  handleOpened(): void;    // Show animation completed — sheet is interactive
+  handleClosed(): void;    // Hide animation completed — sheet is fully hidden
+}
+```
+
+**Event Flow:**
+1. Coordinator calls `ref.expand()` → adapter shows UI
+2. Animation completes → adapter calls `handleOpened()`
+3. User swipes/taps backdrop → adapter calls `handleDismiss()`
+4. Hide animation completes → adapter calls `handleClosed()`
+
+---
+
+### SheetRef
+
+Ref type alias used in the refs registry.
+
+```tsx
+type SheetRef = RefObject<SheetAdapterRef | null>;
 ```
 
 ---

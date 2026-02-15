@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DemoCard, FeatureItem } from '../components';
 import {
+  ActionsSheetDemoContent,
   AdapterComparisonContent,
   ContextComparisonSheet,
   ContextSheetPortal,
@@ -17,8 +18,11 @@ import {
   NestedSheet1,
   PortalModeSheetA,
   PortalModeSheetB,
+  RawBottomSheetDemoContent,
+  RNModalDemoContent,
   SheetA,
   SimpleModalContent,
+  TrueSheetDemoContent,
 } from '../sheets';
 import { colors, sharedStyles } from '../styles/theme';
 
@@ -34,6 +38,10 @@ export function HomeScreen() {
   const modalWithNestedControl = useBottomSheetControl('modal-with-nested');
   const adapterComparisonControl = useBottomSheetControl('adapter-comparison');
   const modalNavigationControl = useBottomSheetControl('modal-navigation');
+  const rnModalControl = useBottomSheetControl('rn-modal-demo');
+  const trueSheetControl = useBottomSheetControl('true-sheet-demo');
+  const actionsSheetControl = useBottomSheetControl('actions-sheet-demo');
+  const rawBottomSheetControl = useBottomSheetControl('raw-bottom-sheet-demo');
 
   return (
     <View style={sharedStyles.container}>
@@ -59,6 +67,19 @@ export function HomeScreen() {
       </BottomSheetPortal>
       <BottomSheetPortal id="modal-navigation">
         <ModalNavigationContent />
+      </BottomSheetPortal>
+      {/* Third-party adapter portals */}
+      <BottomSheetPortal id="rn-modal-demo">
+        <RNModalDemoContent />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="true-sheet-demo">
+        <TrueSheetDemoContent />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="actions-sheet-demo">
+        <ActionsSheetDemoContent />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="raw-bottom-sheet-demo">
+        <RawBottomSheetDemoContent />
       </BottomSheetPortal>
 
       <ScrollView
@@ -185,6 +206,39 @@ export function HomeScreen() {
           />
         </View>
 
+        {/* Third-Party Adapters */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Third-Party Adapters</Text>
+
+          <DemoCard
+            title="react-native-modal"
+            description="Fancy animations (slide, bounce, fade), swipe-to-dismiss, custom backdrops"
+            color={colors.warning}
+            onPress={() => rnModalControl.open()}
+          />
+
+          <DemoCard
+            title="TrueSheet (Native C++)"
+            description="Fully native Fabric sheet with detents, native grabber handle"
+            color={colors.success}
+            onPress={() => trueSheetControl.open()}
+          />
+
+          <DemoCard
+            title="ActionsSheet"
+            description="Zero-dependency action sheet with snap points and gesture controls"
+            color={colors.purple}
+            onPress={() => actionsSheetControl.open()}
+          />
+
+          <DemoCard
+            title="Raw Bottom Sheet"
+            description="Lightweight, minimal bottom sheet — fixed height, zero native deps"
+            color={colors.cyan}
+            onPress={() => rawBottomSheetControl.open()}
+          />
+        </View>
+
         {/* Features */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Features</Text>
@@ -202,7 +256,8 @@ export function HomeScreen() {
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
             Library-agnostic stack manager with pluggable adapters. Ships with
-            GorhomSheetAdapter and ModalAdapter — or build your own.
+            GorhomSheetAdapter, ModalAdapter, and 4 third-party adapters —
+            or build your own with the SheetAdapterRef interface.
           </Text>
         </View>
       </ScrollView>

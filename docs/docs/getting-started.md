@@ -10,11 +10,38 @@ sidebar_position: 2
 yarn add react-native-bottom-sheet-stack
 ```
 
-### Peer Dependencies
+### Core Peer Dependencies
 
 ```bash
-yarn add @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-teleport zustand
+yarn add react-native-reanimated react-native-safe-area-context react-native-teleport zustand
 ```
+
+### Adapter-Specific Dependencies
+
+Install only the dependencies for the adapter(s) you plan to use:
+
+```bash
+# For GorhomSheetAdapter (default bottom sheet adapter)
+yarn add @gorhom/bottom-sheet react-native-gesture-handler
+
+# For ModalAdapter — no extra dependencies (uses React Native's built-in Modal)
+
+# For ReactNativeModalAdapter
+yarn add react-native-modal
+
+# For TrueSheetAdapter (requires Fabric / New Architecture)
+yarn add @lodev09/react-native-true-sheet
+
+# For ActionsSheetAdapter
+yarn add react-native-actions-sheet
+
+# For RawBottomSheetAdapter
+yarn add react-native-raw-bottom-sheet
+```
+
+:::tip
+All adapter dependencies are **optional**. Only install what you use. The library won't crash if a dependency is missing — it's only needed at runtime when you render that specific adapter.
+:::
 
 ## Setup
 

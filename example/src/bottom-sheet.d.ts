@@ -22,5 +22,10 @@ declare module 'react-native-bottom-sheet-stack' {
     'modal-with-nested': true;
     'adapter-comparison': true;
     'modal-navigation': true;
+    // Third-party adapter demos
+    'rn-modal-demo': true;
+    'true-sheet-demo': true;
+    'actions-sheet-demo': true;
+    'raw-bottom-sheet-demo': true;
   }
 }
