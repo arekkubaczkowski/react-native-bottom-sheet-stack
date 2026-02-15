@@ -6,6 +6,8 @@ sidebar_position: 11
 
 These adapters wrap popular React Native bottom sheet and modal libraries. Each is an **optional peer dependency** — install only what you use.
 
+All library-specific props are accepted via spread and forwarded to the underlying component. Each adapter sets sensible defaults that can be overridden.
+
 ## ReactNativeModalAdapter
 
 Wraps [`react-native-modal`](https://github.com/react-native-modal/react-native-modal) — a feature-rich modal with 60+ animation options, swipe-to-dismiss, and customizable backdrops.
@@ -42,25 +44,9 @@ function FancyModal() {
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `animationIn` | `string` | `'slideInUp'` | Show animation (any [react-native-animatable](https://github.com/oblador/react-native-animatable) animation) |
-| `animationOut` | `string` | `'slideOutDown'` | Hide animation |
-| `animationInTiming` | `number` | `300` | Show animation duration (ms) |
-| `animationOutTiming` | `number` | `300` | Hide animation duration (ms) |
-| `swipeDirection` | `string \| string[]` | `'down'` | Swipe direction(s) to dismiss |
-| `swipeThreshold` | `number` | `100` | Swipe distance to trigger dismiss |
-| `hasBackdrop` | `boolean` | `true` | Show backdrop overlay |
-| `backdropColor` | `string` | `'black'` | Backdrop color |
-| `backdropOpacity` | `number` | `0.5` | Backdrop opacity |
-| `coverScreen` | `boolean` | `true` | Cover entire screen |
-| `avoidKeyboard` | `boolean` | `false` | Avoid keyboard |
-| `useNativeDriver` | `boolean` | `true` | Use native animation driver |
-| `hideModalContentWhileAnimating` | `boolean` | `true` | Fix useNativeDriver flicker |
-| `propagateSwipe` | `boolean` | — | Propagate swipe to children |
-| `presentationStyle` | `string` | — | iOS presentation style |
-| `statusBarTranslucent` | `boolean` | — | Android status bar |
-| `modalProps` | `Record<string, unknown>` | — | Additional pass-through props |
+All [`react-native-modal` props](https://github.com/react-native-modal/react-native-modal#available-props) are accepted via spread.
+
+Adapter defaults (overridable): `swipeDirection="down"`, `backdropOpacity={0.5}`, `useNativeDriver`, `hideModalContentWhileAnimating`.
 
 ### When to Use
 
@@ -106,20 +92,9 @@ function NativeSheet() {
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `detents` | `('auto' \| number)[]` | `['auto']` | Detent positions (up to 3). `'auto'` = content-sized, `0.0-1.0` = screen fraction |
-| `initialDetentIndex` | `number` | `0` | Initial detent index |
-| `dismissible` | `boolean` | `true` | Allow dismiss via drag/tap |
-| `draggable` | `boolean` | `true` | Enable dragging |
-| `dimmed` | `boolean` | `true` | Show dimmed overlay |
-| `dimmedDetentIndex` | `number` | — | Detent index where dimming starts |
-| `backgroundColor` | `string` | — | Sheet background color |
-| `grabber` | `boolean` | `true` | Show native grabber handle |
-| `cornerRadius` | `number` | — | Corner radius |
-| `header` | `ReactNode` | — | Fixed header component |
-| `footer` | `ReactNode` | — | Fixed footer component |
-| `sheetProps` | `Record<string, unknown>` | — | Additional pass-through props |
+All [`@lodev09/react-native-true-sheet` props](https://github.com/lodev09/react-native-true-sheet#props) are accepted via spread.
+
+Adapter defaults (overridable): `detents={['auto']}`, `grabber`, `dismissible`, `draggable`, `dimmed`.
 
 ### When to Use
 
@@ -160,22 +135,9 @@ function MyActionsSheet() {
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `gestureEnabled` | `boolean` | `true` | Enable gesture controls |
-| `snapPoints` | `number[]` | — | Snap points as percentages (0-100) |
-| `initialSnapIndex` | `number` | — | Initial snap point index |
-| `closeOnTouchBackdrop` | `boolean` | `true` | Close on backdrop tap |
-| `closeOnPressBack` | `boolean` | `true` | Close on Android back button |
-| `overlayColor` | `string` | — | Backdrop overlay color |
-| `defaultOverlayOpacity` | `number` | `0.3` | Backdrop opacity |
-| `indicatorStyle` | `object` | — | Drag indicator style |
-| `containerStyle` | `object` | — | Sheet container style |
-| `statusBarTranslucent` | `boolean` | — | Android status bar |
-| `drawUnderStatusBar` | `boolean` | — | Draw under status bar |
-| `keyboardHandlerEnabled` | `boolean` | `true` | Enable keyboard handling |
-| `CustomHeaderComponent` | `ReactNode` | — | Custom header |
-| `sheetProps` | `Record<string, unknown>` | — | Additional pass-through props |
+All [`react-native-actions-sheet` props](https://github.com/ammarahm-ed/react-native-actions-sheet#actionsheet-props) are accepted via spread.
+
+Adapter defaults (overridable): `gestureEnabled`, `closeOnTouchBackdrop`, `closeOnPressBack`, `keyboardHandlerEnabled`.
 
 :::tip
 This adapter uses `isModal={false}` internally to avoid wrapping in a redundant Modal — the stack manager handles the overlay lifecycle.
@@ -226,19 +188,9 @@ function SimpleSheet() {
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `height` | `number` | `260` | Sheet height in pixels |
-| `openDuration` | `number` | `300` | Open animation duration (ms) |
-| `closeDuration` | `number` | `200` | Close animation duration (ms) |
-| `closeOnPressMask` | `boolean` | `true` | Close on backdrop tap |
-| `closeOnPressBack` | `boolean` | `false` | Close on Android back button |
-| `draggable` | `boolean` | `true` | Enable drag-to-close gesture |
-| `dragOnContent` | `boolean` | `false` | Allow dragging on content (incompatible with ScrollView) |
-| `useNativeDriver` | `boolean` | `true` | Use native animation driver |
-| `customStyles` | `{ wrapper?, container?, draggableIcon? }` | — | Custom styles |
-| `customModalProps` | `Record<string, unknown>` | — | Additional Modal props |
-| `customAvoidingViewProps` | `Record<string, unknown>` | — | KeyboardAvoidingView props |
+All [`react-native-raw-bottom-sheet` props](https://github.com/nicoleho0707/react-native-raw-bottom-sheet#props) are accepted via spread.
+
+Adapter defaults (overridable): `height={260}`, `draggable`, `closeOnPressMask`, `useNativeDriver`.
 
 ### When to Use
 
@@ -252,7 +204,6 @@ function SimpleSheet() {
 
 | Feature | ReactNativeModal | TrueSheet | ActionsSheet | RawBottomSheet |
 |---------|-----------------|-----------|--------------|----------------|
-| **npm downloads** | ~430K/week | ~41K/week | ~41K/week | ~25K/week |
 | **Native module** | No | Yes (C++) | No | No |
 | **Fabric required** | No | Yes | No | No |
 | **Snap points** | No | Detents (up to 3) | Yes (%) | No (fixed height) |

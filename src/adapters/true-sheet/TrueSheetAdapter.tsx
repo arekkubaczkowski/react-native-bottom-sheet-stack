@@ -7,146 +7,76 @@ import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
 /**
- * Props for the TrueSheet adapter. We define our own interface to keep
- * `@lodev09/react-native-true-sheet` as an optional peer dependency.
- */
-export interface TrueSheetAdapterProps {
-  children: React.ReactNode;
-  /**
-   * Array of detent positions. Up to 3 values.
-   * - `'auto'` for content-based sizing
-   * - `0.0` to `1.0` fractional values (e.g., 0.5 = 50% of screen)
-   * @default ['auto']
-   */
-  detents?: Array<'auto' | number>;
-  /** Index of the detent to present at initially (default: 0) */
-  initialDetentIndex?: number;
-  /** Enable/disable dismissal via drag or background tap (default: true) */
-  dismissible?: boolean;
-  /** Enable/disable dragging (default: true) */
-  draggable?: boolean;
-  /** Show dimmed background overlay (default: true) */
-  dimmed?: boolean;
-  /** Detent index at which dimming starts */
-  dimmedDetentIndex?: number;
-  /** Sheet background color */
-  backgroundColor?: string;
-  /** Show native grabber handle (default: true) */
-  grabber?: boolean;
-  /** Corner radius */
-  cornerRadius?: number;
-  /** Header component (stays fixed while content scrolls) */
-  header?: React.ReactNode;
-  /** Footer component (stays fixed while content scrolls) */
-  footer?: React.ReactNode;
-  /** Any additional props to pass through to TrueSheet */
-  sheetProps?: Record<string, unknown>;
-}
-
-/**
  * Adapter for `@lodev09/react-native-true-sheet` — a fully native (C++/Fabric)
- * bottom sheet with the best performance characteristics.
+ * bottom sheet.
+ *
+ * All TrueSheet props are accepted via spread and forwarded to the
+ * underlying component. Requires React Native New Architecture (Fabric).
  *
  * Requires `@lodev09/react-native-true-sheet` as a peer dependency:
  * ```
  * npm install @lodev09/react-native-true-sheet
  * ```
  *
- * Note: Requires React Native New Architecture (Fabric).
- *
- * @example
- * ```tsx
- * <BottomSheetPortal id="my-sheet">
- *   <TrueSheetAdapter detents={['auto', 0.6]} grabber>
- *     <View><Text>Native sheet content</Text></View>
- *   </TrueSheetAdapter>
- * </BottomSheetPortal>
- * ```
+ * @see https://github.com/lodev09/react-native-true-sheet
  */
+export interface TrueSheetAdapterProps {
+  children: React.ReactNode;
+  [key: string]: unknown;
+}
+
 export const TrueSheetAdapter = React.forwardRef<
   SheetAdapterRef,
   TrueSheetAdapterProps
->(
-  (
-    {
-      children,
-      detents = ['auto'],
-      initialDetentIndex = 0,
-      dismissible = true,
-      draggable = true,
-      dimmed = true,
-      dimmedDetentIndex,
-      backgroundColor,
-      grabber = true,
-      cornerRadius,
-      header,
-      footer,
-      sheetProps,
-    },
-    forwardedRef
-  ) => {
-    const { id } = useBottomSheetContext();
-    const contextRef = useBottomSheetRefContext();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const trueSheetRef = useRef<any>(null);
+>(({ children, ...sheetProps }, forwardedRef) => {
+  const { id } = useBottomSheetContext();
+  const contextRef = useBottomSheetRefContext();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const trueSheetRef = useRef<any>(null);
 
-    const { handleDismiss, handleOpened, handleClosed } =
-      createSheetEventHandlers(id);
+  const { handleDismiss, handleOpened, handleClosed } =
+    createSheetEventHandlers(id);
 
-    const ref = contextRef ?? forwardedRef;
+  const ref = contextRef ?? forwardedRef;
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        expand: () => {
-          trueSheetRef.current?.present();
-        },
-        close: () => {
-          trueSheetRef.current?.dismiss();
-        },
-      }),
-      []
-    );
+  useImperativeHandle(
+    ref,
+    () => ({
+      expand: () => trueSheetRef.current?.present(),
+      close: () => trueSheetRef.current?.dismiss(),
+    }),
+    []
+  );
 
-    const onDidPresent = () => {
-      setAnimatedIndexValue(id, 0);
-      handleOpened();
-    };
+  const onDidPresent = () => {
+    setAnimatedIndexValue(id, 0);
+    handleOpened();
+  };
 
-    const onWillDismiss = () => {
-      handleDismiss();
-    };
+  const onDidDismiss = () => {
+    setAnimatedIndexValue(id, -1);
+    handleClosed();
+  };
 
-    const onDidDismiss = () => {
-      setAnimatedIndexValue(id, -1);
-      handleClosed();
-    };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { TrueSheet } = require('@lodev09/react-native-true-sheet');
 
-    // Lazy import: @lodev09/react-native-true-sheet is an optional peer dependency
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { TrueSheet } = require('@lodev09/react-native-true-sheet');
-
-    return (
-      <TrueSheet
-        ref={trueSheetRef}
-        detents={detents}
-        initialDetentIndex={initialDetentIndex}
-        dismissible={dismissible}
-        draggable={draggable}
-        dimmed={dimmed}
-        dimmedDetentIndex={dimmedDetentIndex}
-        backgroundColor={backgroundColor}
-        grabber={grabber}
-        cornerRadius={cornerRadius}
-        header={header}
-        footer={footer}
-        onDidPresent={onDidPresent}
-        onWillDismiss={onWillDismiss}
-        onDidDismiss={onDidDismiss}
-        {...sheetProps}
-      >
-        {children}
-      </TrueSheet>
-    );
-  }
-);
+  return (
+    <TrueSheet
+      // Adapter defaults (overridable via spread)
+      detents={['auto']}
+      grabber
+      dismissible
+      draggable
+      dimmed
+      {...sheetProps}
+      // Managed by adapter (not overridable)
+      ref={trueSheetRef}
+      onDidPresent={onDidPresent}
+      onWillDismiss={handleDismiss}
+      onDidDismiss={onDidDismiss}
+    >
+      {children}
+    </TrueSheet>
+  );
+});

@@ -27,10 +27,8 @@ export function initBottomSheetCoordinator(groupId: string) {
             ref?.expand();
             break;
           case 'hidden':
-            if (ref) ref.close();
-            break;
           case 'closing':
-            if (ref) ref.close();
+            ref?.close();
             break;
         }
       });
@@ -51,32 +49,29 @@ export function createSheetEventHandlers(
   sheetId: string
 ): SheetAdapterEvents {
   const handleDismiss = () => {
-    const { startClosing } = useBottomSheetStore.getState();
-    const currentStatus =
-      useBottomSheetStore.getState().sheetsById[sheetId]?.status;
+    const state = useBottomSheetStore.getState();
+    const currentStatus = state.sheetsById[sheetId]?.status;
 
     if (currentStatus === 'open' || currentStatus === 'opening') {
-      startClosing(sheetId);
+      state.startClosing(sheetId);
     }
   };
 
   const handleOpened = () => {
-    const { markOpen } = useBottomSheetStore.getState();
-    const currentStatus =
-      useBottomSheetStore.getState().sheetsById[sheetId]?.status;
+    const state = useBottomSheetStore.getState();
+    const currentStatus = state.sheetsById[sheetId]?.status;
 
     if (currentStatus === 'opening') {
-      markOpen(sheetId);
+      state.markOpen(sheetId);
     }
   };
 
   const handleClosed = () => {
-    const { finishClosing } = useBottomSheetStore.getState();
-    const currentStatus =
-      useBottomSheetStore.getState().sheetsById[sheetId]?.status;
+    const state = useBottomSheetStore.getState();
+    const currentStatus = state.sheetsById[sheetId]?.status;
 
     if (currentStatus !== 'hidden') {
-      finishClosing(sheetId);
+      state.finishClosing(sheetId);
     }
   };
 

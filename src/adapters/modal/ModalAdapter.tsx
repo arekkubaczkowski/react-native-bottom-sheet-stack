@@ -63,18 +63,6 @@ export const ModalAdapter = React.forwardRef<
       setAnimatedIndexValue(id, visible ? 0 : -1);
     }, [visible, id]);
 
-    const onShow = () => {
-      handleOpened();
-    };
-
-    const onRequestClose = () => {
-      handleDismiss();
-    };
-
-    const onDismiss = () => {
-      handleClosed();
-    };
-
     return (
       <Modal
         visible={visible}
@@ -82,9 +70,9 @@ export const ModalAdapter = React.forwardRef<
         presentationStyle={presentationStyle}
         transparent={transparent}
         statusBarTranslucent={statusBarTranslucent}
-        onShow={onShow}
-        onRequestClose={onRequestClose}
-        onDismiss={onDismiss}
+        onShow={handleOpened}
+        onRequestClose={handleDismiss}
+        onDismiss={handleClosed}
       >
         <View style={[styles.container, contentContainerStyle]}>
           {children}

@@ -36,16 +36,7 @@ const MySheet = forwardRef((props, ref) => {
 
 ### Props
 
-Accepts all props from [`@gorhom/bottom-sheet`](https://gorhom.dev/react-native-bottom-sheet/props).
-
-Key props:
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `snapPoints` | `(string \| number)[]` | — | Snap point positions |
-| `enableDynamicSizing` | `boolean` | `false` | Auto-size to content |
-| `enablePanDownToClose` | `boolean` | `true` | Swipe down to dismiss |
-| `backdropComponent` | `Component` | `null` | Custom backdrop |
+Accepts all props from [`@gorhom/bottom-sheet`](https://gorhom.dev/react-native-bottom-sheet/props). The adapter overrides `enablePanDownToClose` to `true` by default.
 
 ### When to Use
 
@@ -80,13 +71,9 @@ function MyModal() {
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `animationType` | `'none' \| 'slide' \| 'fade'` | `'slide'` | Animation type |
-| `presentationStyle` | `'fullScreen' \| 'pageSheet' \| 'formSheet' \| 'overFullScreen'` | `'pageSheet'` | iOS presentation style |
-| `transparent` | `boolean` | `false` | Transparent background |
-| `statusBarTranslucent` | `boolean` | — | Android status bar |
-| `contentContainerStyle` | `ViewStyle` | — | Inner container style |
+Accepts [`animationType`](https://reactnative.dev/docs/modal#animationtype), [`presentationStyle`](https://reactnative.dev/docs/modal#presentationstyle), [`transparent`](https://reactnative.dev/docs/modal#transparent), and [`statusBarTranslucent`](https://reactnative.dev/docs/modal#statusbartranslucent) from React Native's [Modal](https://reactnative.dev/docs/modal). Additionally accepts `contentContainerStyle` for the inner wrapper view.
+
+Defaults: `animationType="slide"`, `presentationStyle="pageSheet"`, `transparent={false}`.
 
 ### When to Use
 
