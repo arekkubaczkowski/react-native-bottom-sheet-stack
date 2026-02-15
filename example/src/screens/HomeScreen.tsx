@@ -8,13 +8,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DemoCard, FeatureItem } from '../components';
 import {
+  AdapterComparisonContent,
   ContextComparisonSheet,
   ContextSheetPortal,
   HeavySheet,
+  ModalNavigationContent,
+  ModalWithNestedSheetContent,
   NestedSheet1,
   PortalModeSheetA,
   PortalModeSheetB,
   SheetA,
+  SimpleModalContent,
 } from '../sheets';
 import { colors, sharedStyles } from '../styles/theme';
 
@@ -27,6 +31,9 @@ export function HomeScreen() {
   const persistentWithPortalControl = useBottomSheetControl(
     'persistent-with-portal'
   );
+  const modalWithNestedControl = useBottomSheetControl('modal-with-nested');
+  const adapterComparisonControl = useBottomSheetControl('adapter-comparison');
+  const modalNavigationControl = useBottomSheetControl('modal-navigation');
 
   return (
     <View style={sharedStyles.container}>
@@ -39,6 +46,19 @@ export function HomeScreen() {
       </BottomSheetPortal>
       <BottomSheetPortal id="portal-mode-sheet-b">
         <PortalModeSheetB />
+      </BottomSheetPortal>
+      {/* Modal adapter portals */}
+      <BottomSheetPortal id="simple-modal">
+        <SimpleModalContent />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="modal-with-nested">
+        <ModalWithNestedSheetContent />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="adapter-comparison">
+        <AdapterComparisonContent />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="modal-navigation">
+        <ModalNavigationContent />
       </BottomSheetPortal>
 
       <ScrollView
@@ -139,6 +159,32 @@ export function HomeScreen() {
           />
         </View>
 
+        {/* Modal Adapter Demos */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Modal Adapter</Text>
+
+          <DemoCard
+            title="Modal Navigation"
+            description="Push, Switch, Replace modes using native Modal instead of bottom sheet"
+            color={colors.warning}
+            onPress={() => modalNavigationControl.open()}
+          />
+
+          <DemoCard
+            title="Mixed Stack"
+            description="Push bottom sheets from modals and modals from bottom sheets"
+            color={colors.purple}
+            onPress={() => modalWithNestedControl.open()}
+          />
+
+          <DemoCard
+            title="Adapter Comparison"
+            description="Open the same content as a bottom sheet or modal — same stack API"
+            color={colors.cyan}
+            onPress={() => adapterComparisonControl.open()}
+          />
+        </View>
+
         {/* Features */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Features</Text>
@@ -147,14 +193,16 @@ export function HomeScreen() {
             <FeatureItem icon="~" label="Switch" />
             <FeatureItem icon="=" label="Replace" />
             <FeatureItem icon="*" label="Scale BG" />
+            <FeatureItem icon="[" label="Adapters" />
+            <FeatureItem icon="#" label="Modals" />
           </View>
         </View>
 
         {/* Info */}
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
-            Built on top of @gorhom/bottom-sheet with stack management,
-            navigation modes, and iOS-style scale animations.
+            Library-agnostic stack manager with pluggable adapters. Ships with
+            GorhomSheetAdapter and ModalAdapter — or build your own.
           </Text>
         </View>
       </ScrollView>
