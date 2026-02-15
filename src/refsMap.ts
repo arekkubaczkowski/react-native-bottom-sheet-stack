@@ -1,7 +1,4 @@
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import type { RefObject } from 'react';
-
-type SheetRef = RefObject<BottomSheetMethods | null>;
+import type { SheetRef } from './adapter.types';
 
 const sheetRefsMap = new Map<string, SheetRef>();
 

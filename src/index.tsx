@@ -6,6 +6,23 @@ export { BottomSheetManaged, type BottomSheetRef } from './BottomSheetManaged';
 export { BottomSheetPortal } from './BottomSheetPortal';
 export { BottomSheetPersistent } from './BottomSheetPersistent';
 
+// Adapters
+export {
+  GorhomSheetAdapter,
+  type GorhomSheetAdapterProps,
+} from './adapters/gorhom';
+export { ModalAdapter, type ModalAdapterProps } from './adapters/modal';
+
+// Adapter types
+export type {
+  SheetAdapterRef,
+  SheetAdapterEvents,
+  SheetRef,
+} from './adapter.types';
+
+// Coordinator (for custom adapter authors)
+export { createSheetEventHandlers } from './bottomSheetCoordinator';
+
 // Hooks
 export { useBottomSheetManager } from './useBottomSheetManager';
 export {

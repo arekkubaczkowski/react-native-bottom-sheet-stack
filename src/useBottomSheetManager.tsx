@@ -7,8 +7,8 @@ import {
   type OpenMode,
 } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
+import type { SheetAdapterRef } from './adapter.types';
 import { setSheetRef } from './refsMap';
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
@@ -30,7 +30,7 @@ export const useBottomSheetManager = () => {
       options.groupId || bottomSheetManagerContext?.groupId || 'default';
 
     const id = options.id || Math.random().toString(36);
-    const ref = React.createRef<BottomSheetMethods>();
+    const ref = React.createRef<SheetAdapterRef>();
 
     setSheetRef(id, ref);
 

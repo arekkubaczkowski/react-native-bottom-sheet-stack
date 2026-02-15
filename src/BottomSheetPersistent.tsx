@@ -1,5 +1,5 @@
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React, { useEffect, useRef } from 'react';
+import type { SheetAdapterRef } from './adapter.types';
 
 import { Portal } from 'react-native-teleport';
 import { BottomSheetContext } from './BottomSheet.context';
@@ -30,7 +30,7 @@ export function BottomSheetPersistent({
   const unmount = useUnmount();
   const sheetExists = useSheetExists(id);
   const portalSession = useSheetPortalSession(id);
-  const sheetRef = useRef<BottomSheetMethods>(null);
+  const sheetRef = useRef<SheetAdapterRef>(null);
   const groupId = bottomSheetManagerContext?.groupId || 'default';
 
   const mountSheet = useEvent(() => {
