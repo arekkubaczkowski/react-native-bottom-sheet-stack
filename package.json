@@ -77,13 +77,29 @@
     "react-native-reanimated": ">=3.0.0",
     "react-native-safe-area-context": ">=5.0.0",
     "react-native-teleport": ">=0.5.0",
-    "zustand": ">=5.0.0"
+    "zustand": ">=5.0.0",
+    "react-native-modal": ">=11.0.0",
+    "@lodev09/react-native-true-sheet": ">=1.0.0",
+    "react-native-actions-sheet": ">=0.9.0",
+    "react-native-raw-bottom-sheet": ">=3.0.0"
   },
   "peerDependenciesMeta": {
     "@gorhom/bottom-sheet": {
       "optional": true
     },
     "react-native-gesture-handler": {
+      "optional": true
+    },
+    "react-native-modal": {
+      "optional": true
+    },
+    "@lodev09/react-native-true-sheet": {
+      "optional": true
+    },
+    "react-native-actions-sheet": {
+      "optional": true
+    },
+    "react-native-raw-bottom-sheet": {
       "optional": true
     }
   },
