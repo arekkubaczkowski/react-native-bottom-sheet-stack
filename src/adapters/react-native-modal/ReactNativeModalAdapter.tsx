@@ -1,7 +1,7 @@
 import React, { useEffect, useImperativeHandle, useState } from 'react';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { getAnimatedIndex } from '../../animatedRegistry';
+import { setAnimatedIndexValue } from '../../animatedRegistry';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
@@ -99,7 +99,6 @@ export const ReactNativeModalAdapter = React.forwardRef<
     const contextRef = useBottomSheetRefContext();
     const [isVisible, setIsVisible] = useState(false);
 
-    const animatedIndex = getAnimatedIndex(id);
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
@@ -115,10 +114,8 @@ export const ReactNativeModalAdapter = React.forwardRef<
     );
 
     useEffect(() => {
-      if (animatedIndex) {
-        animatedIndex.value = isVisible ? 0 : -1;
-      }
-    }, [isVisible, animatedIndex]);
+      setAnimatedIndexValue(id, isVisible ? 0 : -1);
+    }, [isVisible, id]);
 
     // Lazy import: react-native-modal is an optional peer dependency
     // eslint-disable-next-line @typescript-eslint/no-var-requires

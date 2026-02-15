@@ -133,11 +133,11 @@ export function ModalWithNestedSheetContent() {
 /**
  * A bottom sheet opened from within a modal — demonstrates cross-adapter stacking.
  */
-const NestedBottomSheetFromModal = (_: unknown, ref: React.Ref<unknown>) => {
+const NestedBottomSheetFromModal = ({ ref }: { ref?: React.Ref<unknown> }) => {
   const { close } = useBottomSheetContext();
 
   return (
-    <Sheet ref={ref}>
+    <Sheet ref={ref as any}>
       <View style={styles.badgeRow}>
         <Badge label="Bottom Sheet" color={colors.primary} />
         <Badge label="From Modal" color={colors.warning} />
@@ -230,11 +230,11 @@ export function AdapterComparisonContent() {
   );
 }
 
-const ComparisonBottomSheet = (_: unknown, ref: React.Ref<unknown>) => {
+const ComparisonBottomSheet = ({ ref }: { ref?: React.Ref<unknown> }) => {
   const { close } = useBottomSheetContext();
 
   return (
-    <Sheet ref={ref}>
+    <Sheet ref={ref as any}>
       <Badge label="GorhomSheetAdapter" color={colors.primary} />
       <Text style={sharedStyles.h1}>I'm a Bottom Sheet</Text>
       <Text style={sharedStyles.text}>
@@ -253,7 +253,6 @@ const ComparisonBottomSheet = (_: unknown, ref: React.Ref<unknown>) => {
  */
 export function ModalNavigationContent() {
   const { close } = useBottomSheetContext<'modal-navigation'>();
-  const { open } = useBottomSheetManager();
   const simpleModalControl = useBottomSheetControl('simple-modal');
 
   const handlePush = () => {

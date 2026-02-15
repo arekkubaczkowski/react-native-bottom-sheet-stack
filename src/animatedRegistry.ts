@@ -25,6 +25,18 @@ export function getAnimatedIndex(
   return animatedIndex;
 }
 
+/**
+ * Set the animated index value for a sheet.
+ * Extracted as a standalone function so the React Compiler
+ * doesn't flag SharedValue mutations inside component bodies.
+ */
+export function setAnimatedIndexValue(sheetId: string, value: number): void {
+  const animatedIndex = animatedIndexRegistry.get(sheetId);
+  if (animatedIndex) {
+    animatedIndex.value = value;
+  }
+}
+
 export function cleanupAnimatedIndex(sheetId: string): void {
   animatedIndexRegistry.delete(sheetId);
 }

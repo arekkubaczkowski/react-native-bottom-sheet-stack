@@ -1,7 +1,7 @@
 import React, { useImperativeHandle, useRef } from 'react';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { getAnimatedIndex } from '../../animatedRegistry';
+import { setAnimatedIndexValue } from '../../animatedRegistry';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
@@ -92,7 +92,6 @@ export const ActionsSheetAdapter = React.forwardRef<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const actionSheetRef = useRef<any>(null);
 
-    const animatedIndex = getAnimatedIndex(id);
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
@@ -112,16 +111,12 @@ export const ActionsSheetAdapter = React.forwardRef<
     );
 
     const onOpen = () => {
-      if (animatedIndex) {
-        animatedIndex.value = 0;
-      }
+      setAnimatedIndexValue(id, 0);
       handleOpened();
     };
 
     const onClose = () => {
-      if (animatedIndex) {
-        animatedIndex.value = -1;
-      }
+      setAnimatedIndexValue(id, -1);
       handleClosed();
     };
 

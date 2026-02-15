@@ -93,7 +93,8 @@ export const GorhomSheetAdapter = React.forwardRef<
     return (
       <BottomSheetOriginal
         animationConfigs={config}
-        ref={ref}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ref={ref as any}
         {...props}
         index={defaultIndex}
         animatedIndex={contextAnimatedIndex}

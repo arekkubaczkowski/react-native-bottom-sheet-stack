@@ -2,7 +2,7 @@ import React, { useEffect, useImperativeHandle, useState } from 'react';
 import { Modal, type ModalProps, StyleSheet, View } from 'react-native';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { getAnimatedIndex } from '../../animatedRegistry';
+import { setAnimatedIndexValue } from '../../animatedRegistry';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
@@ -40,7 +40,6 @@ export const ModalAdapter = React.forwardRef<
     const contextRef = useBottomSheetRefContext();
     const [visible, setVisible] = useState(false);
 
-    const animatedIndex = getAnimatedIndex(id);
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
@@ -61,10 +60,8 @@ export const ModalAdapter = React.forwardRef<
 
     // Sync animated index for backdrop/scale integration
     useEffect(() => {
-      if (animatedIndex) {
-        animatedIndex.value = visible ? 0 : -1;
-      }
-    }, [visible, animatedIndex]);
+      setAnimatedIndexValue(id, visible ? 0 : -1);
+    }, [visible, id]);
 
     const onShow = () => {
       handleOpened();

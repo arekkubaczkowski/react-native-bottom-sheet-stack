@@ -2,7 +2,7 @@ import React, { useImperativeHandle, useRef } from 'react';
 import type { ViewStyle } from 'react-native';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { getAnimatedIndex } from '../../animatedRegistry';
+import { setAnimatedIndexValue } from '../../animatedRegistry';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
@@ -88,7 +88,6 @@ export const RawBottomSheetAdapter = React.forwardRef<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rbSheetRef = useRef<any>(null);
 
-    const animatedIndex = getAnimatedIndex(id);
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
@@ -108,16 +107,12 @@ export const RawBottomSheetAdapter = React.forwardRef<
     );
 
     const onOpen = () => {
-      if (animatedIndex) {
-        animatedIndex.value = 0;
-      }
+      setAnimatedIndexValue(id, 0);
       handleOpened();
     };
 
     const onClose = () => {
-      if (animatedIndex) {
-        animatedIndex.value = -1;
-      }
+      setAnimatedIndexValue(id, -1);
       // RBSheet fires onClose for both programmatic and user-initiated closes.
       // We call handleDismiss + handleClosed together since RBSheet
       // doesn't distinguish between the two phases.

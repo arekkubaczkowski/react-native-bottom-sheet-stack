@@ -426,11 +426,11 @@ interface StackedSheetProps {
   mode: 'push' | 'switch' | 'replace';
   fromAdapter: string;
   fromColor: string;
+  ref?: React.Ref<unknown>;
 }
 
 const StackedSheet = (
-  { mode, fromAdapter, fromColor }: StackedSheetProps,
-  ref: React.Ref<unknown>
+  { mode, fromAdapter, fromColor, ref }: StackedSheetProps,
 ) => {
   const { close } = useBottomSheetContext();
   const { open } = useBottomSheetManager();
@@ -453,7 +453,7 @@ const StackedSheet = (
   };
 
   return (
-    <Sheet ref={ref}>
+    <Sheet ref={ref as any}>
       <View style={styles.badgeRow}>
         <Badge label="GorhomSheet" color={colors.primary} />
         <Badge label={fromAdapter} color={fromColor} />
@@ -492,13 +492,12 @@ const StackedSheet = (
 // ---------------------------------------------------------------------------
 
 const StackedModalFromAdapter = (
-  _: unknown,
-  ref: React.Ref<unknown>
+  { ref }: { ref?: React.Ref<unknown> },
 ) => {
   const { close } = useBottomSheetContext();
 
   return (
-    <ModalAdapter animationType="slide" presentationStyle="pageSheet" ref={ref}>
+    <ModalAdapter animationType="slide" presentationStyle="pageSheet" ref={ref as any}>
       <View style={styles.modalContainer}>
         <View style={styles.modalHandle}>
           <View style={styles.modalHandleBar} />
