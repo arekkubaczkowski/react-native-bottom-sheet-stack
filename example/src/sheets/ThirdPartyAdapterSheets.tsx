@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   ActionsSheetAdapter,
-  ModalAdapter,
+  CustomModalAdapter,
   ReactNativeModalAdapter,
   useBottomSheetContext,
   useBottomSheetManager,
@@ -50,7 +50,7 @@ export function ModalAdapterDemoContent() {
   };
 
   return (
-    <ModalAdapter contentContainerStyle={styles.dialogOverlay}>
+    <CustomModalAdapter contentContainerStyle={styles.dialogOverlay}>
       <View style={styles.dialogCard}>
         <View style={styles.badgeRow}>
           <Badge label="ModalAdapter" color={colors.success} />
@@ -98,7 +98,7 @@ export function ModalAdapterDemoContent() {
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
-    </ModalAdapter>
+    </CustomModalAdapter>
   );
 }
 
@@ -128,8 +128,8 @@ export function RNModalDemoContent() {
 
   return (
     <ReactNativeModalAdapter
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
+      animationIn="zoomIn"
+      animationOut="zoomOut"
       swipeDirection="down"
       swipeThreshold={80}
       backdropOpacity={0.6}
@@ -383,7 +383,10 @@ const StackedModal = ({ mode, ref }: StackedProps) => {
   };
 
   return (
-    <ModalAdapter ref={ref as any} contentContainerStyle={styles.dialogOverlay}>
+    <CustomModalAdapter
+      ref={ref as any}
+      contentContainerStyle={styles.dialogOverlay}
+    >
       <View style={styles.dialogCard}>
         <View style={styles.badgeRow}>
           <Badge label="ModalAdapter" color={colors.success} />
@@ -412,7 +415,7 @@ const StackedModal = ({ mode, ref }: StackedProps) => {
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
-    </ModalAdapter>
+    </CustomModalAdapter>
   );
 };
 

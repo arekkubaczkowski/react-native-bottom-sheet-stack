@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   ActionsSheetAdapter,
-  ModalAdapter,
+  CustomModalAdapter,
   useBottomSheetContext,
   useBottomSheetControl,
   useBottomSheetManager,
@@ -25,7 +25,7 @@ export function MixedStackContent() {
   const { open } = useBottomSheetManager();
 
   return (
-    <ModalAdapter contentContainerStyle={styles.overlay}>
+    <CustomModalAdapter contentContainerStyle={styles.overlay}>
       <View style={styles.card}>
         <View style={styles.badgeRow}>
           <Badge label="Modal" color={colors.warning} />
@@ -43,7 +43,7 @@ export function MixedStackContent() {
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
-    </ModalAdapter>
+    </CustomModalAdapter>
   );
 }
 
@@ -56,7 +56,7 @@ export function SimpleModalContent() {
   const user = useUser();
 
   return (
-    <ModalAdapter contentContainerStyle={styles.overlay}>
+    <CustomModalAdapter contentContainerStyle={styles.overlay}>
       <View style={styles.card}>
         <Badge label="Modal Adapter" color={colors.warning} />
         <Text style={sharedStyles.h1}>Modal Sheet</Text>
@@ -89,7 +89,7 @@ export function SimpleModalContent() {
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
-    </ModalAdapter>
+    </CustomModalAdapter>
   );
 }
 
@@ -120,7 +120,7 @@ export function AdapterComparisonContent() {
   };
 
   return (
-    <ModalAdapter contentContainerStyle={styles.overlay}>
+    <CustomModalAdapter contentContainerStyle={styles.overlay}>
       <View style={styles.card}>
         <Badge label="Adapter Pattern" color={colors.cyan} />
         <Text style={[sharedStyles.h1, { marginTop: 8 }]}>
@@ -156,7 +156,7 @@ export function AdapterComparisonContent() {
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
-    </ModalAdapter>
+    </CustomModalAdapter>
   );
 }
 
@@ -195,7 +195,7 @@ const MixedModalStep = ({ ref, mode, from, step }: MixedStepProps) => {
   const { open } = useBottomSheetManager();
 
   return (
-    <ModalAdapter ref={ref as any} contentContainerStyle={styles.overlay}>
+    <CustomModalAdapter ref={ref as any} contentContainerStyle={styles.overlay}>
       <View style={styles.card}>
         <StepHeader
           adapterName="Modal"
@@ -209,7 +209,7 @@ const MixedModalStep = ({ ref, mode, from, step }: MixedStepProps) => {
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
-    </ModalAdapter>
+    </CustomModalAdapter>
   );
 };
 

@@ -1,5 +1,7 @@
 export {
-  CustomModalAdapter as ModalAdapter,
+  CustomModalAdapter,
   type ModalAdapterProps,
-  type ModalAdapterAnimation,
 } from './CustomModalAdapter';
+
+/** @deprecated Use `CustomModalAdapter` instead. */
+export { CustomModalAdapter as ModalAdapter } from './CustomModalAdapter';

@@ -1,9 +1,9 @@
-import React, { useEffect, useImperativeHandle, useState } from 'react';
+import React, { useImperativeHandle, useState } from 'react';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { setAnimatedIndexValue } from '../../animatedRegistry';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
-import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
+import { useAdapterRef } from '../../useAdapterRef';
+import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
 const RNModal = require('react-native-modal').default;
@@ -32,26 +32,27 @@ export const ReactNativeModalAdapter = React.forwardRef<
   ReactNativeModalAdapterProps
 >(({ children, ...modalProps }, forwardedRef) => {
   const { id } = useBottomSheetContext();
-  const contextRef = useBottomSheetRefContext();
+  const ref = useAdapterRef(forwardedRef);
+  const animatedIndex = useAnimatedIndex();
   const [isVisible, setIsVisible] = useState(false);
 
   const { handleDismiss, handleOpened, handleClosed } =
     createSheetEventHandlers(id);
 
-  const ref = contextRef ?? forwardedRef;
-
   useImperativeHandle(
     ref,
     () => ({
-      expand: () => setIsVisible(true),
-      close: () => setIsVisible(false),
+      expand: () => {
+        setIsVisible(true);
+        animatedIndex.value = 0;
+      },
+      close: () => {
+        setIsVisible(false);
+        animatedIndex.value = -1;
+      },
     }),
-    []
+    [animatedIndex]
   );
-
-  useEffect(() => {
-    setAnimatedIndexValue(id, isVisible ? 0 : -1);
-  }, [isVisible, id]);
 
   return (
     <RNModal

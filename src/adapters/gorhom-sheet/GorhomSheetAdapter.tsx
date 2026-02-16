@@ -2,15 +2,16 @@ import BottomSheetOriginal, {
   useBottomSheetSpringConfigs,
   type BottomSheetProps,
 } from '@gorhom/bottom-sheet';
-import React from 'react';
+import React, { useImperativeHandle, useRef } from 'react';
 import { useAnimatedReaction } from 'react-native-reanimated';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { getAnimatedIndex } from '../../animatedRegistry';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
-import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
+import { useAdapterRef } from '../../useAdapterRef';
+import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
+import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 
 export interface GorhomSheetAdapterProps extends BottomSheetProps {}
 
@@ -34,15 +35,20 @@ export const GorhomSheetAdapter = React.forwardRef<
     forwardedRef
   ) => {
     const { id } = useBottomSheetContext();
-    const contextRef = useBottomSheetRefContext();
-    const ref = contextRef ?? forwardedRef;
-
+    const ref = useAdapterRef(forwardedRef);
+    const contextAnimatedIndex = useAnimatedIndex();
     const defaultIndex = useBottomSheetDefaultIndex();
-    const contextAnimatedIndex = getAnimatedIndex(id);
 
-    if (!contextAnimatedIndex) {
-      throw new Error('animatedIndex must be defined in GorhomSheetAdapter');
-    }
+    const gorhomRef = useRef<BottomSheetMethods | null>(null);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        expand: () => gorhomRef.current?.expand(),
+        close: () => gorhomRef.current?.close(),
+      }),
+      []
+    );
 
     useAnimatedReaction(
       () => contextAnimatedIndex.value,
@@ -93,7 +99,7 @@ export const GorhomSheetAdapter = React.forwardRef<
     return (
       <BottomSheetOriginal
         animationConfigs={config}
-        ref={ref as any}
+        ref={gorhomRef}
         {...props}
         index={defaultIndex}
         animatedIndex={contextAnimatedIndex}

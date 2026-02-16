@@ -1,9 +1,9 @@
 import React, { useImperativeHandle, useRef } from 'react';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { setAnimatedIndexValue } from '../../animatedRegistry';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
-import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
+import { useAdapterRef } from '../../useAdapterRef';
+import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
 const ActionSheet = require('react-native-actions-sheet').default;
@@ -33,14 +33,13 @@ export const ActionsSheetAdapter = React.forwardRef<
   ActionsSheetAdapterProps
 >(({ children, ...sheetProps }, forwardedRef) => {
   const { id } = useBottomSheetContext();
-  const contextRef = useBottomSheetRefContext();
+  const ref = useAdapterRef(forwardedRef);
+  const animatedIndex = useAnimatedIndex();
 
   const actionSheetRef = useRef<any>(null);
 
   const { handleDismiss, handleOpened, handleClosed } =
     createSheetEventHandlers(id);
-
-  const ref = contextRef ?? forwardedRef;
 
   useImperativeHandle(
     ref,
@@ -52,12 +51,12 @@ export const ActionsSheetAdapter = React.forwardRef<
   );
 
   const onOpen = () => {
-    setAnimatedIndexValue(id, 0);
+    animatedIndex.value = 0;
     handleOpened();
   };
 
   const onClose = () => {
-    setAnimatedIndexValue(id, -1);
+    animatedIndex.value = -1;
     handleClosed();
   };
 

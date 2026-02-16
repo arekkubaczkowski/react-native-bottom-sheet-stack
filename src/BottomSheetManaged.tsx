@@ -9,6 +9,6 @@
 export {
   GorhomSheetAdapter as BottomSheetManaged,
   type GorhomSheetAdapterProps as BottomSheetManagedProps,
-} from './adapters/gorhom';
+} from './adapters/gorhom-sheet';
 
 export type { SheetAdapterRef as BottomSheetRef } from './adapter.types';

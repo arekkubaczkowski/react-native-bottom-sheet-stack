@@ -39,10 +39,10 @@ import React, { useImperativeHandle } from 'react';
 import type { SheetAdapterRef } from 'react-native-bottom-sheet-stack';
 import {
   createSheetEventHandlers,
+  useAdapterRef,
+  useAnimatedIndex,
   useBottomSheetContext,
-  useBottomSheetRefContext,
 } from 'react-native-bottom-sheet-stack';
-import { getAnimatedIndex } from 'react-native-bottom-sheet-stack'; // for backdrop/scale
 
 interface MyAdapterProps {
   children: React.ReactNode;
@@ -51,17 +51,16 @@ interface MyAdapterProps {
 
 export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
   ({ children, ...props }, forwardedRef) => {
-    // 1. Get sheet context
+    // 1. Get sheet context and adapter ref
     const { id } = useBottomSheetContext();
-    const contextRef = useBottomSheetRefContext();
-    const ref = contextRef ?? forwardedRef;
+    const ref = useAdapterRef(forwardedRef);
 
     // 2. Get event handlers for this sheet
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
     // 3. Get animated index (for backdrop/scale integration)
-    const animatedIndex = getAnimatedIndex(id);
+    const animatedIndex = useAnimatedIndex();
 
     // 4. Expose expand/close to the coordinator
     useImperativeHandle(ref, () => ({
@@ -77,7 +76,7 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
 
     // 5. Wire up callbacks
     const onShown = () => {
-      if (animatedIndex) animatedIndex.value = 0;
+      animatedIndex.value = 0;
       handleOpened();
     };
 
@@ -86,7 +85,7 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
     };
 
     const onHidden = () => {
-      if (animatedIndex) animatedIndex.value = -1;
+      animatedIndex.value = -1;
       handleClosed();
     };
 
@@ -155,32 +154,54 @@ Understanding the correct order of events is critical:
 
 ### Animated Index
 
-The `animatedIndex` shared value drives backdrop opacity and scale animations:
-- Set to `0` (or higher) when the sheet is visible
-- Set to `-1` when the sheet is hidden
+The `useAnimatedIndex()` hook returns the `animatedIndex` shared value for the current sheet. It drives backdrop opacity and scale animations — `BottomSheetBackdrop` interpolates it in the range `[-1, 0]` to opacity `[0, 1]`.
 
 ```tsx
-const animatedIndex = getAnimatedIndex(id);
+import { useAnimatedIndex } from 'react-native-bottom-sheet-stack';
 
-// When sheet becomes visible:
-if (animatedIndex) animatedIndex.value = 0;
-
-// When sheet becomes hidden:
-if (animatedIndex) animatedIndex.value = -1;
+const animatedIndex = useAnimatedIndex();
 ```
 
-For adapters that support intermediate positions (like snap points), you can set fractional values to get progressive backdrop/scale effects.
+No need to pass the sheet `id` — the hook reads it from context automatically.
 
-### Ref Priority
+#### Binary strategy (CustomModalAdapter, ReactNativeModalAdapter, ActionsSheetAdapter)
 
-Always use `contextRef ?? forwardedRef`:
+Set to `0` when the sheet becomes visible, `-1` when hidden. The backdrop snaps between transparent and opaque. Simple and works for any library.
 
 ```tsx
-const contextRef = useBottomSheetRefContext();
-const ref = contextRef ?? forwardedRef;
+const animatedIndex = useAnimatedIndex();
+
+useImperativeHandle(ref, () => ({
+  expand: () => {
+    animatedIndex.value = 0;   // backdrop fully opaque
+    // ... show your overlay
+  },
+  close: () => {
+    animatedIndex.value = -1;  // backdrop fully transparent
+    // ... hide your overlay
+  },
+}), [animatedIndex]);
 ```
 
-The `contextRef` is set by `BottomSheetPortal` and `BottomSheetPersistent` for portal-mode sheets. The `forwardedRef` is used for inline-mode sheets (via `useBottomSheetManager`).
+#### Continuous/dynamic strategy (GorhomSheetAdapter)
+
+Pass the shared value directly to the underlying library as a prop. The library updates it continuously during swipe gestures (intermediate values between `-1` and `0`), so the backdrop smoothly interpolates during user interaction.
+
+```tsx
+const animatedIndex = useAnimatedIndex();
+
+// The library writes to the shared value during gestures:
+<BottomSheet animatedIndex={animatedIndex} />
+```
+
+### Adapter Ref
+
+Use `useAdapterRef(forwardedRef)` to get the ref for `useImperativeHandle`. The hook resolves the correct ref automatically — your adapter works in all three modes (inline, portal, persistent) without any extra logic:
+
+```tsx
+const ref = useAdapterRef(forwardedRef);
+useImperativeHandle(ref, () => ({ expand: ..., close: ... }));
+```
 
 ### Prop-Controlled vs Ref-Controlled Libraries
 
@@ -230,11 +251,10 @@ Here's a real-world example adapting a hypothetical tooltip/popover library:
 export const TooltipAdapter = React.forwardRef<SheetAdapterRef, TooltipAdapterProps>(
   ({ children, anchorRef, placement = 'bottom', ...props }, forwardedRef) => {
     const { id } = useBottomSheetContext();
-    const contextRef = useBottomSheetRefContext();
-    const ref = contextRef ?? forwardedRef;
+    const ref = useAdapterRef(forwardedRef);
     const [visible, setVisible] = useState(false);
 
-    const animatedIndex = getAnimatedIndex(id);
+    const animatedIndex = useAnimatedIndex();
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
@@ -244,9 +264,7 @@ export const TooltipAdapter = React.forwardRef<SheetAdapterRef, TooltipAdapterPr
     }), []);
 
     useEffect(() => {
-      if (animatedIndex) {
-        animatedIndex.value = visible ? 0 : -1;
-      }
+      animatedIndex.value = visible ? 0 : -1;
     }, [visible, animatedIndex]);
 
     return (

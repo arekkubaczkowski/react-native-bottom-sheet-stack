@@ -10,12 +10,13 @@ export { BottomSheetPersistent } from './BottomSheetPersistent';
 export {
   GorhomSheetAdapter,
   type GorhomSheetAdapterProps,
-} from './adapters/gorhom';
+} from './adapters/gorhom-sheet';
 export {
-  ModalAdapter,
+  CustomModalAdapter,
   type ModalAdapterProps,
-  type ModalAdapterAnimation,
 } from './adapters/custom-modal';
+/** @deprecated Use `CustomModalAdapter` instead. */
+export { ModalAdapter } from './adapters/custom-modal';
 export {
   ReactNativeModalAdapter,
   type ReactNativeModalAdapterProps,
@@ -32,8 +33,11 @@ export type {
   SheetRef,
 } from './adapter.types';
 
-// Coordinator (for custom adapter authors)
+// Adapter utilities (for custom adapter authors)
 export { createSheetEventHandlers } from './bottomSheetCoordinator';
+export { useAdapterRef } from './useAdapterRef';
+export { useAnimatedIndex } from './useAnimatedIndex';
+export { getAnimatedIndex, setAnimatedIndexValue } from './animatedRegistry';
 
 // Hooks
 export { useBottomSheetManager } from './useBottomSheetManager';
@@ -71,7 +75,5 @@ export { __resetSheetRefs } from './refsMap';
 export {
   __resetAnimatedIndexes,
   __getAllAnimatedIndexes,
-  getAnimatedIndex,
-  setAnimatedIndexValue,
 } from './animatedRegistry';
 export { __resetPortalSessions } from './portalSessionRegistry';

@@ -2,9 +2,9 @@
 sidebar_position: 10
 ---
 
-# Built-in Adapters
+# Shipped Adapters
 
-These adapters ship with the library and require no additional dependencies beyond the core peer dependencies.
+All adapters listed below ship with the library. `CustomModalAdapter` requires no additional dependencies. The others wrap optional peer dependencies — install only what you use.
 
 ## GorhomSheetAdapter
 
@@ -13,6 +13,12 @@ The default adapter. Wraps `@gorhom/bottom-sheet` to provide feature-rich bottom
 :::tip
 `BottomSheetManaged` is a re-export of `GorhomSheetAdapter` for backward compatibility. They are identical.
 :::
+
+### Installation
+
+```bash
+npm install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
+```
 
 ### Usage
 
@@ -46,75 +52,32 @@ Accepts all props from [`@gorhom/bottom-sheet`](https://gorhom.dev/react-native-
 
 ---
 
-## ModalAdapter
+## CustomModalAdapter
 
-Wraps React Native's built-in `Modal` component. No additional dependencies needed.
+Custom React Native dialog UI. No additional dependencies needed.
 
 ### Usage
 
 ```tsx
-import { ModalAdapter, useBottomSheetContext } from 'react-native-bottom-sheet-stack';
+import { CustomModalAdapter, useBottomSheetContext } from 'react-native-bottom-sheet-stack';
 
 function MyModal() {
   const { close } = useBottomSheetContext();
 
   return (
-    <ModalAdapter animationType="slide" presentationStyle="pageSheet">
+    <CustomModalAdapter>
       <View style={{ flex: 1, padding: 20 }}>
         <Text>Modal content</Text>
         <Button title="Close" onPress={close} />
       </View>
-    </ModalAdapter>
+    </CustomModalAdapter>
   );
 }
 ```
 
 ### Props
 
-Accepts [`animationType`](https://reactnative.dev/docs/modal#animationtype), [`presentationStyle`](https://reactnative.dev/docs/modal#presentationstyle), [`transparent`](https://reactnative.dev/docs/modal#transparent), and [`statusBarTranslucent`](https://reactnative.dev/docs/modal#statusbartranslucent) from React Native's [Modal](https://reactnative.dev/docs/modal). Additionally accepts `contentContainerStyle` for the inner wrapper view.
-
-Defaults: `animationType="slide"`, `presentationStyle="pageSheet"`, `transparent={false}`.
-
-### When to Use
-
-- Full-screen overlays or alerts
-- iOS page sheet presentation
-- When you don't need snap points or gestures
-- Zero additional dependencies
-
-### Example: Page Sheet with Navigation
-
-```tsx
-<BottomSheetPortal id="settings-modal">
-  <SettingsModal />
-</BottomSheetPortal>
-
-function SettingsModal() {
-  const { close } = useBottomSheetContext();
-
-  return (
-    <ModalAdapter animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={{ flex: 1 }}>
-        <Header title="Settings" onClose={close} />
-        <SettingsForm />
-      </SafeAreaView>
-    </ModalAdapter>
-  );
-}
-```
-
-### Example: Transparent Overlay
-
-```tsx
-<ModalAdapter animationType="fade" transparent presentationStyle="overFullScreen">
-  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
-    <View style={{ margin: 20, padding: 20, backgroundColor: 'white', borderRadius: 12 }}>
-      <Text>Are you sure?</Text>
-      <Button title="Confirm" onPress={handleConfirm} />
-    </View>
-  </View>
-</ModalAdapter>
-```
+Accepts `contentContainerStyle` for the inner wrapper view.
 
 ### Mixed Stacking
 
@@ -131,3 +94,86 @@ open(<MyBottomSheet />, { mode: 'push' });
 modalControl.open({ mode: 'push' });
 // Both are in the stack — closing the modal returns to the bottom sheet
 ```
+
+---
+
+## ReactNativeModalAdapter
+
+Wraps [`react-native-modal`](https://github.com/react-native-modal/react-native-modal) — a feature-rich modal with 60+ animation options, swipe-to-dismiss, and customizable backdrops.
+
+### Installation
+
+```bash
+npm install react-native-modal
+```
+
+### Usage
+
+```tsx
+import { ReactNativeModalAdapter } from 'react-native-bottom-sheet-stack';
+
+function FancyModal() {
+  const { close } = useBottomSheetContext();
+
+  return (
+    <ReactNativeModalAdapter
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      swipeDirection="down"
+      backdropOpacity={0.6}
+    >
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text>Fancy animated modal</Text>
+        <Button title="Close" onPress={close} />
+      </View>
+    </ReactNativeModalAdapter>
+  );
+}
+```
+
+### Props
+
+All [`react-native-modal` props](https://github.com/react-native-modal/react-native-modal#available-props) are accepted via spread.
+
+Adapter defaults (overridable): `swipeDirection="down"`, `backdropOpacity={0.5}`, `useNativeDriver`, `hideModalContentWhileAnimating`.
+
+---
+
+## ActionsSheetAdapter
+
+Wraps [`react-native-actions-sheet`](https://github.com/ammarahm-ed/react-native-actions-sheet) — a zero-dependency action sheet with snap points, gestures, and a SheetManager API.
+
+### Installation
+
+```bash
+npm install react-native-actions-sheet
+```
+
+### Usage
+
+```tsx
+import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack';
+
+function MyActionsSheet() {
+  const { close } = useBottomSheetContext();
+
+  return (
+    <ActionsSheetAdapter snapPoints={[50, 100]} gestureEnabled>
+      <View style={{ padding: 20 }}>
+        <Text>Actions sheet with snap points</Text>
+        <Button title="Close" onPress={close} />
+      </View>
+    </ActionsSheetAdapter>
+  );
+}
+```
+
+### Props
+
+All [`react-native-actions-sheet` props](https://github.com/ammarahm-ed/react-native-actions-sheet#actionsheet-props) are accepted via spread.
+
+Adapter defaults (overridable): `gestureEnabled`, `closeOnTouchBackdrop`, `closeOnPressBack`, `keyboardHandlerEnabled`.
+
+:::tip
+This adapter uses `isModal={false}` internally to avoid wrapping in a redundant Modal — the stack manager handles the overlay lifecycle.
+:::

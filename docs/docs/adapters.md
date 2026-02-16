@@ -68,11 +68,11 @@ Each sheet can use a different adapter. You can mix bottom sheets, modals, and c
   </GorhomSheetAdapter>
 </BottomSheetPortal>
 
-// Sheet 2: native modal
+// Sheet 2: custom modal adapter
 <BottomSheetPortal id="alert">
-  <ModalAdapter animationType="fade" transparent>
+  <CustomModalAdapter contentContainerStyle={{ backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 24 }}>
     <AlertContent />
-  </ModalAdapter>
+  </CustomModalAdapter>
 </BottomSheetPortal>
 
 // Open them in sequence — both participate in the same stack
@@ -88,8 +88,8 @@ alert.open({ mode: 'push' }); // Modal pushes on top of bottom sheet
 
 ### Built-in (no extra dependencies)
 
-| Adapter | Wraps | Best For |
-|---------|-------|----------|
+| Adapter | Wraps |
+|---------|-------|
 | `CustomModalAdapter` | Custom React Native UI
 
 ### Third-party (optional peer dependencies)

@@ -14,12 +14,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Adapters',
       collapsed: false,
-      items: [
-        'adapters',
-        'built-in-adapters',
-        'third-party-adapters',
-        'custom-adapters',
-      ],
+      items: ['adapters', 'built-in-adapters', 'custom-adapters'],
     },
     {
       type: 'category',

@@ -14,9 +14,9 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { setAnimatedIndexValue } from '../../animatedRegistry';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
-import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
+import { useAdapterRef } from '../../useAdapterRef';
+import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
 const ANIMATION_DURATION = 300;
@@ -33,7 +33,8 @@ export const CustomModalAdapter = React.forwardRef<
   ModalAdapterProps
 >(({ children, contentContainerStyle }, forwardedRef) => {
   const { id } = useBottomSheetContext();
-  const contextRef = useBottomSheetRefContext();
+  const ref = useAdapterRef(forwardedRef);
+  const animatedIndex = useAnimatedIndex();
   const [rendered, setRendered] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -42,22 +43,20 @@ export const CustomModalAdapter = React.forwardRef<
   const { handleDismiss, handleOpened, handleClosed } =
     createSheetEventHandlers(id);
 
-  const ref = contextRef ?? forwardedRef;
-
   useImperativeHandle(
     ref,
     () => ({
       expand: () => {
         setRendered(true);
         setOpen(true);
-        setAnimatedIndexValue(id, 0);
+        animatedIndex.value = 0;
       },
       close: () => {
         setOpen(false);
-        setAnimatedIndexValue(id, -1);
+        animatedIndex.value = -1;
       },
     }),
-    [id]
+    [animatedIndex]
   );
 
   const onAnimationEnd = (value: boolean) => {
@@ -121,7 +120,7 @@ export const CustomModalAdapter = React.forwardRef<
   );
 });
 
-CustomModalAdapter.displayName = 'ModalAdapter';
+CustomModalAdapter.displayName = 'CustomModalAdapter';
 
 const styles = StyleSheet.create({
   container: {

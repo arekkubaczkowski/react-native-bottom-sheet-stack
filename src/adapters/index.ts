@@ -1,8 +1,11 @@
-export { GorhomSheetAdapter, type GorhomSheetAdapterProps } from './gorhom';
 export {
+  GorhomSheetAdapter,
+  type GorhomSheetAdapterProps,
+} from './gorhom-sheet';
+export {
+  CustomModalAdapter,
   ModalAdapter,
   type ModalAdapterProps,
-  type ModalAdapterAnimation,
 } from './custom-modal';
 export {
   ReactNativeModalAdapter,
