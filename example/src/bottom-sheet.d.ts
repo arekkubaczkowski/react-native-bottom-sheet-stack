@@ -12,6 +12,7 @@ declare module 'react-native-bottom-sheet-stack' {
       title?: string;
     };
     'persistent-with-portal': true;
+    'persistent-notepad': true;
     'nested-portal-in-persistent': {
       message: string;
     };

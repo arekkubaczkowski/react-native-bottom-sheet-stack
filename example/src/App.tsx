@@ -10,7 +10,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BottomSheetDebugMonitor } from './components/BottomSheetDebugMonitor';
 import { UserProvider } from './context/UserContext';
 import { HomeScreen } from './screens';
-import { PersistentWithPortalSheet, ScannerSheet } from './sheets';
+import {
+  PersistentNotepadContent,
+  PersistentWithPortalSheet,
+  ScannerSheet,
+} from './sheets';
 import { sharedStyles } from './styles/theme';
 
 export default function App() {
@@ -34,6 +38,10 @@ export default function App() {
           {/* Persistent sheet with nested portal sheet inside */}
           <BottomSheetPersistent id="persistent-with-portal">
             <PersistentWithPortalSheet />
+          </BottomSheetPersistent>
+          {/* Persistent notepad with mixed adapters */}
+          <BottomSheetPersistent id="persistent-notepad">
+            <PersistentNotepadContent />
           </BottomSheetPersistent>
           {/* Debug Monitor */}
           <BottomSheetDebugMonitor />

@@ -34,6 +34,7 @@ export function HomeScreen() {
   const persistentWithPortalControl = useBottomSheetControl(
     'persistent-with-portal'
   );
+  const persistentNotepadControl = useBottomSheetControl('persistent-notepad');
   const mixedStackControl = useBottomSheetControl('mixed-stack');
   const adapterComparisonControl = useBottomSheetControl('adapter-comparison');
   const modalAdapterControl = useBottomSheetControl('modal-adapter-demo');
@@ -178,6 +179,15 @@ export function HomeScreen() {
             description="Chain modals, bottom sheets, and action sheets with push and switch"
             color={colors.purple}
             onPress={() => mixedStackControl.open()}
+          />
+
+          <DemoCard
+            title="Persistent + Mixed Adapters"
+            description="Persistent modal notepad that pushes sheets with different adapters"
+            color={colors.success}
+            onPress={() =>
+              persistentNotepadControl.open({ scaleBackground: true })
+            }
           />
 
           <DemoCard
