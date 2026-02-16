@@ -19,6 +19,8 @@ A **library-agnostic** stack manager for bottom sheets and modals in React Nativ
 - **Stack Navigation** — `push`, `switch`, and `replace` modes for managing multiple sheets
 - **Scale Animation** — iOS-style background scaling effect when sheets are stacked
 - **Context Preservation** — Portal-based API that preserves React context in bottom sheets
+- **Close Interception** — [`useOnBeforeClose`](/close-interception) to confirm or prevent sheet dismissal
+- **Cascading Close** — `closeAll()` with staggered animation, respecting interceptors
 - **Mixed Stacking** — Bottom sheets and modals coexist in the same stack
 - **4 Adapters** — GorhomSheet, Modal, react-native-modal, ActionsSheet
 - **Group Support** — Isolated stacks for different parts of your app

@@ -12,6 +12,7 @@ Hooks are divided into two categories based on where they can be used:
 | `useBottomSheetControl` | Anywhere | Control portal-based sheets |
 | `useBottomSheetStatus` | Anywhere | Subscribe to sheet status by ID |
 | `useBottomSheetContext` | **Inside sheet only** | Access current sheet's state and params |
+| `useOnBeforeClose` | **Inside sheet only** | Intercept close and optionally prevent it |
 
 ---
 
@@ -20,7 +21,7 @@ Hooks are divided into two categories based on where they can be used:
 Main hook for opening and managing bottom sheets imperatively.
 
 ```tsx
-const { open, close, clear } = useBottomSheetManager();
+const { open, close, closeAll, clear } = useBottomSheetManager();
 ```
 
 ### Returns
@@ -29,7 +30,27 @@ const { open, close, clear } = useBottomSheetManager();
 |----------|------|-------------|
 | `open` | `(content, options?) => string` | Opens a bottom sheet and returns its ID |
 | `close` | `(id: string) => void` | Closes a specific sheet by ID |
-| `clear` | `() => void` | Closes all sheets in the current group |
+| `closeAll` | `(options?) => Promise<void>` | Closes all sheets with cascading animation |
+| `clear` | `() => void` | Removes all sheets immediately (no animation) |
+
+### closeAll Options
+
+Closes all sheets in the group from top to bottom with a staggered animation. Respects [`useOnBeforeClose`](#useonbeforeclose) interceptors — if one blocks, the cascade stops.
+
+```tsx
+// Default stagger (100ms between each close)
+await closeAll();
+
+// Custom stagger
+await closeAll({ stagger: 200 });
+
+// No stagger (all close at once)
+await closeAll({ stagger: 0 });
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `stagger` | `number` | `100` | Delay in ms between each cascading close |
 
 ### open Options
 
@@ -68,7 +89,7 @@ This hook can **only** be used inside a sheet adapter component (e.g. `GorhomShe
 
 ```tsx
 // Basic usage
-const { id, params, close } = useBottomSheetContext();
+const { id, params, close, forceClose } = useBottomSheetContext();
 
 // With typed params (for portal sheets)
 const { params, close } = useBottomSheetContext<'my-sheet'>();
@@ -90,7 +111,8 @@ console.log(params.userId); // type-safe: string
 |----------|------|-------------|
 | `id` | `string` | Current sheet's ID |
 | `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided |
-| `close` | `() => void` | Closes this sheet |
+| `close` | `() => void` | Closes this sheet (respects `useOnBeforeClose`) |
+| `forceClose` | `() => void` | Closes this sheet immediately, bypassing any `useOnBeforeClose` interceptor |
 
 ### Deprecated Aliases
 
@@ -110,7 +132,7 @@ Returns only methods - no state subscriptions. Use `useBottomSheetStatus` separa
 :::
 
 ```tsx
-const { open, close, updateParams, resetParams } = useBottomSheetControl('my-sheet');
+const { open, close, closeAll, updateParams, resetParams } = useBottomSheetControl('my-sheet');
 ```
 
 ### Parameters
@@ -124,7 +146,8 @@ const { open, close, updateParams, resetParams } = useBottomSheetControl('my-she
 | Property | Type | Description |
 |----------|------|-------------|
 | `open` | `(options?) => void` | Opens the sheet |
-| `close` | `() => void` | Closes the sheet |
+| `close` | `() => void` | Closes the sheet (respects `useOnBeforeClose`) |
+| `closeAll` | `(options?) => Promise<void>` | Closes all sheets with cascading animation |
 | `updateParams` | `(params) => void` | Updates the sheet's params |
 | `resetParams` | `() => void` | Resets params to `undefined` |
 
@@ -210,3 +233,61 @@ function StatusIndicator() {
   return <Text>{isOpen ? 'Sheet is open' : 'Sheet is closed'}</Text>;
 }
 ```
+
+---
+
+## useOnBeforeClose
+
+Registers an interceptor that runs before the sheet closes. Return `false` to prevent closing.
+
+:::warning Inside Sheet Only
+This hook can **only** be used inside a sheet adapter component. It reads from React context — no ID parameter needed.
+:::
+
+```tsx
+import { useOnBeforeClose, useBottomSheetContext } from 'react-native-bottom-sheet-stack';
+
+function MySheet() {
+  const [dirty, setDirty] = useState(false);
+  const { forceClose } = useBottomSheetContext();
+
+  useOnBeforeClose(() => {
+    if (!dirty) return true;
+
+    Alert.alert('Discard?', '', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Discard', onPress: () => forceClose() },
+    ]);
+    return false;
+  });
+
+  // ...
+}
+```
+
+### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `callback` | `OnBeforeCloseCallback` | Function called before close. Return `false` to block. |
+
+### Callback Signature
+
+```tsx
+type OnBeforeCloseCallback = () => boolean | Promise<boolean>;
+```
+
+- Return `true` — close proceeds normally
+- Return `false` — close is cancelled
+- Return `Promise<boolean>` — async confirmation supported
+- If the promise rejects — close is cancelled for safety
+
+### Behavior
+
+When active, the hook:
+1. Sets `preventDismiss` on the sheet so adapters block native dismiss gestures (swipe, pan-to-close)
+2. Intercepts all close paths: `close()`, backdrop tap, back button, `closeAll()`
+
+Use `forceClose()` from `useBottomSheetContext` to bypass the interceptor.
+
+See [Close Interception](/close-interception) for detailed guide and examples.
