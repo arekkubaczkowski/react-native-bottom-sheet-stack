@@ -13,6 +13,7 @@ import {
   useSheetUsePortal,
 } from './bottomSheet.store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
+import { removeOnBeforeClose } from './onBeforeCloseRegistry';
 import { cleanupSheetRef } from './refsMap';
 import { useSheetScaleAnimatedStyle } from './useScaleAnimation';
 
@@ -40,6 +41,7 @@ export const QueueItem = memo(function QueueItem({
     return () => {
       cleanupSheetRef(id);
       cleanupAnimatedIndex(id);
+      removeOnBeforeClose(id);
     };
   }, [id, keepMounted]);
 
