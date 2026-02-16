@@ -90,17 +90,15 @@ alert.open({ mode: 'push' }); // Modal pushes on top of bottom sheet
 
 | Adapter | Wraps | Best For |
 |---------|-------|----------|
-| `GorhomSheetAdapter` | `@gorhom/bottom-sheet` | Feature-rich bottom sheets with snap points |
-| `ModalAdapter` | React Native `Modal` | Native modals, full-screen overlays |
+| `CustomModalAdapter` | Custom React Native UI
 
 ### Third-party (optional peer dependencies)
 
 | Adapter | Wraps | Best For |
 |---------|-------|----------|
+| `GorhomSheetAdapter` | `@gorhom/bottom-sheet` | Feature-rich bottom sheets with snap points |
 | `ReactNativeModalAdapter` | `react-native-modal` | Rich animations, swipe dismiss |
-| `TrueSheetAdapter` | `@lodev09/react-native-true-sheet` | Native C++ performance, Fabric |
 | `ActionsSheetAdapter` | `react-native-actions-sheet` | Zero-dep sheets, snap points |
-| `RawBottomSheetAdapter` | `react-native-raw-bottom-sheet` | Minimal, lightweight sheets |
 
 ### Custom
 

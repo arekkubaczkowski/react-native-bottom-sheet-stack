@@ -29,14 +29,9 @@ yarn add @gorhom/bottom-sheet react-native-gesture-handler
 # For ReactNativeModalAdapter
 yarn add react-native-modal
 
-# For TrueSheetAdapter (requires Fabric / New Architecture)
-yarn add @lodev09/react-native-true-sheet
-
 # For ActionsSheetAdapter
 yarn add react-native-actions-sheet
 
-# For RawBottomSheetAdapter
-yarn add react-native-raw-bottom-sheet
 ```
 
 :::tip

@@ -93,9 +93,7 @@ Adapters are the components that actually render sheets/modals. Each adapter wra
 | `GorhomSheetAdapter` | `@gorhom/bottom-sheet` | [Built-in Adapters](/built-in-adapters) |
 | `ModalAdapter` | React Native `Modal` | [Built-in Adapters](/built-in-adapters) |
 | `ReactNativeModalAdapter` | `react-native-modal` | [Third-Party Adapters](/third-party-adapters) |
-| `TrueSheetAdapter` | `@lodev09/react-native-true-sheet` | [Third-Party Adapters](/third-party-adapters) |
 | `ActionsSheetAdapter` | `react-native-actions-sheet` | [Third-Party Adapters](/third-party-adapters) |
-| `RawBottomSheetAdapter` | `react-native-raw-bottom-sheet` | [Third-Party Adapters](/third-party-adapters) |
 
 See [Library-Agnostic Architecture](/adapters) for how adapters work, or [Building Custom Adapters](/custom-adapters) to create your own.
 

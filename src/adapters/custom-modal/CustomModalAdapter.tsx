@@ -46,17 +46,21 @@ export const CustomModalAdapter = React.forwardRef<
 
   const ref = contextRef ?? forwardedRef;
 
-  useImperativeHandle(ref, () => ({
-    expand: () => {
-      setRendered(true);
-      setOpen(true);
-      setAnimatedIndexValue(id, 0);
-    },
-    close: () => {
-      setOpen(false);
-      setAnimatedIndexValue(id, -1);
-    },
-  }));
+  useImperativeHandle(
+    ref,
+    () => ({
+      expand: () => {
+        setRendered(true);
+        setOpen(true);
+        setAnimatedIndexValue(id, 0);
+      },
+      close: () => {
+        setOpen(false);
+        setAnimatedIndexValue(id, -1);
+      },
+    }),
+    [id]
+  );
 
   const onAnimationEnd = (value: boolean) => {
     'worklet';
