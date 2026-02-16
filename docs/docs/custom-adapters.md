@@ -243,44 +243,99 @@ If publishing your adapter as a separate package, use lazy `require()` to keep t
 const ThirdPartySheet = require('third-party-sheet').default;
 ```
 
-## Example: Adapter for a Tooltip Library
+## Full Example: Simple Slide-Up Modal
 
-Here's a real-world example adapting a hypothetical tooltip/popover library:
+A complete, minimal adapter — a slide-up modal using `react-native-reanimated`:
 
 ```tsx
-export const TooltipAdapter = React.forwardRef<SheetAdapterRef, TooltipAdapterProps>(
-  ({ children, anchorRef, placement = 'bottom', ...props }, forwardedRef) => {
+import React, { useEffect, useImperativeHandle, useState } from 'react';
+import { BackHandler, Pressable, StyleSheet } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import type { SheetAdapterRef } from 'react-native-bottom-sheet-stack';
+import {
+  createSheetEventHandlers,
+  useAdapterRef,
+  useAnimatedIndex,
+  useBottomSheetContext,
+} from 'react-native-bottom-sheet-stack';
+
+interface SlideUpModalProps {
+  children: React.ReactNode;
+}
+
+export const SlideUpModal = React.forwardRef<SheetAdapterRef, SlideUpModalProps>(
+  ({ children }, forwardedRef) => {
     const { id } = useBottomSheetContext();
     const ref = useAdapterRef(forwardedRef);
-    const [visible, setVisible] = useState(false);
-
     const animatedIndex = useAnimatedIndex();
+
+    const [visible, setVisible] = useState(false);
+    const progress = useSharedValue(0);
+
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
     useImperativeHandle(ref, () => ({
-      expand: () => setVisible(true),
-      close: () => setVisible(false),
-    }), []);
+      expand: () => {
+        setVisible(true);
+        animatedIndex.set(0);
+        progress.value = withSpring(1, { damping: 20, stiffness: 300 }, (finished) => {
+          if (finished) runOnJS(handleOpened)();
+        });
+      },
+      close: () => {
+        animatedIndex.set(-1);
+        progress.value = withTiming(0, { duration: 250 }, (finished) => {
+          if (finished) {
+            runOnJS(setVisible)(false);
+            runOnJS(handleClosed)();
+          }
+        });
+      },
+    }), [progress, animatedIndex]);
 
+    // Android back button
     useEffect(() => {
-      animatedIndex.set(visible ? 0 : -1);
-    }, [visible, animatedIndex]);
+      if (!visible) return;
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleDismiss();
+        return true;
+      });
+      return () => sub.remove();
+    }, [visible, handleDismiss]);
+
+    const sheetStyle = useAnimatedStyle(() => ({
+      transform: [{ translateY: (1 - progress.value) * 600 }],
+    }));
+
+    if (!visible) return null;
 
     return (
-      <Tooltip
-        visible={visible}
-        anchor={anchorRef}
-        placement={placement}
-        onShow={handleOpened}
-        onDismiss={() => { handleDismiss(); handleClosed(); }}
-        {...props}
-      >
-        {children}
-      </Tooltip>
+      <Pressable style={styles.backdrop} onPress={handleDismiss}>
+        <Animated.View style={[styles.sheet, sheetStyle]}>
+          <Pressable>{children}</Pressable>
+        </Animated.View>
+      </Pressable>
     );
   }
 );
+
+const styles = StyleSheet.create({
+  backdrop: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: '#1c1c1e',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    minHeight: 200,
+  },
+});
 ```
 
-Now this tooltip participates in the same stack as your bottom sheets and modals — push, switch, and replace all work across adapter types.
+This adapter works with all three sheet modes (inline, portal, persistent) and participates in push/switch/replace navigation — no extra wiring needed.

@@ -37,6 +37,7 @@ export type {
 export { createSheetEventHandlers } from './bottomSheetCoordinator';
 export { useAdapterRef } from './useAdapterRef';
 export { useAnimatedIndex } from './useAnimatedIndex';
+export { useBackHandler } from './useBackHandler';
 export { getAnimatedIndex, setAnimatedIndexValue } from './animatedRegistry';
 
 // Hooks

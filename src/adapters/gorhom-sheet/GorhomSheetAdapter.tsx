@@ -10,6 +10,7 @@ import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
+import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 
@@ -59,6 +60,8 @@ export const GorhomSheetAdapter = React.forwardRef<
 
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
+
+    useBackHandler(id, handleDismiss);
 
     const wrappedOnAnimate: BottomSheetProps['onAnimate'] = (
       fromIndex,

@@ -1,10 +1,5 @@
-import React, { useEffect, useImperativeHandle, useState } from 'react';
-import {
-  BackHandler,
-  StyleSheet,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import React, { useImperativeHandle, useState } from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -17,6 +12,7 @@ import type { SheetAdapterRef } from '../../adapter.types';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
+import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
 const ANIMATION_DURATION = 300;
@@ -84,17 +80,7 @@ export const CustomModalAdapter = React.forwardRef<
     }
   );
 
-  useEffect(() => {
-    if (!rendered) return;
-    const subscription = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        handleDismiss();
-        return true;
-      }
-    );
-    return () => subscription.remove();
-  }, [rendered, handleDismiss]);
+  useBackHandler(id, handleDismiss);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
