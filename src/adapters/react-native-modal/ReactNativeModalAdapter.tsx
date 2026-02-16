@@ -6,6 +6,8 @@ import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
+const RNModal = require('react-native-modal').default;
+
 /**
  * Adapter for `react-native-modal`.
  *
@@ -51,22 +53,22 @@ export const ReactNativeModalAdapter = React.forwardRef<
     setAnimatedIndexValue(id, isVisible ? 0 : -1);
   }, [isVisible, id]);
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const RNModal = require('react-native-modal').default;
-
   return (
     <RNModal
       // Adapter defaults (overridable via spread)
       swipeDirection="down"
-      backdropOpacity={0.5}
       useNativeDriver
       hideModalContentWhileAnimating
       {...modalProps}
       // Managed by adapter (not overridable)
+      // coverScreen={false}: renders as View instead of native Modal,
+      // so QueueItem z-index controls stacking order for push mode.
+      // hasBackdrop={false}: manager's BottomSheetBackdrop handles the overlay.
       isVisible={isVisible}
+      coverScreen={false}
+      hasBackdrop={false}
       onModalShow={handleOpened}
       onModalHide={handleClosed}
-      onBackdropPress={handleDismiss}
       onBackButtonPress={handleDismiss}
       onSwipeComplete={handleDismiss}
     >
@@ -74,3 +76,5 @@ export const ReactNativeModalAdapter = React.forwardRef<
     </RNModal>
   );
 });
+
+ReactNativeModalAdapter.displayName = 'ReactNativeModalAdapter';

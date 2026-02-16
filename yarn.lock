@@ -12120,6 +12120,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-native-actions-sheet@npm:^10.1.2":
+  version: 10.1.2
+  resolution: "react-native-actions-sheet@npm:10.1.2"
+  dependencies:
+    react-native-worklets: ^0.7.1
+  peerDependencies:
+    react-native: "*"
+    react-native-gesture-handler: "*"
+    react-native-reanimated: "*"
+    react-native-safe-area-context: "*"
+  checksum: f7246035e6b3d534d05ea5309b109ace280f4cfa1ef00eef5c36cc37405834d11c0cd9b13ae9d83f30c9571bb24b46112d8f8e3a260431180a8a65559aa31186
+  languageName: node
+  linkType: hard
+
+"react-native-animatable@npm:1.4.0":
+  version: 1.4.0
+  resolution: "react-native-animatable@npm:1.4.0"
+  dependencies:
+    prop-types: ^15.8.1
+  checksum: a1b211aff745b97351d78643d641fa298f7d71524eaf22fee8a69257ce52e85d6b3caf8e7fd26a521af34984fba7402b7c632c35ea69d618769387d1dcb6b32a
+  languageName: node
+  linkType: hard
+
 "react-native-bottom-sheet-stack-example@workspace:example":
   version: 0.0.0-use.local
   resolution: "react-native-bottom-sheet-stack-example@workspace:example"
@@ -12135,8 +12158,10 @@ __metadata:
     react: 19.1.0
     react-dom: 19.1.0
     react-native: 0.81.5
+    react-native-actions-sheet: ^10.1.2
     react-native-builder-bob: ^0.40.6
     react-native-gesture-handler: ^2.30.0
+    react-native-modal: ^14.0.0-rc.1
     react-native-reanimated: ^4.2.1
     react-native-safe-area-context: ^5.6.2
     react-native-teleport: ^0.5.6
@@ -12185,11 +12210,23 @@ __metadata:
     "@gorhom/bottom-sheet": ">=5.0.0"
     react: "*"
     react-native: "*"
+    react-native-actions-sheet: ">=0.9.0"
     react-native-gesture-handler: ">=2.0.0"
+    react-native-modal: ">=11.0.0"
     react-native-reanimated: ">=3.0.0"
     react-native-safe-area-context: ">=5.0.0"
     react-native-teleport: ">=0.5.0"
+    react-native-worklets: ">=0.7.0"
     zustand: ">=5.0.0"
+  peerDependenciesMeta:
+    "@gorhom/bottom-sheet":
+      optional: true
+    react-native-actions-sheet:
+      optional: true
+    react-native-gesture-handler:
+      optional: true
+    react-native-modal:
+      optional: true
   languageName: unknown
   linkType: soft
 
@@ -12246,6 +12283,18 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 8fb6d8ab7b953c7d7cec8c987cef24f1c5348a293a85cb49c7c53b54ef110c0ca746736ae730e297603c8c76020df912e93915fb17518c4f2f91143757177aba
+  languageName: node
+  linkType: hard
+
+"react-native-modal@npm:^14.0.0-rc.1":
+  version: 14.0.0-rc.1
+  resolution: "react-native-modal@npm:14.0.0-rc.1"
+  dependencies:
+    react-native-animatable: 1.4.0
+  peerDependencies:
+    react: "*"
+    react-native: ">=0.70.0"
+  checksum: 19bca96dde148c14ed4cc0e52fedd0a12ca952815e4dcbea31d0a98962d75dc3c011c677f5f9cd15f2b88f78ccd03134647b280724bc6de148c25e28eea1a7e4
   languageName: node
   linkType: hard
 

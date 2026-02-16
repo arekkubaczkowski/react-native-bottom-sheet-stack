@@ -20,7 +20,7 @@ A **library-agnostic** stack manager for bottom sheets and modals in React Nativ
 - **Scale Animation** — iOS-style background scaling effect when sheets are stacked
 - **Context Preservation** — Portal-based API that preserves React context in bottom sheets
 - **Mixed Stacking** — Bottom sheets and modals coexist in the same stack
-- **6 Adapters** — GorhomSheet, Modal, react-native-modal, TrueSheet, ActionsSheet, RawBottomSheet
+- **4 Adapters** — GorhomSheet, Modal, react-native-modal, ActionsSheet
 - **Group Support** — Isolated stacks for different parts of your app
 
 ## Quick Example
@@ -35,12 +35,12 @@ import {
   BottomSheetScaleView,
   BottomSheetManaged,
   useBottomSheetManager,
-  useBottomSheetState,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 // 1. Define a bottom sheet component
 const MySheet = forwardRef((props, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
 
   return (
     <BottomSheetManaged ref={ref} snapPoints={['50%']}>
@@ -68,12 +68,12 @@ function App() {
 
 // 3. Open bottom sheets
 function YourAppContent() {
-  const { openBottomSheet } = useBottomSheetManager();
+  const { open } = useBottomSheetManager();
 
   return (
     <Button
       title="Open Sheet"
-      onPress={() => openBottomSheet(<MySheet />, { mode: 'push' })}
+      onPress={() => open(<MySheet />, { mode: 'push' })}
     />
   );
 }

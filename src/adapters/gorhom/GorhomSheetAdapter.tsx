@@ -93,7 +93,6 @@ export const GorhomSheetAdapter = React.forwardRef<
     return (
       <BottomSheetOriginal
         animationConfigs={config}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ref={ref as any}
         {...props}
         index={defaultIndex}
@@ -109,3 +108,5 @@ export const GorhomSheetAdapter = React.forwardRef<
     );
   }
 );
+
+GorhomSheetAdapter.displayName = 'GorhomSheetAdapter';

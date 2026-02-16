@@ -12,7 +12,7 @@ This library provides two approaches for working with bottom sheets. Both are eq
 |---|----------------|------------|
 | **Style** | Fully imperative | Declarative definition, imperative control |
 | **Hook** | `useBottomSheetManager` | `useBottomSheetControl` |
-| **Open** | `openBottomSheet(<Component />)` | `open()` |
+| **Open** | `open(<Component />)` | `open()` |
 | **React Context** | From `BottomSheetHost` location | From definition site |
 | **Sheet definition** | At the call site | Anywhere in the component tree |
 
@@ -24,10 +24,10 @@ Open sheets directly by passing JSX:
 import { useBottomSheetManager } from 'react-native-bottom-sheet-stack';
 
 function MyComponent() {
-  const { openBottomSheet } = useBottomSheetManager();
+  const { open } = useBottomSheetManager();
 
   const handleOpen = () => {
-    openBottomSheet(<MySheet />, {
+    open(<MySheet />, {
       mode: 'push',
       scaleBackground: true,
     });
@@ -38,7 +38,7 @@ function MyComponent() {
 ```
 
 **Characteristics:**
-- Sheet content is passed directly to `openBottomSheet()`
+- Sheet content is passed directly to `open()`
 - Content is stored in Zustand and rendered in `BottomSheetHost`
 - Sheets have access to context that wraps `BottomSheetHost`, not the call site
 
@@ -53,7 +53,7 @@ If you need context access with Imperative API, wrap `BottomSheetHost` with your
 </ThemeProvider>
 ```
 
-Sheets will have access to these contexts, but not to context from where `openBottomSheet()` is called.
+Sheets will have access to these contexts, but not to context from where `open()` is called.
 :::
 
 ## Portal API

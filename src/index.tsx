@@ -11,23 +11,19 @@ export {
   GorhomSheetAdapter,
   type GorhomSheetAdapterProps,
 } from './adapters/gorhom';
-export { ModalAdapter, type ModalAdapterProps } from './adapters/modal';
+export {
+  ModalAdapter,
+  type ModalAdapterProps,
+  type ModalAdapterAnimation,
+} from './adapters/custom-modal';
 export {
   ReactNativeModalAdapter,
   type ReactNativeModalAdapterProps,
 } from './adapters/react-native-modal';
 export {
-  TrueSheetAdapter,
-  type TrueSheetAdapterProps,
-} from './adapters/true-sheet';
-export {
   ActionsSheetAdapter,
   type ActionsSheetAdapterProps,
 } from './adapters/actions-sheet';
-export {
-  RawBottomSheetAdapter,
-  type RawBottomSheetAdapterProps,
-} from './adapters/raw-bottom-sheet';
 
 // Adapter types
 export type {

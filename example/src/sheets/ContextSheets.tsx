@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import {
   useBottomSheetControl,
   useBottomSheetManager,
-  useBottomSheetState,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 import {
@@ -25,8 +25,8 @@ export const ContextComparisonSheet = forwardRef<
   BottomSheetMethods,
   ContextComparisonSheetProps
 >(({ onOpenPortal }, ref) => {
-  const { close } = useBottomSheetState();
-  const { openBottomSheet } = useBottomSheetManager();
+  const { close } = useBottomSheetContext();
+  const { open } = useBottomSheetManager();
 
   return (
     <Sheet ref={ref}>
@@ -42,7 +42,7 @@ export const ContextComparisonSheet = forwardRef<
         <Button
           title="Open Imperative Sheet"
           onPress={() =>
-            openBottomSheet(<ContextSheetImperative />, {
+            open(<ContextSheetImperative />, {
               mode: 'push',
               scaleBackground: true,
             })
@@ -59,7 +59,7 @@ ContextComparisonSheet.displayName = 'ContextComparisonSheet';
 
 export const ContextSheetImperative = forwardRef<BottomSheetMethods>(
   (_, ref) => {
-    const { close } = useBottomSheetState();
+    const { close } = useBottomSheetContext();
     const user = useUser();
 
     return (
@@ -93,11 +93,11 @@ export const ContextSheetImperative = forwardRef<BottomSheetMethods>(
 ContextSheetImperative.displayName = 'ContextSheetImperative';
 
 export const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close, params } = useBottomSheetState<'context-portal-sheet'>();
+  const { close, params } = useBottomSheetContext<'context-portal-sheet'>();
   const { updateParams, resetParams } = useBottomSheetControl(
     'context-portal-sheet'
   );
-  const { openBottomSheet } = useBottomSheetManager();
+  const { open } = useBottomSheetManager();
   const user = useUser();
   const [counter, setCounter] = useState(1);
 
@@ -145,9 +145,7 @@ export const ContextSheetPortal = forwardRef<BottomSheetMethods>((_, ref) => {
       <View style={{ gap: 12 }}>
         <Button
           title="Open Nested Imperative Sheet"
-          onPress={() =>
-            openBottomSheet(<NestedImperativeSheet />, { mode: 'push' })
-          }
+          onPress={() => open(<NestedImperativeSheet />, { mode: 'push' })}
         />
         <SecondaryButton title="Close" onPress={close} />
       </View>
@@ -159,7 +157,7 @@ ContextSheetPortal.displayName = 'ContextSheetPortal';
 
 export const NestedImperativeSheet = forwardRef<BottomSheetMethods>(
   (_, ref) => {
-    const { close } = useBottomSheetState();
+    const { close } = useBottomSheetContext();
     const user = useUser();
 
     return (

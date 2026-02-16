@@ -13,35 +13,33 @@ import {
   ContextComparisonSheet,
   ContextSheetPortal,
   HeavySheet,
-  ModalNavigationContent,
-  ModalWithNestedSheetContent,
+  GorhomSheetDemoContent,
+  ModalAdapterDemoContent,
+  MixedStackContent,
   NestedSheet1,
   PortalModeSheetA,
   PortalModeSheetB,
-  RawBottomSheetDemoContent,
   RNModalDemoContent,
   SheetA,
   SimpleModalContent,
-  TrueSheetDemoContent,
 } from '../sheets';
 import { colors, sharedStyles } from '../styles/theme';
 
 export function HomeScreen() {
   const { top } = useSafeAreaInsets();
-  const { openBottomSheet } = useBottomSheetManager();
+  const { open } = useBottomSheetManager();
   const portalSheetControl = useBottomSheetControl('context-portal-sheet');
   const portalModeSheetA = useBottomSheetControl('portal-mode-sheet-a');
   const scannerControl = useBottomSheetControl('scanner-sheet');
   const persistentWithPortalControl = useBottomSheetControl(
     'persistent-with-portal'
   );
-  const modalWithNestedControl = useBottomSheetControl('modal-with-nested');
+  const mixedStackControl = useBottomSheetControl('mixed-stack');
   const adapterComparisonControl = useBottomSheetControl('adapter-comparison');
-  const modalNavigationControl = useBottomSheetControl('modal-navigation');
+  const modalAdapterControl = useBottomSheetControl('modal-adapter-demo');
   const rnModalControl = useBottomSheetControl('rn-modal-demo');
-  const trueSheetControl = useBottomSheetControl('true-sheet-demo');
   const actionsSheetControl = useBottomSheetControl('actions-sheet-demo');
-  const rawBottomSheetControl = useBottomSheetControl('raw-bottom-sheet-demo');
+  const gorhomSheetControl = useBottomSheetControl('gorhom-sheet-demo');
 
   return (
     <View style={sharedStyles.container}>
@@ -59,27 +57,24 @@ export function HomeScreen() {
       <BottomSheetPortal id="simple-modal">
         <SimpleModalContent />
       </BottomSheetPortal>
-      <BottomSheetPortal id="modal-with-nested">
-        <ModalWithNestedSheetContent />
+      <BottomSheetPortal id="mixed-stack">
+        <MixedStackContent />
       </BottomSheetPortal>
       <BottomSheetPortal id="adapter-comparison">
         <AdapterComparisonContent />
       </BottomSheetPortal>
-      <BottomSheetPortal id="modal-navigation">
-        <ModalNavigationContent />
-      </BottomSheetPortal>
       {/* Third-party adapter portals */}
+      <BottomSheetPortal id="modal-adapter-demo">
+        <ModalAdapterDemoContent />
+      </BottomSheetPortal>
       <BottomSheetPortal id="rn-modal-demo">
         <RNModalDemoContent />
-      </BottomSheetPortal>
-      <BottomSheetPortal id="true-sheet-demo">
-        <TrueSheetDemoContent />
       </BottomSheetPortal>
       <BottomSheetPortal id="actions-sheet-demo">
         <ActionsSheetDemoContent />
       </BottomSheetPortal>
-      <BottomSheetPortal id="raw-bottom-sheet-demo">
-        <RawBottomSheetDemoContent />
+      <BottomSheetPortal id="gorhom-sheet-demo">
+        <GorhomSheetDemoContent />
       </BottomSheetPortal>
 
       <ScrollView
@@ -110,7 +105,7 @@ export function HomeScreen() {
             description="Compare imperative vs portal API - portal preserves React context"
             color={colors.success}
             onPress={() =>
-              openBottomSheet(
+              open(
                 <ContextComparisonSheet
                   onOpenPortal={() =>
                     portalSheetControl.open({
@@ -128,9 +123,7 @@ export function HomeScreen() {
             title="Navigation Flow"
             description="Switch, Push, and Replace modes for managing sheet navigation"
             color={colors.primary}
-            onPress={() =>
-              openBottomSheet(<SheetA />, { scaleBackground: true })
-            }
+            onPress={() => open(<SheetA />, { scaleBackground: true })}
           />
 
           <DemoCard
@@ -144,18 +137,14 @@ export function HomeScreen() {
             title="Nested Scale"
             description="Cascading scale effect with multiple stacked sheets"
             color={colors.purple}
-            onPress={() =>
-              openBottomSheet(<NestedSheet1 />, { scaleBackground: true })
-            }
+            onPress={() => open(<NestedSheet1 />, { scaleBackground: true })}
           />
 
           <DemoCard
             title="Dynamic Content"
             description="Async loading and dynamic content updates"
             color={colors.pink}
-            onPress={() =>
-              openBottomSheet(<HeavySheet />, { scaleBackground: true })
-            }
+            onPress={() => open(<HeavySheet />, { scaleBackground: true })}
           />
 
           <DemoCard
@@ -180,22 +169,15 @@ export function HomeScreen() {
           />
         </View>
 
-        {/* Modal Adapter Demos */}
+        {/* Mixed Adapters */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Modal Adapter</Text>
-
-          <DemoCard
-            title="Modal Navigation"
-            description="Push, Switch, Replace modes using native Modal instead of bottom sheet"
-            color={colors.warning}
-            onPress={() => modalNavigationControl.open()}
-          />
+          <Text style={styles.sectionTitle}>Mixed Adapters</Text>
 
           <DemoCard
             title="Mixed Stack"
-            description="Push bottom sheets from modals and modals from bottom sheets"
+            description="Chain modals, bottom sheets, and action sheets with push and switch"
             color={colors.purple}
-            onPress={() => modalWithNestedControl.open()}
+            onPress={() => mixedStackControl.open()}
           />
 
           <DemoCard
@@ -211,17 +193,17 @@ export function HomeScreen() {
           <Text style={styles.sectionTitle}>Third-Party Adapters</Text>
 
           <DemoCard
+            title="ModalAdapter (Built-in)"
+            description="Zero-dependency View-based overlay with slide-up animation and stacking"
+            color={colors.success}
+            onPress={() => modalAdapterControl.open({ scaleBackground: true })}
+          />
+
+          <DemoCard
             title="react-native-modal"
             description="Fancy animations (slide, bounce, fade), swipe-to-dismiss, custom backdrops"
             color={colors.warning}
             onPress={() => rnModalControl.open()}
-          />
-
-          <DemoCard
-            title="TrueSheet (Native C++)"
-            description="Fully native Fabric sheet with detents, native grabber handle"
-            color={colors.success}
-            onPress={() => trueSheetControl.open()}
           />
 
           <DemoCard
@@ -232,10 +214,10 @@ export function HomeScreen() {
           />
 
           <DemoCard
-            title="Raw Bottom Sheet"
-            description="Lightweight, minimal bottom sheet — fixed height, zero native deps"
+            title="@gorhom/bottom-sheet"
+            description="Feature-rich bottom sheet with snap points, gestures, and spring animations"
             color={colors.cyan}
-            onPress={() => rawBottomSheetControl.open()}
+            onPress={() => gorhomSheetControl.open({ scaleBackground: true })}
           />
         </View>
 
@@ -256,8 +238,8 @@ export function HomeScreen() {
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
             Library-agnostic stack manager with pluggable adapters. Ships with
-            GorhomSheetAdapter, ModalAdapter, and 4 third-party adapters —
-            or build your own with the SheetAdapterRef interface.
+            GorhomSheetAdapter, ModalAdapter, and third-party adapters — or
+            build your own with the SheetAdapterRef interface.
           </Text>
         </View>
       </ScrollView>

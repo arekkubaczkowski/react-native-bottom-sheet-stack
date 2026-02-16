@@ -3,14 +3,14 @@ import { forwardRef } from 'react';
 import { Text, View } from 'react-native';
 import {
   useBottomSheetManager,
-  useBottomSheetState,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 import { Badge, Button, SecondaryButton, Sheet } from '../components';
 import { colors, sharedStyles } from '../styles/theme';
 
 export const ScannerNestedSheet2 = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
 
   const mockHistory = [
     { id: 'QR-A1B2C3D4', date: '2 min ago' },
@@ -52,8 +52,8 @@ export const ScannerNestedSheet2 = forwardRef<BottomSheetMethods>((_, ref) => {
 ScannerNestedSheet2.displayName = 'ScannerNestedSheet2';
 
 export const ScannerNestedSheet1 = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
-  const { openBottomSheet } = useBottomSheetManager();
+  const { close } = useBottomSheetContext();
+  const { open } = useBottomSheetManager();
 
   return (
     <Sheet ref={ref} snapPoints={['50%']} backgroundColor={colors.nested1}>
@@ -67,7 +67,7 @@ export const ScannerNestedSheet1 = forwardRef<BottomSheetMethods>((_, ref) => {
         <Button
           title="Open Scan History"
           onPress={() =>
-            openBottomSheet(<ScannerNestedSheet2 />, { scaleBackground: true })
+            open(<ScannerNestedSheet2 />, { scaleBackground: true })
           }
         />
         <SecondaryButton title="Close" onPress={close} />

@@ -24,7 +24,13 @@ export function initBottomSheetCoordinator(groupId: string) {
 
         switch (status) {
           case 'opening':
-            ref?.expand();
+            requestAnimationFrame(() => {
+              const currentStatus =
+                useBottomSheetStore.getState().sheetsById[id]?.status;
+              if (currentStatus === 'opening') {
+                getSheetRef(id)?.current?.expand();
+              }
+            });
             break;
           case 'hidden':
           case 'closing':
@@ -45,9 +51,7 @@ export function initBottomSheetCoordinator(groupId: string) {
  * - `handleOpened()` when the show animation completes
  * - `handleClosed()` when the hide animation completes
  */
-export function createSheetEventHandlers(
-  sheetId: string
-): SheetAdapterEvents {
+export function createSheetEventHandlers(sheetId: string): SheetAdapterEvents {
   const handleDismiss = () => {
     const state = useBottomSheetStore.getState();
     const currentStatus = state.sheetsById[sheetId]?.status;

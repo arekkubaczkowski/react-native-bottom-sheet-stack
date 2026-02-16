@@ -6,6 +6,8 @@ import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetRefContext } from '../../BottomSheetRef.context';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
+const ActionSheet = require('react-native-actions-sheet').default;
+
 /**
  * Adapter for `react-native-actions-sheet` — a zero-dependency action sheet
  * with snap points and gesture controls.
@@ -32,7 +34,7 @@ export const ActionsSheetAdapter = React.forwardRef<
 >(({ children, ...sheetProps }, forwardedRef) => {
   const { id } = useBottomSheetContext();
   const contextRef = useBottomSheetRefContext();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const actionSheetRef = useRef<any>(null);
 
   const { handleDismiss, handleOpened, handleClosed } =
@@ -59,9 +61,6 @@ export const ActionsSheetAdapter = React.forwardRef<
     handleClosed();
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const ActionSheet = require('react-native-actions-sheet').default;
-
   return (
     <ActionSheet
       // Adapter defaults (overridable via spread)
@@ -81,3 +80,5 @@ export const ActionsSheetAdapter = React.forwardRef<
     </ActionSheet>
   );
 });
+
+ActionsSheetAdapter.displayName = 'ActionsSheetAdapter';

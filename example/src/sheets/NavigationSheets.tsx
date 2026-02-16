@@ -4,15 +4,15 @@ import { Text, View } from 'react-native';
 import {
   useBottomSheetControl,
   useBottomSheetManager,
-  useBottomSheetState,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 import { Badge, Button, SecondaryButton, Sheet } from '../components';
 import { colors, sharedStyles } from '../styles/theme';
 
 export const SheetA = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { openBottomSheet } = useBottomSheetManager();
-  const { close } = useBottomSheetState();
+  const { open } = useBottomSheetManager();
+  const { close } = useBottomSheetContext();
   const scannerSheet = useBottomSheetControl('scanner-sheet');
 
   return (
@@ -43,7 +43,7 @@ export const SheetA = forwardRef<BottomSheetMethods>((_, ref) => {
       <View style={{ gap: 12, marginTop: 20 }}>
         <Button
           title="Switch to Sheet B"
-          onPress={() => openBottomSheet(<SheetB />, { mode: 'switch' })}
+          onPress={() => open(<SheetB />, { mode: 'switch' })}
         />
         <Button
           title="Open Scanner (Persistent)"
@@ -66,8 +66,8 @@ export const SheetA = forwardRef<BottomSheetMethods>((_, ref) => {
 SheetA.displayName = 'SheetA';
 
 export const SheetB = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { openBottomSheet } = useBottomSheetManager();
-  const { close } = useBottomSheetState();
+  const { open } = useBottomSheetManager();
+  const { close } = useBottomSheetContext();
 
   return (
     <Sheet ref={ref}>
@@ -92,7 +92,7 @@ export const SheetB = forwardRef<BottomSheetMethods>((_, ref) => {
       <View style={{ gap: 12, marginTop: 20 }}>
         <Button
           title="Push Sheet C"
-          onPress={() => openBottomSheet(<SheetC />, { mode: 'push' })}
+          onPress={() => open(<SheetC />, { mode: 'push' })}
         />
         <SecondaryButton title="Close" onPress={close} />
       </View>
@@ -103,8 +103,8 @@ export const SheetB = forwardRef<BottomSheetMethods>((_, ref) => {
 SheetB.displayName = 'SheetB';
 
 export const SheetC = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
-  const { openBottomSheet } = useBottomSheetManager();
+  const { close } = useBottomSheetContext();
+  const { open } = useBottomSheetManager();
 
   return (
     <Sheet ref={ref}>
@@ -117,7 +117,7 @@ export const SheetC = forwardRef<BottomSheetMethods>((_, ref) => {
       <View style={{ gap: 12 }}>
         <Button
           title="Replace with Sheet D"
-          onPress={() => openBottomSheet(<SheetD />, { mode: 'replace' })}
+          onPress={() => open(<SheetD />, { mode: 'replace' })}
         />
         <SecondaryButton title="Close" onPress={close} />
       </View>
@@ -128,7 +128,7 @@ export const SheetC = forwardRef<BottomSheetMethods>((_, ref) => {
 SheetC.displayName = 'SheetC';
 
 export const SheetD = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
 
   return (
     <Sheet ref={ref}>

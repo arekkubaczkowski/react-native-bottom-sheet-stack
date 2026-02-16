@@ -1,7 +1,7 @@
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { forwardRef, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useBottomSheetState } from 'react-native-bottom-sheet-stack';
+import { useBottomSheetContext } from 'react-native-bottom-sheet-stack';
 
 import { SecondaryButton, Sheet } from '../components';
 import { colors, sharedStyles } from '../styles/theme';
@@ -24,7 +24,7 @@ function HeavyItem({ index }: { index: number }) {
 }
 
 export const HeavySheet = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
   const [items, setItems] = useState<number[]>(() =>
     Array.from({ length: 5 }, (_, i) => i)
   );

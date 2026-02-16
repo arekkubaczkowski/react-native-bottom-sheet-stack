@@ -11,14 +11,13 @@ export { PersistentWithPortalSheet } from './PersistentWithNestedPortal';
 export { PortalModeSheetA, PortalModeSheetB } from './PortalModeSheets';
 export { ScannerSheet } from './ScannerSheet';
 export {
+  MixedStackContent,
   SimpleModalContent,
-  ModalWithNestedSheetContent,
   AdapterComparisonContent,
-  ModalNavigationContent,
 } from './ModalSheets';
 export {
+  ModalAdapterDemoContent,
   RNModalDemoContent,
-  TrueSheetDemoContent,
   ActionsSheetDemoContent,
-  RawBottomSheetDemoContent,
+  GorhomSheetDemoContent,
 } from './ThirdPartyAdapterSheets';

@@ -19,13 +19,12 @@ declare module 'react-native-bottom-sheet-stack' {
     'simple-modal': {
       title: string;
     };
-    'modal-with-nested': true;
+    'mixed-stack': true;
     'adapter-comparison': true;
-    'modal-navigation': true;
     // Third-party adapter demos
+    'modal-adapter-demo': true;
     'rn-modal-demo': true;
-    'true-sheet-demo': true;
     'actions-sheet-demo': true;
-    'raw-bottom-sheet-demo': true;
+    'gorhom-sheet-demo': true;
   }
 }
