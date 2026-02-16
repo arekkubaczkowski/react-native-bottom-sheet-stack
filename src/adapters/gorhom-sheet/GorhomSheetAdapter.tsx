@@ -1,7 +1,5 @@
-import BottomSheetOriginal, {
-  useBottomSheetSpringConfigs,
-  type BottomSheetProps,
-} from '@gorhom/bottom-sheet';
+import type { BottomSheetProps } from '@gorhom/bottom-sheet';
+import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React, { useImperativeHandle, useRef } from 'react';
 import { useAnimatedReaction } from 'react-native-reanimated';
 
@@ -12,7 +10,16 @@ import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
+
+let BottomSheetOriginal: any;
+let useBottomSheetSpringConfigs: any;
+try {
+  const gorhom = require('@gorhom/bottom-sheet');
+  BottomSheetOriginal = gorhom.default;
+  useBottomSheetSpringConfigs = gorhom.useBottomSheetSpringConfigs;
+} catch {
+  // Optional dependency — resolved lazily when the adapter renders.
+}
 
 export interface GorhomSheetAdapterProps extends BottomSheetProps {}
 
@@ -35,6 +42,12 @@ export const GorhomSheetAdapter = React.forwardRef<
     },
     forwardedRef
   ) => {
+    if (!BottomSheetOriginal) {
+      throw new Error(
+        'GorhomSheetAdapter requires "@gorhom/bottom-sheet". Install it with: yarn add @gorhom/bottom-sheet react-native-gesture-handler'
+      );
+    }
+
     const { id } = useBottomSheetContext();
     const ref = useAdapterRef(forwardedRef);
     const contextAnimatedIndex = useAnimatedIndex();

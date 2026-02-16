@@ -6,7 +6,12 @@ import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
-const RNModal = require('react-native-modal').default;
+let RNModal: any;
+try {
+  RNModal = require('react-native-modal').default;
+} catch {
+  // Optional dependency — resolved lazily when the adapter renders.
+}
 
 /**
  * Adapter for `react-native-modal`.
@@ -31,6 +36,12 @@ export const ReactNativeModalAdapter = React.forwardRef<
   SheetAdapterRef,
   ReactNativeModalAdapterProps
 >(({ children, ...modalProps }, forwardedRef) => {
+  if (!RNModal) {
+    throw new Error(
+      'ReactNativeModalAdapter requires "react-native-modal". Install it with: yarn add react-native-modal'
+    );
+  }
+
   const { id } = useBottomSheetContext();
   const ref = useAdapterRef(forwardedRef);
   const animatedIndex = useAnimatedIndex();
