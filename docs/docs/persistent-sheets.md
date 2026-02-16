@@ -53,6 +53,8 @@ function HomeScreen() {
 Internal component state is preserved between open/close cycles:
 
 ```tsx
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+
 const ScannerSheet = forwardRef((props, ref) => {
   const { close } = useBottomSheetContext();
   // State is preserved when sheet is closed and reopened
@@ -67,7 +69,7 @@ const ScannerSheet = forwardRef((props, ref) => {
   };
 
   return (
-    <BottomSheetManaged ref={ref} enableDynamicSizing>
+    <GorhomSheetAdapter ref={ref} enableDynamicSizing>
       <View>
         {scanResult ? (
           <Text>Result: {scanResult}</Text>
@@ -76,7 +78,7 @@ const ScannerSheet = forwardRef((props, ref) => {
         )}
         <Button title="Close" onPress={close} />
       </View>
-    </BottomSheetManaged>
+    </GorhomSheetAdapter>
   );
 });
 ```
@@ -110,13 +112,15 @@ scanner.open({
 Access them in the sheet:
 
 ```tsx
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+
 const ScannerSheet = forwardRef((props, ref) => {
   const { params } = useBottomSheetContext<'scanner'>();
 
   return (
-    <BottomSheetManaged ref={ref}>
+    <GorhomSheetAdapter ref={ref}>
       <Text>{params?.title ?? 'Scanner'}</Text>
-    </BottomSheetManaged>
+    </GorhomSheetAdapter>
   );
 });
 ```

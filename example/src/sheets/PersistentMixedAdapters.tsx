@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   CustomModalAdapter,
-  ReactNativeModalAdapter,
   useBottomSheetContext,
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
+import { ReactNativeModalAdapter } from 'react-native-bottom-sheet-stack/react-native-modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {

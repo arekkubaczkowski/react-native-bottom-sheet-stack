@@ -6,7 +6,7 @@ import {
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { forwardRef, useCallback, useMemo, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { BottomSheetManaged } from 'react-native-bottom-sheet-stack';
+import { BottomSheetManaged } from 'react-native-bottom-sheet-stack/gorhom';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, sharedStyles } from '../styles/theme';

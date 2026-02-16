@@ -6,12 +6,7 @@ import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
-let ActionSheet: any;
-try {
-  ActionSheet = require('react-native-actions-sheet').default;
-} catch {
-  // Optional dependency — resolved lazily when the adapter renders.
-}
+const ActionSheet = require('react-native-actions-sheet').default;
 
 /**
  * Adapter for `react-native-actions-sheet` — a zero-dependency action sheet
@@ -37,12 +32,6 @@ export const ActionsSheetAdapter = React.forwardRef<
   SheetAdapterRef,
   ActionsSheetAdapterProps
 >(({ children, ...sheetProps }, forwardedRef) => {
-  if (!ActionSheet) {
-    throw new Error(
-      'ActionsSheetAdapter requires "react-native-actions-sheet". Install it with: yarn add react-native-actions-sheet'
-    );
-  }
-
   const { id } = useBottomSheetContext();
   const ref = useAdapterRef(forwardedRef);
   const animatedIndex = useAnimatedIndex();

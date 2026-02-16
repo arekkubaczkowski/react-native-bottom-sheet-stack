@@ -63,7 +63,7 @@ open(<MySheet />, {
 Access the current sheet's state, params, and close function.
 
 :::warning Inside Sheet Only
-This hook can **only** be used inside a `BottomSheetManaged` component. It reads from React context - no ID parameter needed.
+This hook can **only** be used inside a sheet adapter component (e.g. `GorhomSheetAdapter`, `CustomModalAdapter`). It reads from React context - no ID parameter needed.
 :::
 
 ```tsx

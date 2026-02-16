@@ -92,13 +92,17 @@ alert.open({ mode: 'push' }); // Modal pushes on top of bottom sheet
 |---------|-------|
 | `CustomModalAdapter` | Custom React Native UI
 
-### Third-party (optional peer dependencies)
+### Third-party (separate subpath exports)
 
-| Adapter | Wraps | Best For |
-|---------|-------|----------|
-| `GorhomSheetAdapter` | `@gorhom/bottom-sheet` | Feature-rich bottom sheets with snap points |
-| `ReactNativeModalAdapter` | `react-native-modal` | Rich animations, swipe dismiss |
-| `ActionsSheetAdapter` | `react-native-actions-sheet` | Zero-dep sheets, snap points |
+| Adapter | Import | Wraps | Best For |
+|---------|--------|-------|----------|
+| `GorhomSheetAdapter` | `react-native-bottom-sheet-stack/gorhom` | `@gorhom/bottom-sheet` | Feature-rich bottom sheets with snap points |
+| `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | Rich animations, swipe dismiss |
+| `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | Zero-dep sheets, snap points |
+
+:::info
+Third-party adapters are shipped as separate [subpath exports](https://nodejs.org/api/packages.html#subpath-exports). Importing the main package never causes Metro resolution errors for uninstalled adapter dependencies.
+:::
 
 ### Custom
 
@@ -106,10 +110,10 @@ You can [build your own adapter](/custom-adapters) for any overlay library.
 
 ## Backward Compatibility
 
-`BottomSheetManaged` is a re-export of `GorhomSheetAdapter`. Existing code continues to work without changes:
+`BottomSheetManaged` is available as a deprecated re-export from the gorhom subpath:
 
 ```tsx
 // These are equivalent:
-import { BottomSheetManaged } from 'react-native-bottom-sheet-stack';
-import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack';
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+import { BottomSheetManaged } from 'react-native-bottom-sheet-stack/gorhom';
 ```

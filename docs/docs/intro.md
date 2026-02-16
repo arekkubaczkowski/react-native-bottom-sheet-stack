@@ -33,24 +33,24 @@ import {
   BottomSheetManagerProvider,
   BottomSheetHost,
   BottomSheetScaleView,
-  BottomSheetManaged,
   useBottomSheetManager,
   useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
 
 // 1. Define a bottom sheet component
 const MySheet = forwardRef((props, ref) => {
   const { close } = useBottomSheetContext();
 
   return (
-    <BottomSheetManaged ref={ref} snapPoints={['50%']}>
+    <GorhomSheetAdapter ref={ref} snapPoints={['50%']}>
       <BottomSheetView>
         <View style={{ padding: 20 }}>
           <Text>Hello from Bottom Sheet!</Text>
           <Button title="Close" onPress={close} />
         </View>
       </BottomSheetView>
-    </BottomSheetManaged>
+    </GorhomSheetAdapter>
   );
 });
 

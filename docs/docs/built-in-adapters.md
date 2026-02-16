@@ -11,7 +11,7 @@ All adapters listed below ship with the library. `CustomModalAdapter` requires n
 The default adapter. Wraps `@gorhom/bottom-sheet` to provide feature-rich bottom sheets with snap points, spring animations, and swipe gestures.
 
 :::tip
-`BottomSheetManaged` is a re-export of `GorhomSheetAdapter` for backward compatibility. They are identical.
+`BottomSheetManaged` is available as a deprecated re-export from the same subpath for backward compatibility.
 :::
 
 ### Installation
@@ -23,7 +23,7 @@ npm install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-ha
 ### Usage
 
 ```tsx
-import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack';
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 
 const MySheet = forwardRef((props, ref) => {
@@ -110,7 +110,7 @@ npm install react-native-modal
 ### Usage
 
 ```tsx
-import { ReactNativeModalAdapter } from 'react-native-bottom-sheet-stack';
+import { ReactNativeModalAdapter } from 'react-native-bottom-sheet-stack/react-native-modal';
 
 function FancyModal() {
   const { close } = useBottomSheetContext();
@@ -152,7 +152,7 @@ npm install react-native-actions-sheet
 ### Usage
 
 ```tsx
-import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack';
+import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack/actions-sheet';
 
 function MyActionsSheet() {
   const { close } = useBottomSheetContext();

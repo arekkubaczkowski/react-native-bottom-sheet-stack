@@ -3,7 +3,10 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "react-native-bottom-sheet-stack": ["./src/index"]
+      "react-native-bottom-sheet-stack": ["./src/index"],
+      "react-native-bottom-sheet-stack/gorhom": ["./src/adapters/gorhom-sheet/index"],
+      "react-native-bottom-sheet-stack/react-native-modal": ["./src/adapters/react-native-modal/index"],
+      "react-native-bottom-sheet-stack/actions-sheet": ["./src/adapters/actions-sheet/index"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,

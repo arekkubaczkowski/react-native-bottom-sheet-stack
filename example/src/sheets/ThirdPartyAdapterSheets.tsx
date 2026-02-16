@@ -1,12 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
-  ActionsSheetAdapter,
   CustomModalAdapter,
-  ReactNativeModalAdapter,
   useBottomSheetContext,
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
+import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack/actions-sheet';
+import { ReactNativeModalAdapter } from 'react-native-bottom-sheet-stack/react-native-modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {

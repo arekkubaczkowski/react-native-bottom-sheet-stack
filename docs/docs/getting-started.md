@@ -35,7 +35,7 @@ yarn add react-native-actions-sheet
 ```
 
 :::tip
-All adapter dependencies are **optional**. Only install what you use. The library won't crash if a dependency is missing — it's only needed at runtime when you render that specific adapter.
+All adapter dependencies are **optional**. Only install what you use. Adapters with 3rd-party dependencies are shipped as separate [subpath exports](https://nodejs.org/api/packages.html#subpath-exports) — importing the main package never triggers Metro resolution errors for uninstalled libraries.
 :::
 
 ## Setup
@@ -75,29 +75,27 @@ export default function App() {
 
 ### 2. Create a Bottom Sheet Component
 
-Use `BottomSheetManaged` instead of `BottomSheet` from `@gorhom/bottom-sheet`:
+Use `GorhomSheetAdapter` from the gorhom subpath instead of `BottomSheet` from `@gorhom/bottom-sheet`:
 
 ```tsx
 import { forwardRef } from 'react';
 import { View, Text, Button } from 'react-native';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
-import {
-  BottomSheetManaged,
-  useBottomSheetContext,
-} from 'react-native-bottom-sheet-stack';
+import { useBottomSheetContext } from 'react-native-bottom-sheet-stack';
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
 
 const MySheet = forwardRef((props, ref) => {
   const { close } = useBottomSheetContext();
 
   return (
-    <BottomSheetManaged ref={ref} snapPoints={['50%']}>
+    <GorhomSheetAdapter ref={ref} snapPoints={['50%']}>
       <BottomSheetView>
         <View style={{ padding: 20 }}>
           <Text>Hello from Bottom Sheet!</Text>
           <Button title="Close" onPress={close} />
         </View>
       </BottomSheetView>
-    </BottomSheetManaged>
+    </GorhomSheetAdapter>
   );
 });
 ```

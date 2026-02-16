@@ -37,10 +37,10 @@ import {
   BottomSheetManagerProvider,
   BottomSheetHost,
   BottomSheetScaleView,
-  GorhomSheetAdapter,
   useBottomSheetManager,
   useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
 
 // 1. Define a bottom sheet component
 const MySheet = forwardRef((props, ref) => {
@@ -85,14 +85,14 @@ function YourAppContent() {
 
 ## Shipped Adapters
 
-| Adapter | Wraps | Extra Peer Dependencies |
-|---------|-------|-----------------------|
-| `GorhomSheetAdapter` | `@gorhom/bottom-sheet` | `@gorhom/bottom-sheet`, `react-native-gesture-handler` |
-| `CustomModalAdapter` | Custom animated modal | None |
-| `ReactNativeModalAdapter` | `react-native-modal` | `react-native-modal` |
-| `ActionsSheetAdapter` | `react-native-actions-sheet` | `react-native-actions-sheet` |
+| Adapter | Import | Wraps | Extra Peer Dependencies |
+|---------|--------|-------|-----------------------|
+| `GorhomSheetAdapter` | `react-native-bottom-sheet-stack/gorhom` | `@gorhom/bottom-sheet` | `@gorhom/bottom-sheet`, `react-native-gesture-handler` |
+| `CustomModalAdapter` | `react-native-bottom-sheet-stack` | Custom animated modal | None |
+| `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | `react-native-modal` |
+| `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | `react-native-actions-sheet` |
 
-Each sheet in the stack can use a different adapter.
+Adapters with 3rd-party dependencies are shipped as separate subpath exports so that importing the main package never triggers Metro resolution errors for uninstalled libraries. Each sheet in the stack can use a different adapter.
 
 ## License
 

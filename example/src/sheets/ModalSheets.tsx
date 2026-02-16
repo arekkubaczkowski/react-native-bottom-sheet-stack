@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
-  ActionsSheetAdapter,
   CustomModalAdapter,
   useBottomSheetContext,
   useBottomSheetControl,
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
+import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack/actions-sheet';
 
 import { Badge, SecondaryButton, Sheet, SmallButton } from '../components';
 import { useUser } from '../context/UserContext';

@@ -2,33 +2,19 @@
 export { BottomSheetManagerProvider } from './BottomSheetManager.provider';
 export { BottomSheetHost } from './BottomSheetHost';
 export { BottomSheetScaleView } from './BottomSheetScaleView';
-export { BottomSheetManaged, type BottomSheetRef } from './BottomSheetManaged';
 export { BottomSheetPortal } from './BottomSheetPortal';
 export { BottomSheetPersistent } from './BottomSheetPersistent';
 
-// Adapters
-export {
-  GorhomSheetAdapter,
-  type GorhomSheetAdapterProps,
-} from './adapters/gorhom-sheet';
+// Adapters (only those with zero 3rd-party deps)
 export {
   CustomModalAdapter,
   type ModalAdapterProps,
 } from './adapters/custom-modal';
-/** @deprecated Use `CustomModalAdapter` instead. */
-export { ModalAdapter } from './adapters/custom-modal';
-export {
-  ReactNativeModalAdapter,
-  type ReactNativeModalAdapterProps,
-} from './adapters/react-native-modal';
-export {
-  ActionsSheetAdapter,
-  type ActionsSheetAdapterProps,
-} from './adapters/actions-sheet';
 
 // Adapter types
 export type {
   SheetAdapterRef,
+  SheetAdapterRef as BottomSheetRef,
   SheetAdapterEvents,
   SheetRef,
 } from './adapter.types';

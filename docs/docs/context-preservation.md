@@ -79,16 +79,17 @@ Your sheet content retains access to React context:
 
 ```tsx
 import { useTheme } from './ThemeContext';
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
 
 const ThemedSheet = forwardRef((props, ref) => {
   const { colors } = useTheme(); // Context is preserved!
 
   return (
-    <BottomSheetManaged ref={ref} snapPoints={['50%']}>
+    <GorhomSheetAdapter ref={ref} snapPoints={['50%']}>
       <BottomSheetView style={{ backgroundColor: colors.background }}>
         <Text style={{ color: colors.text }}>Themed Content</Text>
       </BottomSheetView>
-    </BottomSheetManaged>
+    </GorhomSheetAdapter>
   );
 });
 
@@ -119,6 +120,8 @@ import {
   useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+
 const UserSheet = forwardRef((props, ref) => {
   const { params } = useBottomSheetContext<'user-sheet'>();
   const [user, setUser] = useState(null);
@@ -130,11 +133,11 @@ const UserSheet = forwardRef((props, ref) => {
   }, [params?.userId]);
 
   return (
-    <BottomSheetManaged ref={ref} snapPoints={['50%']}>
+    <GorhomSheetAdapter ref={ref} snapPoints={['50%']}>
       <BottomSheetView>
         {user && <Text>{user.name}</Text>}
       </BottomSheetView>
-    </BottomSheetManaged>
+    </GorhomSheetAdapter>
   );
 });
 

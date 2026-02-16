@@ -59,7 +59,7 @@ interface BottomSheetState {
 
 ### BottomSheetRef
 
-Backward-compatible alias for `SheetAdapterRef`. Ref type for `BottomSheetManaged` (and all adapters).
+Backward-compatible alias for `SheetAdapterRef`. Ref type for all adapters.
 
 ```tsx
 import type { BottomSheetRef } from 'react-native-bottom-sheet-stack';

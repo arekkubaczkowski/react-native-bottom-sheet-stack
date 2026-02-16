@@ -58,42 +58,22 @@ Wrapper that applies scale animation to its children when sheets are opened with
 
 ---
 
-## BottomSheetManaged
-
-Backward-compatible alias for `GorhomSheetAdapter`. Drop-in replacement for `BottomSheet` from `@gorhom/bottom-sheet`.
-
-```tsx
-const MySheet = forwardRef((props, ref) => {
-  return (
-    <BottomSheetManaged ref={ref} snapPoints={['50%', '90%']}>
-      <BottomSheetView>
-        {/* content */}
-      </BottomSheetView>
-    </BottomSheetManaged>
-  );
-});
-```
-
-### Props
-
-Inherits all props from [@gorhom/bottom-sheet](https://gorhom.dev/react-native-bottom-sheet/props).
-
-:::tip
-`BottomSheetManaged` is a re-export of `GorhomSheetAdapter`. See [Built-in Adapters](/built-in-adapters) for details.
-:::
-
----
-
 ## Adapters
 
 Adapters are the components that actually render sheets/modals. Each adapter wraps a different UI library while implementing the same `SheetAdapterRef` interface.
 
-| Adapter | Library | Docs |
-|---------|---------|------|
-| `GorhomSheetAdapter` | `@gorhom/bottom-sheet` | [Shipped Adapters](/built-in-adapters) |
-| `CustomModalAdapter` | Custom Animated View | [Shipped Adapters](/built-in-adapters) |
-| `ReactNativeModalAdapter` | `react-native-modal` | [Shipped Adapters](/built-in-adapters) |
-| `ActionsSheetAdapter` | `react-native-actions-sheet` | [Shipped Adapters](/built-in-adapters) |
+Adapters with 3rd-party dependencies are shipped as separate subpath exports:
+
+| Adapter | Import | Library | Docs |
+|---------|--------|---------|------|
+| `GorhomSheetAdapter` | `react-native-bottom-sheet-stack/gorhom` | `@gorhom/bottom-sheet` | [Shipped Adapters](/built-in-adapters) |
+| `CustomModalAdapter` | `react-native-bottom-sheet-stack` | Custom Animated View | [Shipped Adapters](/built-in-adapters) |
+| `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | [Shipped Adapters](/built-in-adapters) |
+| `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | [Shipped Adapters](/built-in-adapters) |
+
+:::tip
+`BottomSheetManaged` is available as a deprecated re-export from `react-native-bottom-sheet-stack/gorhom` for backward compatibility.
+:::
 
 See [Library-Agnostic Architecture](/adapters) for how adapters work, or [Building Custom Adapters](/custom-adapters) to create your own.
 

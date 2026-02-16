@@ -5,6 +5,24 @@
   "source": "./src/index.tsx",
   "main": "lib/commonjs/index.js",
   "types": "lib/typescript/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/typescript/src/index.d.ts",
+      "default": "./lib/commonjs/index.js"
+    },
+    "./gorhom": {
+      "types": "./lib/typescript/src/adapters/gorhom-sheet/index.d.ts",
+      "default": "./lib/commonjs/adapters/gorhom-sheet/index.js"
+    },
+    "./react-native-modal": {
+      "types": "./lib/typescript/src/adapters/react-native-modal/index.d.ts",
+      "default": "./lib/commonjs/adapters/react-native-modal/index.js"
+    },
+    "./actions-sheet": {
+      "types": "./lib/typescript/src/adapters/actions-sheet/index.d.ts",
+      "default": "./lib/commonjs/adapters/actions-sheet/index.js"
+    }
+  },
   "files": [
     "src",
     "lib/typescript",

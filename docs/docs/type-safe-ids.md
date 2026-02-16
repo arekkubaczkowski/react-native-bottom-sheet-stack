@@ -81,17 +81,19 @@ profileControl.open({
 Use the generic parameter in `useBottomSheetContext` to get typed params:
 
 ```tsx
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+
 const ProfileSheet = forwardRef((props, ref) => {
   // Pass the sheet ID as generic to get typed params
   const { close, params } = useBottomSheetContext<'profile-sheet'>();
 
   return (
-    <BottomSheetManaged ref={ref}>
+    <GorhomSheetAdapter ref={ref}>
       <BottomSheetView>
         <Text>User ID: {params.userId}</Text>  {/* ✅ type-safe */}
         <Button title="Close" onPress={close} />
       </BottomSheetView>
-    </BottomSheetManaged>
+    </GorhomSheetAdapter>
   );
 });
 ```
@@ -110,17 +112,19 @@ declare module 'react-native-bottom-sheet-stack' {
 }
 
 // 2. Create the sheet component
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+
 const UserDetailsSheet = forwardRef((props, ref) => {
   const { params, close } = useBottomSheetContext<'user-details'>();
 
   return (
-    <BottomSheetManaged ref={ref} snapPoints={['50%']}>
+    <GorhomSheetAdapter ref={ref} snapPoints={['50%']}>
       <BottomSheetView>
         <Text>User: {params.userId}</Text>
         {params.showEmail && <Text>email@example.com</Text>}
         <Button title="Close" onPress={close} />
       </BottomSheetView>
-    </BottomSheetManaged>
+    </GorhomSheetAdapter>
   );
 });
 

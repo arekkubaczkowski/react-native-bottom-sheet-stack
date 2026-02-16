@@ -36,22 +36,30 @@ Use the `'use no memo'` directive at the top of the file (see `BottomSheetPortal
 
 ## Project Overview
 
-A sophisticated stack manager for bottom sheets built on `@gorhom/bottom-sheet`. Provides:
+A library-agnostic stack manager for bottom sheets and modals in React Native. Provides:
+- **Adapter architecture**: Pluggable adapters for any bottom sheet/modal library
 - **Navigation modes**: push, switch, replace
 - **iOS-style scale animations**: Background content scales when sheets open
 - **Context preservation**: Via portals (`react-native-teleport`)
 - **Persistent sheets**: Pre-mounted sheets that maintain state across open/close cycles
 - **Type-safe APIs**: TypeScript with augmentable type registry
 
-### Tech Stack
+### Tech Stack (core)
 | Category | Package | Version |
 |----------|---------|---------|
 | React | react | 19.1.0 |
 | React Native | react-native | 0.81.5 |
-| Bottom Sheet | @gorhom/bottom-sheet | ^5.2.8 |
 | Animation | react-native-reanimated | ^4.2.1 |
 | State | zustand | ^5.0.3 |
 | Portals | react-native-teleport | ^0.5.6 |
+
+### Shipped Adapters (separate subpath exports)
+| Adapter | Import subpath | Wraps |
+|---------|---------------|-------|
+| `GorhomSheetAdapter` | `react-native-bottom-sheet-stack/gorhom` | `@gorhom/bottom-sheet` |
+| `CustomModalAdapter` | `react-native-bottom-sheet-stack` (main) | Custom animated modal (zero deps) |
+| `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` |
+| `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` |
 
 ---
 
@@ -134,18 +142,18 @@ interface BottomSheetState {
 - `replace` - Closes previous sheet (closing status, then removed)
 
 #### `bottomSheetCoordinator.ts` - State↔UI Synchronization
-**Purpose**: Bidirectional sync between Zustand store and gorhom bottom sheet.
+**Purpose**: Bidirectional sync between Zustand store and sheet adapters.
 
 **Two Directions**:
-1. **Store → Gorhom** (`initBottomSheetCoordinator`):
+1. **Store → Adapter** (`initBottomSheetCoordinator`):
    - Subscribes to store changes
    - Calls `ref.expand()` when status becomes 'opening'
    - Calls `ref.close()` when status becomes 'hidden' or 'closing'
 
-2. **Gorhom → Store** (`createSheetEventHandlers`):
-   - `handleAnimate`: User swipes down → `startClosing()`
-   - `handleChange`: Animation completes → `markOpen()`
-   - `handleClose`: Sheet fully closed → `finishClosing()`
+2. **Adapter → Store** (`createSheetEventHandlers`):
+   - `handleDismiss`: User swipes down / back button → `startClosing()`
+   - `handleOpened`: Show animation completes → `markOpen()`
+   - `handleClosed`: Hide animation completes → `finishClosing()`
 
 ### Global Registries (Module-Level Maps)
 
@@ -188,15 +196,6 @@ This ensures backdrop always renders below its sheet's content.
 **Rendering Modes**:
 - **Portal Mode** (`usePortal: true`): Renders `<PortalHost>` that receives content from `BottomSheetPortal`
 - **Inline Mode** (`usePortal: false`): Renders content directly with `BottomSheetContext.Provider`
-
-#### `BottomSheetManaged.tsx` - Gorhom Sheet Wrapper
-**Purpose**: Wraps `@gorhom/bottom-sheet` with coordinator integration.
-
-**Key Features**:
-- Auto-wires event handlers to coordinator
-- Reads status from store to control `index` prop
-- Uses `useBottomSheetSpringConfigs` for smooth animations
-- Supports both forwarded ref and context ref
 
 #### `BottomSheetPortal.tsx` - Portal Mode Sheet Definition
 **Uses `'use no memo'` directive** - Compiler cannot optimize due to dynamic ref cloning.
@@ -397,13 +396,15 @@ This library provides three distinct ways to use bottom sheets. Each mode has di
 **Flags**: `usePortal: false`, `keepMounted: false`
 
 ```tsx
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+
 const { open, close } = useBottomSheetManager();
 
 // Open with inline content
 const id = open(
-  <BottomSheetManaged snapPoints={['50%']}>
+  <GorhomSheetAdapter snapPoints={['50%']}>
     <DynamicContent data={someData} />
-  </BottomSheetManaged>,
+  </GorhomSheetAdapter>,
   { scaleBackground: true, mode: 'push' }
 );
 
@@ -437,11 +438,13 @@ close(id);
 **Flags**: `usePortal: true`, `keepMounted: false`
 
 ```tsx
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+
 // 1. Define sheet at declaration site (near context providers)
 <BottomSheetPortal id="user-sheet">
-  <BottomSheetManaged snapPoints={['50%']}>
+  <GorhomSheetAdapter snapPoints={['50%']}>
     <UserSheetContent />  {/* Has access to parent contexts! */}
-  </BottomSheetManaged>
+  </GorhomSheetAdapter>
 </BottomSheetPortal>
 
 // 2. Control from anywhere
@@ -480,11 +483,13 @@ close();
 **Flags**: `usePortal: true`, `keepMounted: true`
 
 ```tsx
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+
 // 1. Define persistent sheet (content stays mounted!)
 <BottomSheetPersistent id="scanner-sheet">
-  <BottomSheetManaged snapPoints={['90%']}>
+  <GorhomSheetAdapter snapPoints={['90%']}>
     <ScannerWithHeavyState />  {/* State preserved across close/open! */}
-  </BottomSheetManaged>
+  </GorhomSheetAdapter>
 </BottomSheetPersistent>
 
 // 2. Control from anywhere
@@ -755,11 +760,12 @@ open({ mode: 'replace' });
 
 ```
 src/
-├── index.tsx                    # Public exports
+├── index.tsx                    # Public exports (no 3rd-party adapter deps)
 ├── bottomSheet.store.ts         # Zustand store (state + actions)
-├── bottomSheetCoordinator.ts    # Store ↔ Gorhom sync
+├── bottomSheetCoordinator.ts    # Store ↔ adapter sync
 ├── refsMap.ts                   # Global sheet refs registry
 ├── animatedRegistry.ts          # Global animated values registry
+├── adapter.types.ts             # SheetAdapterRef, SheetAdapterEvents types
 ├── portal.types.ts              # Type-safe portal registry types
 │
 ├── BottomSheetManager.provider.tsx  # Root provider component
@@ -769,7 +775,6 @@ src/
 │
 ├── BottomSheetHost.tsx          # Sheet queue renderer
 ├── QueueItem.tsx                # Individual sheet slot
-├── BottomSheetManaged.tsx       # Gorhom wrapper component
 ├── BottomSheetPortal.tsx        # Portal mode definition ('use no memo')
 ├── BottomSheetPersistent.tsx    # Persistent sheet component
 ├── BottomSheetScaleView.tsx     # Background scale wrapper
@@ -779,9 +784,26 @@ src/
 ├── useBottomSheetControl.ts     # Portal sheet control hook
 ├── useBottomSheetContext.ts     # Sheet internal context hook
 ├── useBottomSheetStatus.ts      # External status monitoring hook
+├── useAdapterRef.ts             # Adapter ref helper hook
+├── useAnimatedIndex.ts          # Animated index context hook
+├── useBackHandler.ts            # Android back button handler
 ├── useScaleAnimation.ts         # Scale animation hooks
 ├── useSheetRenderData.ts        # Render order computation hook
-└── useEvent.ts                  # Stable callback utility
+├── useEvent.ts                  # Stable callback utility
+│
+└── adapters/                    # Each adapter is a separate subpath export
+    ├── gorhom-sheet/            # → 'react-native-bottom-sheet-stack/gorhom'
+    │   ├── index.ts
+    │   └── GorhomSheetAdapter.tsx
+    ├── custom-modal/            # → 'react-native-bottom-sheet-stack' (main)
+    │   ├── index.ts
+    │   └── CustomModalAdapter.tsx
+    ├── react-native-modal/      # → 'react-native-bottom-sheet-stack/react-native-modal'
+    │   ├── index.ts
+    │   └── ReactNativeModalAdapter.tsx
+    └── actions-sheet/           # → 'react-native-bottom-sheet-stack/actions-sheet'
+        ├── index.ts
+        └── ActionsSheetAdapter.tsx
 ```
 
 ---
@@ -789,22 +811,55 @@ src/
 ## Dependencies Graph
 
 ```
-@gorhom/bottom-sheet ──────┐
-                           │
-react-native-reanimated ───┼──▶ BottomSheetManaged
-                           │         │
-react-native-gesture-handler        │
-                                    ▼
-zustand ─────────────────────▶ bottomSheet.store
-                                    │
-                                    ▼
-react-native-teleport ────────▶ BottomSheetPortal
-                               BottomSheetPersistent
-                               QueueItem (PortalHost)
-                                    │
-                                    ▼
-react-native-safe-area-context ─▶ QueueItem (useSafeAreaFrame)
+CORE (main entry — no 3rd-party bottom sheet deps):
+react-native-reanimated ──────▶ bottomSheetCoordinator, useScaleAnimation
+zustand ──────────────────────▶ bottomSheet.store
+react-native-teleport ────────▶ BottomSheetPortal, BottomSheetPersistent, QueueItem
+react-native-safe-area-context ▶ QueueItem (useSafeAreaFrame)
+
+ADAPTERS (separate subpath exports — isolated dependency trees):
+react-native-bottom-sheet-stack/gorhom:
+  @gorhom/bottom-sheet ────────▶ GorhomSheetAdapter
+  react-native-gesture-handler ─▶ (peer of @gorhom/bottom-sheet)
+
+react-native-bottom-sheet-stack/react-native-modal:
+  react-native-modal ──────────▶ ReactNativeModalAdapter
+
+react-native-bottom-sheet-stack/actions-sheet:
+  react-native-actions-sheet ──▶ ActionsSheetAdapter
 ```
+
+---
+
+## Subpath Exports Architecture
+
+Adapters with 3rd-party dependencies are shipped as **separate subpath exports** so the main entry point never causes Metro resolution errors for uninstalled libraries.
+
+**package.json `exports` field**:
+```json
+{
+  ".": "./lib/commonjs/index.js",
+  "./gorhom": "./lib/commonjs/adapters/gorhom-sheet/index.js",
+  "./react-native-modal": "./lib/commonjs/adapters/react-native-modal/index.js",
+  "./actions-sheet": "./lib/commonjs/adapters/actions-sheet/index.js"
+}
+```
+
+**Import patterns**:
+```typescript
+// Core — safe to import without any adapter deps installed
+import { BottomSheetManagerProvider, useBottomSheetManager } from 'react-native-bottom-sheet-stack';
+import { CustomModalAdapter } from 'react-native-bottom-sheet-stack'; // zero deps
+
+// Adapters — import only when the underlying library is installed
+import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
+import { ReactNativeModalAdapter } from 'react-native-bottom-sheet-stack/react-native-modal';
+import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack/actions-sheet';
+```
+
+**Backward compatibility**: `BottomSheetManaged` and `BottomSheetManagedProps` are available as deprecated re-exports from the gorhom subpath.
+
+**Example app (monorepo dev)**: RNBB's `babel-plugin-module-resolver` alias breaks subpath imports. The example's `babel.config.js` adds a separate module-resolver plugin with explicit subpath aliases that runs before RNBB's override. Consumer apps do NOT need this — Metro reads `exports` from package.json directly.
 
 ---
 
@@ -816,3 +871,4 @@ react-native-safe-area-context ─▶ QueueItem (useSafeAreaFrame)
 4. **DO NOT nest `BottomSheetScaleView` around `BottomSheetHost`** - They must be siblings
 5. **DO NOT use same sheet ID in multiple groups** - IDs must be globally unique
 6. **DO NOT call `open()` on already-open sheet** - It's a no-op by design
+7. **DO NOT export 3rd-party adapters from `src/index.tsx`** - They must use subpath exports to avoid Metro resolution errors
