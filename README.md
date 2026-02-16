@@ -2,6 +2,20 @@
 
 A stack manager for bottom sheets and modals in React Native. Supports `push`, `switch`, and `replace` navigation modes, iOS-style scale animations, and React context preservation. Works with any bottom sheet or modal library via a pluggable adapter architecture.
 
+## Documentation
+
+**[View Full Documentation](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/)**
+
+- [Getting Started](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/getting-started)
+- [Imperative vs Portal API](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/api-comparison)
+- [Navigation Modes](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/navigation-modes)
+- [Scale Animation](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/scale-animation)
+- [Portal API (Context Preservation)](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/context-preservation)
+- [Persistent Sheets](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/persistent-sheets)
+- [Type-Safe IDs & Params](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/type-safe-ids)
+- [Adapters](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/adapters) / [Shipped Adapters](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/built-in-adapters) / [Custom Adapters](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/custom-adapters)
+- [API Reference](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/api/components)
+
 ## Features
 
 - **Adapter Architecture** - Pluggable adapters for different bottom sheet/modal libraries. Ships with adapters for `@gorhom/bottom-sheet`, `react-native-modal`, `react-native-actions-sheet`, and a custom modal. You can also build your own.
