@@ -45,7 +45,7 @@ export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
   return (
     <Pressable
       style={StyleSheet.absoluteFillObject}
-      onPress={() => void requestClose(sheetId)}
+      onPress={() => requestClose(sheetId)}
     >
       <Animated.View
         style={[StyleSheet.absoluteFillObject, animatedStyle, styles.backdrop]}

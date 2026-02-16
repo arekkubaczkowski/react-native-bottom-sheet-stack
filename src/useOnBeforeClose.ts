@@ -59,5 +59,5 @@ export function useOnBeforeClose(callback: OnBeforeCloseCallback): void {
       removeOnBeforeClose(id);
       setPreventDismiss(id, false);
     };
-  });
+  }, [id, callback, setPreventDismiss]);
 }

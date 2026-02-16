@@ -144,22 +144,7 @@ export function createSheetEventHandlers(sheetId: string): SheetAdapterEvents {
     const interceptor = getOnBeforeClose(sheetId);
 
     if (interceptor) {
-      // Run async interception — if blocked, the close is silently cancelled
-      void (async () => {
-        try {
-          const allowed = await interceptor();
-          if (!allowed) return;
-        } catch {
-          return;
-        }
-
-        const state = useBottomSheetStore.getState();
-        const currentStatus = state.sheetsById[sheetId]?.status;
-
-        if (currentStatus === 'open' || currentStatus === 'opening') {
-          state.startClosing(sheetId);
-        }
-      })();
+      requestClose(sheetId);
       return;
     }
 

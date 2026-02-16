@@ -38,7 +38,9 @@ export function useBottomSheetContext<
     );
   }
 
-  const close = () => void requestClose(context.id);
+  const close = () => {
+    requestClose(context.id);
+  };
   const forceClose = () => startClosing(context.id);
 
   return {

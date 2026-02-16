@@ -52,7 +52,7 @@ export const useBottomSheetManager = () => {
   };
 
   const close = (id: string) => {
-    void requestClose(id);
+    requestClose(id);
   };
 
   const closeAll = (options?: CloseAllOptions) => {

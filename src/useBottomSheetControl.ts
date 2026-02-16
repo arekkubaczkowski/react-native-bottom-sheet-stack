@@ -71,7 +71,7 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
   };
 
   const close = () => {
-    void requestClose(id);
+    requestClose(id);
   };
 
   const closeAll = (options?: CloseAllOptions) => {
