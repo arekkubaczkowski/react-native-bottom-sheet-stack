@@ -28,7 +28,7 @@ Wrap your app content in `BottomSheetScaleView`:
 Open sheets with `scaleBackground: true`:
 
 ```tsx
-openBottomSheet(<MySheet />, { scaleBackground: true });
+open(<MySheet />, { scaleBackground: true });
 ```
 
 Or with the portal API:

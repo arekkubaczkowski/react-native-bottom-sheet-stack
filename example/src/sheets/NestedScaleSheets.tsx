@@ -3,15 +3,15 @@ import { forwardRef } from 'react';
 import { Text, View } from 'react-native';
 import {
   useBottomSheetManager,
-  useBottomSheetState,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 import { Badge, Button, SecondaryButton, Sheet } from '../components';
 import { colors, sharedStyles } from '../styles/theme';
 
 export const NestedSheet1 = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { openBottomSheet } = useBottomSheetManager();
-  const { close } = useBottomSheetState();
+  const { open } = useBottomSheetManager();
+  const { close } = useBottomSheetContext();
 
   return (
     <Sheet ref={ref} snapPoints={['60%']} backgroundColor={colors.nested1}>
@@ -25,7 +25,7 @@ export const NestedSheet1 = forwardRef<BottomSheetMethods>((_, ref) => {
         <Button
           title="Open Level 2"
           onPress={() =>
-            openBottomSheet(<NestedSheet2 />, {
+            open(<NestedSheet2 />, {
               mode: 'push',
               scaleBackground: true,
             })
@@ -40,8 +40,8 @@ export const NestedSheet1 = forwardRef<BottomSheetMethods>((_, ref) => {
 NestedSheet1.displayName = 'NestedSheet1';
 
 export const NestedSheet2 = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { openBottomSheet } = useBottomSheetManager();
-  const { close } = useBottomSheetState();
+  const { open } = useBottomSheetManager();
+  const { close } = useBottomSheetContext();
 
   return (
     <Sheet ref={ref} snapPoints={['58%']} backgroundColor={colors.nested2}>
@@ -55,7 +55,7 @@ export const NestedSheet2 = forwardRef<BottomSheetMethods>((_, ref) => {
         <Button
           title="Open Level 3"
           onPress={() =>
-            openBottomSheet(<NestedSheet3 />, {
+            open(<NestedSheet3 />, {
               mode: 'push',
               scaleBackground: true,
             })
@@ -70,7 +70,7 @@ export const NestedSheet2 = forwardRef<BottomSheetMethods>((_, ref) => {
 NestedSheet2.displayName = 'NestedSheet2';
 
 export const NestedSheet3 = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
 
   return (
     <Sheet ref={ref} backgroundColor={colors.nested3}>

@@ -1,106 +1,14 @@
-import BottomSheetOriginal, {
-  useBottomSheetSpringConfigs,
-  type BottomSheetProps,
-} from '@gorhom/bottom-sheet';
-import { type BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import React from 'react';
+/**
+ * Backward-compatible re-export of GorhomSheetAdapter.
+ *
+ * Existing users can continue importing `BottomSheetManaged` and `BottomSheetRef`
+ * without any changes. For new code, prefer importing `GorhomSheetAdapter` directly
+ * from 'react-native-bottom-sheet-stack/adapters/gorhom' or use the `ModalAdapter`
+ * for modal-based sheets.
+ */
+export {
+  GorhomSheetAdapter as BottomSheetManaged,
+  type GorhomSheetAdapterProps as BottomSheetManagedProps,
+} from './adapters/gorhom';
 
-import { useAnimatedReaction } from 'react-native-reanimated';
-import { getAnimatedIndex } from './animatedRegistry';
-import { createSheetEventHandlers } from './bottomSheetCoordinator';
-import { useBottomSheetDefaultIndex } from './BottomSheetDefaultIndex.context';
-import { useBottomSheetRefContext } from './BottomSheetRef.context';
-import { useBottomSheetContext } from './useBottomSheetContext';
-
-export interface BottomSheetRef extends BottomSheetMethods {}
-
-interface BottomSheetManagedProps extends BottomSheetProps {}
-
-const nullBackdrop = () => null;
-
-export const BottomSheetManaged = React.forwardRef<
-  BottomSheetRef,
-  BottomSheetManagedProps
->(
-  (
-    {
-      children,
-      onAnimate,
-      onChange,
-      onClose,
-      enablePanDownToClose = true,
-      backdropComponent = nullBackdrop,
-      animatedIndex: externalAnimatedIndex,
-      ...props
-    },
-    forwardedRef
-  ) => {
-    const { id } = useBottomSheetContext();
-    const contextRef = useBottomSheetRefContext();
-    const ref = contextRef ?? forwardedRef;
-
-    const defaultIndex = useBottomSheetDefaultIndex();
-    const contextAnimatedIndex = getAnimatedIndex(id);
-
-    if (!contextAnimatedIndex) {
-      throw new Error('animatedIndex must be defined in BottomSheetManaged');
-    }
-
-    useAnimatedReaction(
-      () => contextAnimatedIndex.value,
-      (value) => {
-        externalAnimatedIndex?.set(value);
-      }
-    );
-
-    const { handleAnimate, handleChange, handleClose } =
-      createSheetEventHandlers(id);
-
-    const wrappedOnAnimate: BottomSheetProps['onAnimate'] = (
-      fromIndex,
-      toIndex,
-      fromPosition,
-      toPosition
-    ) => {
-      handleAnimate(fromIndex, toIndex);
-      onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
-    };
-
-    const wrappedOnChange: BottomSheetProps['onChange'] = (
-      index,
-      position,
-      type
-    ) => {
-      handleChange(index);
-      onChange?.(index, position, type);
-    };
-
-    const wrappedOnClose = () => {
-      onClose?.();
-      handleClose();
-    };
-
-    const config = useBottomSheetSpringConfigs({
-      stiffness: 400,
-      damping: 80,
-      mass: 0.7,
-    });
-
-    return (
-      <BottomSheetOriginal
-        animationConfigs={config}
-        ref={ref}
-        {...props}
-        index={defaultIndex}
-        animatedIndex={contextAnimatedIndex}
-        onChange={wrappedOnChange}
-        onClose={wrappedOnClose}
-        onAnimate={wrappedOnAnimate}
-        backdropComponent={backdropComponent}
-        enablePanDownToClose={enablePanDownToClose}
-      >
-        {children}
-      </BottomSheetOriginal>
-    );
-  }
-);
+export type { SheetAdapterRef as BottomSheetRef } from './adapter.types';

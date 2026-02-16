@@ -3,14 +3,14 @@ import { forwardRef } from 'react';
 import { Text, View } from 'react-native';
 import {
   useBottomSheetControl,
-  useBottomSheetState,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 import { Badge, Button, SecondaryButton, Sheet } from '../components';
 import { colors, sharedStyles } from '../styles/theme';
 
 export const PortalModeSheetA = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
   const sheetBControl = useBottomSheetControl('portal-mode-sheet-b');
 
   return (
@@ -50,7 +50,7 @@ export const PortalModeSheetA = forwardRef<BottomSheetMethods>((_, ref) => {
 PortalModeSheetA.displayName = 'PortalModeSheetA';
 
 export const PortalModeSheetB = forwardRef<BottomSheetMethods>((_, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
 
   return (
     <Sheet ref={ref}>

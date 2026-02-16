@@ -1,6 +1,11 @@
+import type { SheetAdapterEvents } from './adapter.types';
 import { useBottomSheetStore } from './bottomSheet.store';
 import { getSheetRef } from './refsMap';
 
+/**
+ * Subscribes to store changes and calls adapter ref methods.
+ * Direction: Store → Adapter (via SheetAdapterRef)
+ */
 export function initBottomSheetCoordinator(groupId: string) {
   return useBottomSheetStore.subscribe(
     (s) =>
@@ -19,13 +24,17 @@ export function initBottomSheetCoordinator(groupId: string) {
 
         switch (status) {
           case 'opening':
-            getSheetRef(id)?.current?.expand();
+            requestAnimationFrame(() => {
+              const currentStatus =
+                useBottomSheetStore.getState().sheetsById[id]?.status;
+              if (currentStatus === 'opening') {
+                getSheetRef(id)?.current?.expand();
+              }
+            });
             break;
           case 'hidden':
-            if (ref) ref.close();
-            break;
           case 'closing':
-            if (ref) ref.close();
+            ref?.close();
             break;
         }
       });
@@ -34,46 +43,45 @@ export function initBottomSheetCoordinator(groupId: string) {
 }
 
 /**
- * Creates event handlers for a bottom sheet that sync gorhom events back to the store.
- * Direction: Gorhom Events → Store
+ * Creates event handlers that adapters call to sync UI state back to the store.
+ * Direction: Adapter Events → Store
+ *
+ * Adapters must call:
+ * - `handleDismiss()` when the user initiates dismissal (swipe, backdrop tap, back button)
+ * - `handleOpened()` when the show animation completes
+ * - `handleClosed()` when the hide animation completes
  */
-export function createSheetEventHandlers(sheetId: string) {
-  const { startClosing, finishClosing, markOpen } =
-    useBottomSheetStore.getState();
-
-  const handleAnimate = (_fromIndex: number, toIndex: number) => {
+export function createSheetEventHandlers(sheetId: string): SheetAdapterEvents {
+  const handleDismiss = () => {
     const state = useBottomSheetStore.getState();
     const currentStatus = state.sheetsById[sheetId]?.status;
 
-    if (
-      toIndex === -1 &&
-      (currentStatus === 'open' || currentStatus === 'opening')
-    ) {
-      startClosing(sheetId);
+    if (currentStatus === 'open' || currentStatus === 'opening') {
+      state.startClosing(sheetId);
     }
   };
 
-  const handleChange = (index: number) => {
+  const handleOpened = () => {
     const state = useBottomSheetStore.getState();
     const currentStatus = state.sheetsById[sheetId]?.status;
 
-    if (index >= 0 && currentStatus === 'opening') {
-      markOpen(sheetId);
+    if (currentStatus === 'opening') {
+      state.markOpen(sheetId);
     }
   };
 
-  const handleClose = () => {
+  const handleClosed = () => {
     const state = useBottomSheetStore.getState();
     const currentStatus = state.sheetsById[sheetId]?.status;
 
     if (currentStatus !== 'hidden') {
-      finishClosing(sheetId);
+      state.finishClosing(sheetId);
     }
   };
 
   return {
-    handleAnimate,
-    handleChange,
-    handleClose,
+    handleDismiss,
+    handleOpened,
+    handleClosed,
   };
 }

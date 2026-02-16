@@ -21,8 +21,17 @@ export function ensureAnimatedIndex(sheetId: string): SharedValue<number> {
 export function getAnimatedIndex(
   sheetId: string
 ): SharedValue<number> | undefined {
+  return animatedIndexRegistry.get(sheetId);
+}
+
+/**
+ * Set the animated index value for a sheet.
+ */
+export function setAnimatedIndexValue(sheetId: string, value: number): void {
   const animatedIndex = animatedIndexRegistry.get(sheetId);
-  return animatedIndex;
+  if (animatedIndex) {
+    animatedIndex.value = value;
+  }
 }
 
 export function cleanupAnimatedIndex(sheetId: string): void {

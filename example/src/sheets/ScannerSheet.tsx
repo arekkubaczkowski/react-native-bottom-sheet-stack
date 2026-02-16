@@ -12,7 +12,7 @@ import { colors, sharedStyles } from '../styles/theme';
 
 export const ScannerSheet = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close, params } = useBottomSheetContext<'scanner-sheet'>();
-  const { openBottomSheet } = useBottomSheetManager();
+  const { open } = useBottomSheetManager();
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
 
@@ -83,7 +83,7 @@ export const ScannerSheet = forwardRef<BottomSheetMethods>((_, ref) => {
             <Button
               title="Open Nested Sheet"
               onPress={() =>
-                openBottomSheet(<ScannerNestedSheet1 />, {
+                open(<ScannerNestedSheet1 />, {
                   scaleBackground: true,
                   mode: 'switch',
                 })
@@ -100,7 +100,7 @@ export const ScannerSheet = forwardRef<BottomSheetMethods>((_, ref) => {
             <Button
               title="Open Nested Sheet"
               onPress={() =>
-                openBottomSheet(<ScannerNestedSheet1 />, {
+                open(<ScannerNestedSheet1 />, {
                   scaleBackground: true,
                   mode: 'switch',
                 })

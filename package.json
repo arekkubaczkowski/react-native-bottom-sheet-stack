@@ -73,11 +73,28 @@
     "@gorhom/bottom-sheet": ">=5.0.0",
     "react": "*",
     "react-native": "*",
+    "react-native-actions-sheet": ">=0.9.0",
     "react-native-gesture-handler": ">=2.0.0",
+    "react-native-modal": ">=11.0.0",
     "react-native-reanimated": ">=3.0.0",
     "react-native-safe-area-context": ">=5.0.0",
     "react-native-teleport": ">=0.5.0",
+    "react-native-worklets": ">=0.7.0",
     "zustand": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@gorhom/bottom-sheet": {
+      "optional": true
+    },
+    "react-native-actions-sheet": {
+      "optional": true
+    },
+    "react-native-gesture-handler": {
+      "optional": true
+    },
+    "react-native-modal": {
+      "optional": true
+    }
   },
   "workspaces": [
     "example"

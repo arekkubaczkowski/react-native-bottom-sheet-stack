@@ -5,7 +5,7 @@ slug: /
 
 # Introduction
 
-A stack manager for [@gorhom/bottom-sheet](https://github.com/gorhom/react-native-bottom-sheet) with `push`, `switch`, and `replace` navigation modes, iOS-style scale animations, and React context preservation.
+A **library-agnostic** stack manager for bottom sheets and modals in React Native. Supports `push`, `switch`, and `replace` navigation modes, iOS-style scale animations, and React context preservation. Works with any bottom sheet or modal library via pluggable [adapters](/adapters).
 
 <div style={{textAlign: 'center', margin: '24px 0'}}>
   <video controls width="300" autoPlay loop muted playsInline>
@@ -15,10 +15,12 @@ A stack manager for [@gorhom/bottom-sheet](https://github.com/gorhom/react-nativ
 
 ## Features
 
+- **Library-Agnostic** — Pluggable [adapter architecture](/adapters) works with any bottom sheet or modal library
 - **Stack Navigation** — `push`, `switch`, and `replace` modes for managing multiple sheets
 - **Scale Animation** — iOS-style background scaling effect when sheets are stacked
 - **Context Preservation** — Portal-based API that preserves React context in bottom sheets
-- **Underlying Sheets Stay Mounted** — Sheets remain in the stack until explicitly closed
+- **Mixed Stacking** — Bottom sheets and modals coexist in the same stack
+- **4 Adapters** — GorhomSheet, Modal, react-native-modal, ActionsSheet
 - **Group Support** — Isolated stacks for different parts of your app
 
 ## Quick Example
@@ -33,12 +35,12 @@ import {
   BottomSheetScaleView,
   BottomSheetManaged,
   useBottomSheetManager,
-  useBottomSheetState,
+  useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
 // 1. Define a bottom sheet component
 const MySheet = forwardRef((props, ref) => {
-  const { close } = useBottomSheetState();
+  const { close } = useBottomSheetContext();
 
   return (
     <BottomSheetManaged ref={ref} snapPoints={['50%']}>
@@ -66,12 +68,12 @@ function App() {
 
 // 3. Open bottom sheets
 function YourAppContent() {
-  const { openBottomSheet } = useBottomSheetManager();
+  const { open } = useBottomSheetManager();
 
   return (
     <Button
       title="Open Sheet"
-      onPress={() => openBottomSheet(<MySheet />, { mode: 'push' })}
+      onPress={() => open(<MySheet />, { mode: 'push' })}
     />
   );
 }

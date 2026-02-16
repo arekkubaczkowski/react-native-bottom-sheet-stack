@@ -15,5 +15,16 @@ declare module 'react-native-bottom-sheet-stack' {
     'nested-portal-in-persistent': {
       message: string;
     };
+    // Modal adapter demos
+    'simple-modal': {
+      title: string;
+    };
+    'mixed-stack': true;
+    'adapter-comparison': true;
+    // Third-party adapter demos
+    'modal-adapter-demo': true;
+    'rn-modal-demo': true;
+    'actions-sheet-demo': true;
+    'gorhom-sheet-demo': true;
   }
 }

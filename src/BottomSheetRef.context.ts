@@ -1,7 +1,5 @@
-import { createContext, useContext, type RefObject } from 'react';
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-
-type SheetRef = RefObject<BottomSheetMethods | null>;
+import { createContext, useContext } from 'react';
+import type { SheetRef } from './adapter.types';
 
 /**
  * Context for passing sheet ref from BottomSheetPersistent/BottomSheetPortal

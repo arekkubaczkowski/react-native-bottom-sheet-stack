@@ -17,10 +17,10 @@ The library supports three navigation modes for managing bottom sheet stacks:
 Push stacks sheets on top of each other. Each sheet remains in the stack until explicitly closed.
 
 ```tsx
-openBottomSheet(<SheetA />, { mode: 'push' });
+open(<SheetA />, { mode: 'push' });
 // Stack: [SheetA]
 
-openBottomSheet(<SheetB />, { mode: 'push' });
+open(<SheetB />, { mode: 'push' });
 // Stack: [SheetA, SheetB]
 
 // Close SheetB -> Stack: [SheetA]
@@ -31,10 +31,10 @@ openBottomSheet(<SheetB />, { mode: 'push' });
 Switch hides the current sheet and shows the new one. When the new sheet is closed, the previous sheet is restored.
 
 ```tsx
-openBottomSheet(<SheetA />, { mode: 'push' });
+open(<SheetA />, { mode: 'push' });
 // Stack: [SheetA (visible)]
 
-openBottomSheet(<SheetB />, { mode: 'switch' });
+open(<SheetB />, { mode: 'switch' });
 // Stack: [SheetA (hidden), SheetB (visible)]
 
 // Close SheetB -> SheetA becomes visible again
@@ -45,10 +45,10 @@ openBottomSheet(<SheetB />, { mode: 'switch' });
 Replace closes the current sheet entirely and opens a new one in its place.
 
 ```tsx
-openBottomSheet(<SheetA />, { mode: 'push' });
+open(<SheetA />, { mode: 'push' });
 // Stack: [SheetA]
 
-openBottomSheet(<SheetB />, { mode: 'replace' });
+open(<SheetB />, { mode: 'replace' });
 // Stack: [SheetB] (SheetA is removed)
 ```
 
@@ -56,21 +56,21 @@ openBottomSheet(<SheetB />, { mode: 'replace' });
 
 ```tsx
 function NavigationExample() {
-  const { openBottomSheet } = useBottomSheetManager();
+  const { open } = useBottomSheetManager();
 
   return (
     <View>
       <Button
         title="Push Sheet"
-        onPress={() => openBottomSheet(<MySheet />, { mode: 'push' })}
+        onPress={() => open(<MySheet />, { mode: 'push' })}
       />
       <Button
         title="Switch Sheet"
-        onPress={() => openBottomSheet(<MySheet />, { mode: 'switch' })}
+        onPress={() => open(<MySheet />, { mode: 'switch' })}
       />
       <Button
         title="Replace Sheet"
-        onPress={() => openBottomSheet(<MySheet />, { mode: 'replace' })}
+        onPress={() => open(<MySheet />, { mode: 'replace' })}
       />
     </View>
   );

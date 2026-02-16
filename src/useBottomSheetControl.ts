@@ -1,5 +1,5 @@
 import React from 'react';
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
+import type { SheetAdapterRef } from './adapter.types';
 
 import {
   useOpen,
@@ -56,7 +56,7 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
     // Only create ref if it doesn't exist (keepMounted sheets already have one)
     const existingRef = getSheetRef(id);
     if (!existingRef) {
-      const ref = React.createRef<BottomSheetMethods>();
+      const ref = React.createRef<SheetAdapterRef>();
       setSheetRef(id, ref);
     }
 

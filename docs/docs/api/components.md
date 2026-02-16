@@ -60,7 +60,7 @@ Wrapper that applies scale animation to its children when sheets are opened with
 
 ## BottomSheetManaged
 
-Drop-in replacement for `BottomSheet` from `@gorhom/bottom-sheet`. Accepts all the same props.
+Backward-compatible alias for `GorhomSheetAdapter`. Drop-in replacement for `BottomSheet` from `@gorhom/bottom-sheet`.
 
 ```tsx
 const MySheet = forwardRef((props, ref) => {
@@ -77,6 +77,25 @@ const MySheet = forwardRef((props, ref) => {
 ### Props
 
 Inherits all props from [@gorhom/bottom-sheet](https://gorhom.dev/react-native-bottom-sheet/props).
+
+:::tip
+`BottomSheetManaged` is a re-export of `GorhomSheetAdapter`. See [Built-in Adapters](/built-in-adapters) for details.
+:::
+
+---
+
+## Adapters
+
+Adapters are the components that actually render sheets/modals. Each adapter wraps a different UI library while implementing the same `SheetAdapterRef` interface.
+
+| Adapter | Library | Docs |
+|---------|---------|------|
+| `GorhomSheetAdapter` | `@gorhom/bottom-sheet` | [Built-in Adapters](/built-in-adapters) |
+| `ModalAdapter` | React Native `Modal` | [Built-in Adapters](/built-in-adapters) |
+| `ReactNativeModalAdapter` | `react-native-modal` | [Third-Party Adapters](/third-party-adapters) |
+| `ActionsSheetAdapter` | `react-native-actions-sheet` | [Third-Party Adapters](/third-party-adapters) |
+
+See [Library-Agnostic Architecture](/adapters) for how adapters work, or [Building Custom Adapters](/custom-adapters) to create your own.
 
 ---
 
