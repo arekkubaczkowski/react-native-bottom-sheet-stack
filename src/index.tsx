@@ -20,14 +20,21 @@ export type {
 } from './adapter.types';
 
 // Adapter utilities (for custom adapter authors)
-export { createSheetEventHandlers } from './bottomSheetCoordinator';
+export {
+  createSheetEventHandlers,
+  requestClose,
+  closeAllAnimated,
+} from './bottomSheetCoordinator';
 export { useAdapterRef } from './useAdapterRef';
 export { useAnimatedIndex } from './useAnimatedIndex';
 export { useBackHandler } from './useBackHandler';
 export { getAnimatedIndex, setAnimatedIndexValue } from './animatedRegistry';
 
 // Hooks
-export { useBottomSheetManager } from './useBottomSheetManager';
+export {
+  useBottomSheetManager,
+  type CloseAllOptions,
+} from './useBottomSheetManager';
 export {
   useBottomSheetControl,
   type UseBottomSheetControlReturn,
@@ -41,6 +48,7 @@ export {
   useBottomSheetStatus,
   type UseBottomSheetStatusReturn,
 } from './useBottomSheetStatus';
+export { useOnBeforeClose } from './useOnBeforeClose';
 
 // Types
 export type { ScaleConfig, ScaleAnimationConfig } from './useScaleAnimation';
@@ -57,6 +65,10 @@ export type {
 
 export { useBottomSheetStore } from './bottomSheet.store';
 
+// onBeforeClose registry
+export type { OnBeforeCloseCallback } from './onBeforeCloseRegistry';
+export { setOnBeforeClose, removeOnBeforeClose } from './onBeforeCloseRegistry';
+
 // Testing utilities (internal use)
 export { __resetSheetRefs } from './refsMap';
 export {
@@ -64,3 +76,4 @@ export {
   __getAllAnimatedIndexes,
 } from './animatedRegistry';
 export { __resetPortalSessions } from './portalSessionRegistry';
+export { __resetOnBeforeClose } from './onBeforeCloseRegistry';
