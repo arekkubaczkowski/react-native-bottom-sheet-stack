@@ -51,12 +51,12 @@ export const ActionsSheetAdapter = React.forwardRef<
   );
 
   const onOpen = () => {
-    animatedIndex.value = 0;
+    animatedIndex.set(0);
     handleOpened();
   };
 
   const onClose = () => {
-    animatedIndex.value = -1;
+    animatedIndex.set(-1);
     handleClosed();
   };
 

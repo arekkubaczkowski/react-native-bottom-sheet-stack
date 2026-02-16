@@ -76,7 +76,7 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
 
     // 5. Wire up callbacks
     const onShown = () => {
-      animatedIndex.value = 0;
+      animatedIndex.set(0);
       handleOpened();
     };
 
@@ -85,7 +85,7 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
     };
 
     const onHidden = () => {
-      animatedIndex.value = -1;
+      animatedIndex.set(-1);
       handleClosed();
     };
 
@@ -173,11 +173,11 @@ const animatedIndex = useAnimatedIndex();
 
 useImperativeHandle(ref, () => ({
   expand: () => {
-    animatedIndex.value = 0;   // backdrop fully opaque
+    animatedIndex.set(0);   // backdrop fully opaque
     // ... show your overlay
   },
   close: () => {
-    animatedIndex.value = -1;  // backdrop fully transparent
+    animatedIndex.set(-1);  // backdrop fully transparent
     // ... hide your overlay
   },
 }), [animatedIndex]);
@@ -264,7 +264,7 @@ export const TooltipAdapter = React.forwardRef<SheetAdapterRef, TooltipAdapterPr
     }), []);
 
     useEffect(() => {
-      animatedIndex.value = visible ? 0 : -1;
+      animatedIndex.set(visible ? 0 : -1);
     }, [visible, animatedIndex]);
 
     return (

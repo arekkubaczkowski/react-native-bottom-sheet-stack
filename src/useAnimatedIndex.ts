@@ -13,8 +13,8 @@ import { useBottomSheetContext } from './useBottomSheetContext';
  * **Binary strategy** — set to `0` on expand and `-1` on close:
  * ```ts
  * const animatedIndex = useAnimatedIndex();
- * // in expand: animatedIndex.value = 0;
- * // in close:  animatedIndex.value = -1;
+ * // in expand: animatedIndex.set(0);
+ * // in close:  animatedIndex.set(-1);
  * ```
  *
  * **Continuous strategy** — pass directly to a library that updates it during gestures:

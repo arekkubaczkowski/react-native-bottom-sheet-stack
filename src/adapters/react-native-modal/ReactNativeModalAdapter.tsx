@@ -44,11 +44,11 @@ export const ReactNativeModalAdapter = React.forwardRef<
     () => ({
       expand: () => {
         setIsVisible(true);
-        animatedIndex.value = 0;
+        animatedIndex.set(0);
       },
       close: () => {
         setIsVisible(false);
-        animatedIndex.value = -1;
+        animatedIndex.set(-1);
       },
     }),
     [animatedIndex]

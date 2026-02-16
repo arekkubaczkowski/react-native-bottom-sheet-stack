@@ -49,11 +49,11 @@ export const CustomModalAdapter = React.forwardRef<
       expand: () => {
         setRendered(true);
         setOpen(true);
-        animatedIndex.value = 0;
+        animatedIndex.set(0);
       },
       close: () => {
         setOpen(false);
-        animatedIndex.value = -1;
+        animatedIndex.set(-1);
       },
     }),
     [animatedIndex]
