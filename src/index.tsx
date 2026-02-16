@@ -71,5 +71,7 @@ export { __resetSheetRefs } from './refsMap';
 export {
   __resetAnimatedIndexes,
   __getAllAnimatedIndexes,
+  getAnimatedIndex,
+  setAnimatedIndexValue,
 } from './animatedRegistry';
 export { __resetPortalSessions } from './portalSessionRegistry';

@@ -23,8 +23,6 @@ const ANIMATION_DURATION = 300;
 
 const ZOOM_INITIAL_SCALE = 0.85;
 
-export type ModalAdapterAnimation = 'slide' | 'zoom';
-
 export interface ModalAdapterProps {
   children: React.ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
