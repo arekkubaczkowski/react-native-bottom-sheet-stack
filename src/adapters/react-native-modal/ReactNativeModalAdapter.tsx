@@ -1,6 +1,7 @@
 import React, { useImperativeHandle, useState } from 'react';
 
 import type { SheetAdapterRef } from '../../adapter.types';
+import { useSheetPreventDismiss } from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
@@ -34,6 +35,7 @@ export const ReactNativeModalAdapter = React.forwardRef<
   const { id } = useBottomSheetContext();
   const ref = useAdapterRef(forwardedRef);
   const animatedIndex = useAnimatedIndex();
+  const preventDismiss = useSheetPreventDismiss(id);
   const [isVisible, setIsVisible] = useState(false);
 
   const { handleDismiss, handleOpened, handleClosed } =
@@ -57,7 +59,7 @@ export const ReactNativeModalAdapter = React.forwardRef<
   return (
     <RNModal
       // Adapter defaults (overridable via spread)
-      swipeDirection="down"
+      swipeDirection={preventDismiss ? undefined : 'down'}
       useNativeDriver
       hideModalContentWhileAnimating
       {...modalProps}
@@ -71,7 +73,7 @@ export const ReactNativeModalAdapter = React.forwardRef<
       onModalShow={handleOpened}
       onModalHide={handleClosed}
       onBackButtonPress={handleDismiss}
-      onSwipeComplete={handleDismiss}
+      onSwipeComplete={preventDismiss ? undefined : handleDismiss}
     >
       {children}
     </RNModal>

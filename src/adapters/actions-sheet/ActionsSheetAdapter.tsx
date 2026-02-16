@@ -1,6 +1,7 @@
 import React, { useImperativeHandle, useRef } from 'react';
 
 import type { SheetAdapterRef } from '../../adapter.types';
+import { useSheetPreventDismiss } from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
@@ -35,6 +36,7 @@ export const ActionsSheetAdapter = React.forwardRef<
   const { id } = useBottomSheetContext();
   const ref = useAdapterRef(forwardedRef);
   const animatedIndex = useAnimatedIndex();
+  const preventDismiss = useSheetPreventDismiss(id);
 
   const actionSheetRef = useRef<any>(null);
 
@@ -63,9 +65,9 @@ export const ActionsSheetAdapter = React.forwardRef<
   return (
     <ActionSheet
       // Adapter defaults (overridable via spread)
-      gestureEnabled
-      closeOnTouchBackdrop
-      closeOnPressBack
+      gestureEnabled={!preventDismiss}
+      closeOnTouchBackdrop={!preventDismiss}
+      closeOnPressBack={!preventDismiss}
       keyboardHandlerEnabled
       {...sheetProps}
       // Managed by adapter (not overridable)
