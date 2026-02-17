@@ -1,5 +1,6 @@
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
 import { useSheetParams, useStartClosing } from './bottomSheet.store';
+import { requestClose } from './bottomSheetCoordinator';
 import type {
   BottomSheetPortalId,
   BottomSheetPortalParams,
@@ -9,6 +10,11 @@ export interface UseBottomSheetContextReturn<TParams> {
   id: string;
   params: TParams;
   close: () => void;
+  /**
+   * Close the sheet, bypassing any onBeforeClose interceptor.
+   * Useful for force-closing from within onBeforeClose confirmation flows.
+   */
+  forceClose: () => void;
   /** @deprecated Use `close` instead */
   closeBottomSheet: () => void;
 }
@@ -32,12 +38,16 @@ export function useBottomSheetContext<
     );
   }
 
-  const close = () => startClosing(context.id);
+  const close = () => {
+    requestClose(context.id);
+  };
+  const forceClose = () => startClosing(context.id);
 
   return {
     id: context.id,
     params: params as BottomSheetPortalParams<T>,
     close,
+    forceClose,
     closeBottomSheet: close,
   };
 }

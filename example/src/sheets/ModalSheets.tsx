@@ -6,7 +6,7 @@ import {
   useBottomSheetControl,
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
-import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack/actions-sheet';
+import { ActionsSheetAdapter } from '../../../src/adapters/actions-sheet';
 
 import { Badge, SecondaryButton, Sheet, SmallButton } from '../components';
 import { useUser } from '../context/UserContext';

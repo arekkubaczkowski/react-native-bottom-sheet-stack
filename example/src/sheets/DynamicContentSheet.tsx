@@ -26,7 +26,7 @@ function HeavyItem({ index }: { index: number }) {
 export const HeavySheet = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetContext();
   const [items, setItems] = useState<number[]>(() =>
-    Array.from({ length: 5 }, (_, i) => i)
+    Array.from({ length: 5 }, (_item, i) => i)
   );
   const [loadCount, setLoadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +45,7 @@ export const HeavySheet = forwardRef<BottomSheetMethods>((_, ref) => {
         setLoadCount(idx + 1);
         setItems((prev) => [
           ...prev,
-          ...Array.from({ length: 5 }, (_, i) => prev.length + i),
+          ...Array.from({ length: 5 }, (_item, i) => prev.length + i),
         ]);
       }, delay)
     );

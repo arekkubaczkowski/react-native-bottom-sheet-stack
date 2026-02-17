@@ -1,19 +1,16 @@
 import React from 'react';
 import type { SheetAdapterRef } from './adapter.types';
 
-import {
-  useOpen,
-  useStartClosing,
-  useUpdateParams,
-  type OpenMode,
-} from './bottomSheet.store';
+import { useOpen, useUpdateParams, type OpenMode } from './bottomSheet.store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
 import type {
   BottomSheetPortalId,
   BottomSheetPortalParams,
   HasParams,
 } from './portal.types';
 import { getSheetRef, setSheetRef } from './refsMap';
+import type { CloseAllOptions } from './useBottomSheetManager';
 
 interface BaseOpenOptions<TParams> {
   mode?: OpenMode;
@@ -37,6 +34,7 @@ type OpenFunction<T extends BottomSheetPortalId> =
 export interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
   open: OpenFunction<T>;
   close: () => void;
+  closeAll: (options?: CloseAllOptions) => Promise<void>;
   updateParams: (params: BottomSheetPortalParams<T>) => void;
   resetParams: () => void;
 }
@@ -47,7 +45,6 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
 
   const storeOpen = useOpen();
-  const startClosing = useStartClosing();
   const storeUpdateParams = useUpdateParams();
 
   const open = (options?: OpenOptions<T>) => {
@@ -74,7 +71,12 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
   };
 
   const close = () => {
-    startClosing(id);
+    requestClose(id);
+  };
+
+  const closeAll = (options?: CloseAllOptions) => {
+    const groupId = bottomSheetManagerContext?.groupId || 'default';
+    return closeAllAnimated(groupId, options);
   };
 
   const updateParams = (params: BottomSheetPortalParams<T>) => {
@@ -88,6 +90,7 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
   return {
     open: open as OpenFunction<T>,
     close,
+    closeAll,
     updateParams,
     resetParams,
   };

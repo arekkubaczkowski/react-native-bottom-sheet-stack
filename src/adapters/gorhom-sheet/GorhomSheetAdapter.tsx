@@ -7,6 +7,7 @@ import React, { useImperativeHandle, useRef } from 'react';
 import { useAnimatedReaction } from 'react-native-reanimated';
 
 import type { SheetAdapterRef } from '../../adapter.types';
+import { useSheetPreventDismiss } from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useAdapterRef } from '../../useAdapterRef';
@@ -39,6 +40,7 @@ export const GorhomSheetAdapter = React.forwardRef<
     const ref = useAdapterRef(forwardedRef);
     const contextAnimatedIndex = useAnimatedIndex();
     const defaultIndex = useBottomSheetDefaultIndex();
+    const preventDismiss = useSheetPreventDismiss(id);
 
     const gorhomRef = useRef<BottomSheetMethods | null>(null);
 
@@ -110,7 +112,7 @@ export const GorhomSheetAdapter = React.forwardRef<
         onClose={wrappedOnClose}
         onAnimate={wrappedOnAnimate}
         backdropComponent={backdropComponent}
-        enablePanDownToClose={enablePanDownToClose}
+        enablePanDownToClose={preventDismiss ? false : enablePanDownToClose}
       >
         {children}
       </BottomSheetOriginal>

@@ -1,5 +1,6 @@
 import type { SheetAdapterEvents } from './adapter.types';
 import { useBottomSheetStore } from './bottomSheet.store';
+import { getOnBeforeClose } from './onBeforeCloseRegistry';
 import { getSheetRef } from './refsMap';
 
 /**
@@ -43,6 +44,126 @@ export function initBottomSheetCoordinator(groupId: string) {
 }
 
 /**
+ * Attempts to close a sheet, respecting the onBeforeClose interceptor.
+ *
+ * If an onBeforeClose callback is registered for the sheet and it returns
+ * `false` (or resolves to `false`), the close is cancelled.
+ *
+ * @returns `true` if the close proceeded, `false` if it was intercepted.
+ */
+export async function requestClose(sheetId: string): Promise<boolean> {
+  const state = useBottomSheetStore.getState();
+  const currentStatus = state.sheetsById[sheetId]?.status;
+
+  // Don't run interceptor if sheet is already closing
+  // This prevents duplicate interceptor calls during close animations
+  if (currentStatus === 'closing') {
+    return false;
+  }
+
+  const interceptor = getOnBeforeClose(sheetId);
+
+  if (interceptor) {
+    try {
+      const allowed = await new Promise<boolean>((resolve) => {
+        const result = interceptor({
+          onConfirm: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+
+        if (result) {
+          if (typeof result === 'boolean') {
+            resolve(result);
+          } else if (
+            result &&
+            typeof result === 'object' &&
+            'then' in result &&
+            typeof result.then === 'function'
+          ) {
+            // It's a Promise
+            result.then(resolve);
+          }
+        }
+      });
+
+      if (!allowed) {
+        return false;
+      }
+    } catch (error) {
+      // If the interceptor throws, cancel the close for safety
+      if (__DEV__) {
+        console.warn(
+          `[BottomSheet] onBeforeClose interceptor threw an error for sheet "${sheetId}". ` +
+            'Close cancelled for safety. Fix the interceptor to avoid this warning.',
+          error
+        );
+      }
+      return false;
+    }
+  }
+
+  if (currentStatus === 'open' || currentStatus === 'opening') {
+    state.startClosing(sheetId);
+  }
+
+  return true;
+}
+
+/**
+ * Default stagger delay between cascading close animations (ms).
+ */
+const DEFAULT_STAGGER_MS = 100;
+
+/**
+ * Closes all sheets in a group from top to bottom with cascading animation.
+ *
+ * Each sheet is closed with a staggered delay so the user sees them
+ * peel off one-by-one (similar to `popToRoot` in React Navigation).
+ *
+ * If a sheet has an `onBeforeClose` interceptor that rejects, the cascade
+ * stops at that sheet — sheets below it remain open.
+ *
+ * @param groupId - The manager group to close sheets in.
+ * @param options.stagger - Delay in ms between each close (default: 100).
+ * @returns A promise that resolves when the cascade finishes (or is stopped).
+ */
+export async function closeAllAnimated(
+  groupId: string,
+  options?: { stagger?: number }
+): Promise<void> {
+  const stagger = options?.stagger ?? DEFAULT_STAGGER_MS;
+
+  const state = useBottomSheetStore.getState();
+  const groupSheetIds = state.stackOrder.filter(
+    (id) => state.sheetsById[id]?.groupId === groupId
+  );
+
+  // Close from top to bottom (reverse order)
+  const reversed = [...groupSheetIds].reverse();
+
+  for (const sheetId of reversed) {
+    const currentState = useBottomSheetStore.getState();
+    const sheet = currentState.sheetsById[sheetId];
+
+    // Skip sheets that are already closing or hidden
+    if (!sheet || sheet.status === 'closing' || sheet.status === 'hidden') {
+      continue;
+    }
+
+    const closed = await requestClose(sheetId);
+
+    if (!closed) {
+      // Interceptor blocked — stop the cascade
+      break;
+    }
+
+    if (stagger > 0 && reversed.indexOf(sheetId) < reversed.length - 1) {
+      await new Promise<void>((resolve) => setTimeout(resolve, stagger));
+    }
+  }
+}
+
+/**
  * Creates event handlers that adapters call to sync UI state back to the store.
  * Direction: Adapter Events → Store
  *
@@ -53,6 +174,13 @@ export function initBottomSheetCoordinator(groupId: string) {
  */
 export function createSheetEventHandlers(sheetId: string): SheetAdapterEvents {
   const handleDismiss = () => {
+    const interceptor = getOnBeforeClose(sheetId);
+
+    if (interceptor) {
+      requestClose(sheetId);
+      return;
+    }
+
     const state = useBottomSheetStore.getState();
     const currentStatus = state.sheetsById[sheetId]?.status;
 

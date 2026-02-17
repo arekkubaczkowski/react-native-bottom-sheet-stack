@@ -52,8 +52,15 @@ interface BottomSheetState {
   scaleBackground?: boolean;
   usePortal?: boolean;
   params?: Record<string, unknown>;
+  keepMounted?: boolean;
+  preventDismiss?: boolean;
 }
 ```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `keepMounted` | `boolean` | When `true`, sheet stays in store after close (persistent mode) |
+| `preventDismiss` | `boolean` | When `true`, adapters block native dismiss gestures. Set by `useOnBeforeClose`. |
 
 ---
 
@@ -228,6 +235,7 @@ Return type of `useBottomSheetControl` hook.
 interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
   open: OpenFunction<T>;
   close: () => void;
+  closeAll: (options?: CloseAllOptions) => Promise<void>;
   updateParams: (params: BottomSheetPortalParams<T>) => void;
   resetParams: () => void;
 }
@@ -244,6 +252,7 @@ interface UseBottomSheetContextReturn<TParams> {
   id: string;
   params: TParams;
   close: () => void;
+  forceClose: () => void;
 }
 ```
 
@@ -257,5 +266,45 @@ Return type of `useBottomSheetStatus` hook.
 interface UseBottomSheetStatusReturn {
   status: BottomSheetStatus | null;
   isOpen: boolean;
+}
+```
+
+---
+
+## Close Interception Types
+
+### OnBeforeCloseCallback
+
+Callback type for `useOnBeforeClose`. Receives `onConfirm` and `onCancel` callbacks to call when the user makes a decision.
+
+```tsx
+type OnBeforeCloseCallback = (context: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) => void | boolean | Promise<boolean>;
+```
+
+**Callback Pattern (Recommended):**
+- Call `onConfirm()` to allow the close
+- Call `onCancel()` to block the close
+- Works seamlessly with `Alert.alert` and `closeAll()` cascade
+
+**Backward Compatible:**
+- Return `true` — close proceeds
+- Return `false` — close is cancelled
+- Return `Promise<boolean>` — async confirmation
+
+If the promise rejects, the close is cancelled for safety.
+
+---
+
+### CloseAllOptions
+
+Options for `closeAll()` (available on both `useBottomSheetManager` and `useBottomSheetControl`).
+
+```tsx
+interface CloseAllOptions {
+  /** Delay in ms between each cascading close animation. Default: 100 */
+  stagger?: number;
 }
 ```

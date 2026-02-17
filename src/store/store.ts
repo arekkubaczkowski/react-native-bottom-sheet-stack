@@ -130,6 +130,16 @@ export const useBottomSheetStore = create(
         return { sheetsById: updateSheet(state.sheetsById, id, { params }) };
       }),
 
+    setPreventDismiss: (id, prevent) =>
+      set((state) => {
+        if (!state.sheetsById[id]) return state;
+        return {
+          sheetsById: updateSheet(state.sheetsById, id, {
+            preventDismiss: prevent,
+          }),
+        };
+      }),
+
     clearGroup: (groupId) =>
       set((state) => {
         const idsToRemove = new Set(

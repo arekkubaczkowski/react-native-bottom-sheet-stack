@@ -22,6 +22,11 @@ export const useSheetKeepMounted = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.keepMounted, shallow);
 export const useSheetPortalSession = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.portalSession, shallow);
+export const useSheetPreventDismiss = (id: string) =>
+  useBottomSheetStore(
+    (state) => state.sheetsById[id]?.preventDismiss ?? false,
+    shallow
+  );
 
 export const useSheetExists = (id: string) =>
   useBottomSheetStore((state) => !!state.sheetsById[id], shallow);
@@ -69,6 +74,9 @@ export const useUpdateParams = () =>
 
 export const useClearGroup = () =>
   useBottomSheetStore((state) => state.clearGroup);
+
+export const useSetPreventDismiss = () =>
+  useBottomSheetStore((state) => state.setPreventDismiss);
 
 export const useMount = () => useBottomSheetStore((state) => state.mount);
 

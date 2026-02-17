@@ -24,6 +24,7 @@ import {
   SimpleModalContent,
 } from '../sheets';
 import { colors, sharedStyles } from '../styles/theme';
+import { CloseInterceptionDemo } from '../sheets/CloseInterceptionSheets';
 
 export function HomeScreen() {
   const { top } = useSafeAreaInsets();
@@ -100,7 +101,6 @@ export function HomeScreen() {
         {/* Demo Cards */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Demos</Text>
-
           <DemoCard
             title="Context Preservation"
             description="Compare imperative vs portal API - portal preserves React context"
@@ -119,35 +119,30 @@ export function HomeScreen() {
               )
             }
           />
-
           <DemoCard
             title="Navigation Flow"
             description="Switch, Push, and Replace modes for managing sheet navigation"
             color={colors.primary}
             onPress={() => open(<SheetA />, { scaleBackground: true })}
           />
-
           <DemoCard
             title="Portal Navigation Modes"
             description="Push, Switch, Replace modes with portal-based API"
             color={colors.warning}
             onPress={() => portalModeSheetA.open({ scaleBackground: true })}
           />
-
           <DemoCard
             title="Nested Scale"
             description="Cascading scale effect with multiple stacked sheets"
             color={colors.purple}
             onPress={() => open(<NestedSheet1 />, { scaleBackground: true })}
           />
-
           <DemoCard
             title="Dynamic Content"
             description="Async loading and dynamic content updates"
             color={colors.pink}
             onPress={() => open(<HeavySheet />, { scaleBackground: true })}
           />
-
           <DemoCard
             title="Persistent Scanner"
             description="Pre-mounted sheet with keepMounted - opens instantly"
@@ -159,13 +154,20 @@ export function HomeScreen() {
               })
             }
           />
-
           <DemoCard
             title="Persistent + Nested Portal"
             description="Persistent sheet with portal-based sheet defined inside"
             color={colors.purple}
             onPress={() =>
               persistentWithPortalControl.open({ scaleBackground: true })
+            }
+          />
+          <DemoCard
+            title="Close Interception"
+            description="onBeforeClose interceptors and closeAll() with cascade animation"
+            color={colors.warning}
+            onPress={() =>
+              open(<CloseInterceptionDemo />, { scaleBackground: true })
             }
           />
         </View>

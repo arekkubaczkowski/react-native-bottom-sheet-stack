@@ -6,7 +6,7 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { getAnimatedIndex } from './animatedRegistry';
-import { useStartClosing } from './store';
+import { requestClose } from './bottomSheetCoordinator';
 
 interface BottomSheetBackdropProps {
   sheetId: string;
@@ -14,7 +14,6 @@ interface BottomSheetBackdropProps {
 
 export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
   const animatedIndex = getAnimatedIndex(sheetId);
-  const startClosing = useStartClosing();
 
   if (!animatedIndex) {
     throw new Error('animatedIndex must be defined in BottomSheetBackdrop');
@@ -46,7 +45,7 @@ export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
   return (
     <Pressable
       style={StyleSheet.absoluteFillObject}
-      onPress={() => startClosing(sheetId)}
+      onPress={() => requestClose(sheetId)}
     >
       <Animated.View
         style={[StyleSheet.absoluteFillObject, animatedStyle, styles.backdrop]}

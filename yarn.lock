@@ -12151,6 +12151,7 @@ __metadata:
     "@expo/metro-runtime": ^6.1.2
     "@gorhom/bottom-sheet": ^5.2.8
     "@react-native-clipboard/clipboard": ^1.16.3
+    babel-plugin-module-resolver: ^5.0.2
     expo: ^54.0.31
     expo-dev-client: ~6.0.13
     expo-linking: ~8.0.11
