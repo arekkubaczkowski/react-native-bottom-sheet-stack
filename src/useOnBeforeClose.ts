@@ -4,6 +4,7 @@ import { useMaybeBottomSheetContext } from './BottomSheet.context';
 import { useSetPreventDismiss } from './bottomSheet.store';
 import type { OnBeforeCloseCallback } from './onBeforeCloseRegistry';
 import { removeOnBeforeClose, setOnBeforeClose } from './onBeforeCloseRegistry';
+import { useEvent } from './useEvent';
 
 /**
  * Registers an interceptor that is called before the sheet closes.
@@ -51,13 +52,14 @@ export function useOnBeforeClose(callback: OnBeforeCloseCallback): void {
   }
 
   const id = context.id;
+  const stableCallback = useEvent(callback);
 
   useEffect(() => {
-    setOnBeforeClose(id, callback);
+    setOnBeforeClose(id, stableCallback);
     setPreventDismiss(id, true);
     return () => {
       removeOnBeforeClose(id);
       setPreventDismiss(id, false);
     };
-  }, [id, callback, setPreventDismiss]);
+  }, [id, stableCallback, setPreventDismiss]);
 }

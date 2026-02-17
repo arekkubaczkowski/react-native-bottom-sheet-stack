@@ -60,8 +60,15 @@ export async function requestClose(sheetId: string): Promise<boolean> {
       if (!allowed) {
         return false;
       }
-    } catch {
+    } catch (error) {
       // If the interceptor throws, cancel the close for safety
+      if (__DEV__) {
+        console.warn(
+          `[BottomSheet] onBeforeClose interceptor threw an error for sheet "${sheetId}". ` +
+            'Close cancelled for safety. Fix the interceptor to avoid this warning.',
+          error
+        );
+      }
       return false;
     }
   }
