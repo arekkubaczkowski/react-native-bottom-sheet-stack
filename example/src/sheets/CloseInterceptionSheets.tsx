@@ -1,9 +1,10 @@
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { forwardRef, useState } from 'react';
-import { Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Switch, Text, TextInput, View } from 'react-native';
 import {
   useBottomSheetContext,
   useBottomSheetManager,
+  useOnBeforeClose,
 } from 'react-native-bottom-sheet-stack';
 
 import { Badge, Button, SecondaryButton, Sheet } from '../components';
@@ -81,34 +82,36 @@ CloseInterceptionDemo.displayName = 'CloseInterceptionDemo';
  */
 export const FormSheet = forwardRef<BottomSheetMethods>((_, ref) => {
   const { open, closeAll } = useBottomSheetManager();
-  const { close, forceClose } = useBottomSheetContext();
+  const { close } = useBottomSheetContext();
   const [text, setText] = useState('');
   const [hasInterceptor, setHasInterceptor] = useState(true);
 
   const isDirty = text.trim().length > 0;
 
   // Register interceptor that prompts if there are unsaved changes
-  // TODO: Re-enable after fixing context issue
-  // useOnBeforeClose(() => {
-  //   if (!hasInterceptor) return true;
+  useOnBeforeClose(({ onConfirm, onCancel }) => {
+    if (!hasInterceptor) {
+      onConfirm();
+      return;
+    }
 
-  //   if (isDirty) {
-  //     Alert.alert(
-  //       'Unsaved Changes',
-  //       'You have unsaved text. Are you sure you want to close?',
-  //       [
-  //         { text: 'Cancel', style: 'cancel' },
-  //         {
-  //           text: 'Discard',
-  //           style: 'destructive',
-  //           onPress: () => forceClose(),
-  //         },
-  //       ]
-  //     );
-  //     return false; // Block close
-  //   }
-  //   return true; // Allow close
-  // });
+    if (isDirty) {
+      Alert.alert(
+        'Unsaved Changes',
+        'You have unsaved text. Are you sure you want to close?',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: onCancel },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: onConfirm,
+          },
+        ]
+      );
+    } else {
+      onConfirm();
+    }
+  });
 
   const handleCloseAll = () => {
     closeAll({ stagger: 150 });
@@ -120,7 +123,7 @@ export const FormSheet = forwardRef<BottomSheetMethods>((_, ref) => {
       <Text style={sharedStyles.h1}>Unsaved Changes</Text>
       <Text style={sharedStyles.text}>
         Try typing below, then close or use "Close All". The interceptor will
-        prompt you to confirm.
+        prompt you to confirm. Notice how the cascade waits for your decision!
       </Text>
 
       <View style={sharedStyles.scaleInfo}>
@@ -196,11 +199,6 @@ export const FormSheet = forwardRef<BottomSheetMethods>((_, ref) => {
           onPress={handleCloseAll}
         />
         <SecondaryButton title="Try to Close" onPress={close} />
-        <SecondaryButton
-          title="Force Close (Bypass)"
-          style={{ borderColor: colors.error }}
-          onPress={forceClose}
-        />
       </View>
     </Sheet>
   );

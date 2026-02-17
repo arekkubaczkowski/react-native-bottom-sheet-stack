@@ -52,11 +52,40 @@ export function initBottomSheetCoordinator(groupId: string) {
  * @returns `true` if the close proceeded, `false` if it was intercepted.
  */
 export async function requestClose(sheetId: string): Promise<boolean> {
+  const state = useBottomSheetStore.getState();
+  const currentStatus = state.sheetsById[sheetId]?.status;
+
+  // Don't run interceptor if sheet is already closing
+  // This prevents duplicate interceptor calls during close animations
+  if (currentStatus === 'closing') {
+    return false;
+  }
+
   const interceptor = getOnBeforeClose(sheetId);
 
   if (interceptor) {
     try {
-      const allowed = await interceptor();
+      const allowed = await new Promise<boolean>((resolve) => {
+        const result = interceptor({
+          onConfirm: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+
+        if (result) {
+          if (typeof result === 'boolean') {
+            resolve(result);
+          } else if (
+            result &&
+            typeof result === 'object' &&
+            'then' in result &&
+            typeof result.then === 'function'
+          ) {
+            // It's a Promise
+            result.then(resolve);
+          }
+        }
+      });
+
       if (!allowed) {
         return false;
       }
@@ -72,9 +101,6 @@ export async function requestClose(sheetId: string): Promise<boolean> {
       return false;
     }
   }
-
-  const state = useBottomSheetStore.getState();
-  const currentStatus = state.sheetsById[sheetId]?.status;
 
   if (currentStatus === 'open' || currentStatus === 'opening') {
     state.startClosing(sheetId);

@@ -3,10 +3,18 @@
  *
  * Callbacks are keyed by sheet ID. When a sheet is about to close,
  * the coordinator checks this registry and calls the interceptor.
- * If the interceptor returns `false` (or resolves to `false`),
- * the close is cancelled.
+ *
+ * The interceptor receives `onConfirm` and `onCancel` callbacks that
+ * should be called when the user makes a decision. Alternatively, it can
+ * return `boolean` or `Promise<boolean>` for backward compatibility.
+ *
+ * If the interceptor returns `false` (or resolves to `false`), or if
+ * `onCancel()` is called, the close is cancelled.
  */
-export type OnBeforeCloseCallback = () => boolean | Promise<boolean>;
+export type OnBeforeCloseCallback = (context: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) => void | boolean | Promise<boolean>;
 
 const onBeforeCloseMap = new Map<string, OnBeforeCloseCallback>();
 

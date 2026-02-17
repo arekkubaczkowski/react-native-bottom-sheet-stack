@@ -15,28 +15,55 @@ import { useEvent } from './useEvent';
  * 2. Intercepts all programmatic close paths (backdrop tap, back button,
  *    `close()`, `closeAll()`) and calls the callback first.
  *
- * Return `false` (or a Promise that resolves to `false`) to prevent closing.
- * Return `true` (or resolve to `true`) to allow the close to proceed.
+ * The interceptor receives `onConfirm` and `onCancel` callbacks. Call these
+ * when the user makes a decision. This works seamlessly with `Alert.alert`:
  *
- * Use `forceClose()` from `useBottomSheetContext` to bypass the interceptor.
+ * ```tsx
+ * useOnBeforeClose(({ onConfirm, onCancel }) => {
+ *   if (dirty) {
+ *     Alert.alert('Discard changes?', '', [
+ *       { text: 'Cancel', onPress: onCancel },
+ *       { text: 'Discard', onPress: onConfirm },
+ *     ]);
+ *   } else {
+ *     onConfirm(); // Allow close immediately
+ *   }
+ * });
+ * ```
+ *
+ * For backward compatibility, you can still return `boolean` or `Promise<boolean>`:
+ * - Return `false` (or resolve to `false`) to prevent closing
+ * - Return `true` (or resolve to `true`) to allow closing
+ *
+ * Use `forceClose()` from `useBottomSheetContext` to bypass the interceptor entirely.
  *
  * Must be used inside a sheet component (within BottomSheetContext).
  *
- * @example
+ * @example Callback pattern (recommended)
  * ```tsx
  * function MySheet() {
  *   const [dirty, setDirty] = useState(false);
- *   const { forceClose } = useBottomSheetContext();
  *
- *   useOnBeforeClose(() => {
+ *   useOnBeforeClose(({ onConfirm, onCancel }) => {
  *     if (dirty) {
  *       Alert.alert('Discard changes?', '', [
- *         { text: 'Cancel', style: 'cancel' },
- *         { text: 'Discard', onPress: () => forceClose() },
+ *         { text: 'Cancel', style: 'cancel', onPress: onCancel },
+ *         { text: 'Discard', onPress: onConfirm },
  *       ]);
- *       return false;
+ *     } else {
+ *       onConfirm();
  *     }
- *     return true;
+ *   });
+ * }
+ * ```
+ *
+ * @example Boolean return (backward compatible)
+ * ```tsx
+ * function MySheet() {
+ *   const [dirty, setDirty] = useState(false);
+ *
+ *   useOnBeforeClose(() => {
+ *     return !dirty; // false blocks, true allows
  *   });
  * }
  * ```
