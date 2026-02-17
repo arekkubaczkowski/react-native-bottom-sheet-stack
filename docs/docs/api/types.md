@@ -275,13 +275,26 @@ interface UseBottomSheetStatusReturn {
 
 ### OnBeforeCloseCallback
 
-Callback type for `useOnBeforeClose`. Return `false` to prevent the sheet from closing.
+Callback type for `useOnBeforeClose`. Receives `onConfirm` and `onCancel` callbacks to call when the user makes a decision.
 
 ```tsx
-type OnBeforeCloseCallback = () => boolean | Promise<boolean>;
+type OnBeforeCloseCallback = (context: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) => void | boolean | Promise<boolean>;
 ```
 
-Supports both synchronous and asynchronous flows. If the promise rejects, the close is cancelled for safety.
+**Callback Pattern (Recommended):**
+- Call `onConfirm()` to allow the close
+- Call `onCancel()` to block the close
+- Works seamlessly with `Alert.alert` and `closeAll()` cascade
+
+**Backward Compatible:**
+- Return `true` — close proceeds
+- Return `false` — close is cancelled
+- Return `Promise<boolean>` — async confirmation
+
+If the promise rejects, the close is cancelled for safety.
 
 ---
 

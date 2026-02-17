@@ -238,27 +238,28 @@ function StatusIndicator() {
 
 ## useOnBeforeClose
 
-Registers an interceptor that runs before the sheet closes. Return `false` to prevent closing.
+Registers an interceptor that runs before the sheet closes. Receives `onConfirm` and `onCancel` callbacks to call when the user makes a decision.
 
 :::warning Inside Sheet Only
 This hook can **only** be used inside a sheet adapter component. It reads from React context — no ID parameter needed.
 :::
 
 ```tsx
-import { useOnBeforeClose, useBottomSheetContext } from 'react-native-bottom-sheet-stack';
+import { useOnBeforeClose } from 'react-native-bottom-sheet-stack';
 
 function MySheet() {
   const [dirty, setDirty] = useState(false);
-  const { forceClose } = useBottomSheetContext();
 
-  useOnBeforeClose(() => {
-    if (!dirty) return true;
+  useOnBeforeClose(({ onConfirm, onCancel }) => {
+    if (!dirty) {
+      onConfirm(); // Allow close immediately
+      return;
+    }
 
     Alert.alert('Discard?', '', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Discard', onPress: () => forceClose() },
+      { text: 'Cancel', style: 'cancel', onPress: onCancel },
+      { text: 'Discard', onPress: onConfirm },
     ]);
-    return false;
   });
 
   // ...
@@ -269,14 +270,23 @@ function MySheet() {
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `callback` | `OnBeforeCloseCallback` | Function called before close. Return `false` to block. |
+| `callback` | `OnBeforeCloseCallback` | Function called before close. Call `onConfirm()` to allow or `onCancel()` to block. |
 
 ### Callback Signature
 
 ```tsx
-type OnBeforeCloseCallback = () => boolean | Promise<boolean>;
+type OnBeforeCloseCallback = (context: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) => void | boolean | Promise<boolean>;
 ```
 
+**Callback Pattern (Recommended):**
+- Call `onConfirm()` — close proceeds
+- Call `onCancel()` — close is cancelled
+- Perfect for `Alert.alert` and `closeAll()` integration
+
+**Backward Compatible Patterns:**
 - Return `true` — close proceeds normally
 - Return `false` — close is cancelled
 - Return `Promise<boolean>` — async confirmation supported
@@ -287,7 +297,8 @@ type OnBeforeCloseCallback = () => boolean | Promise<boolean>;
 When active, the hook:
 1. Sets `preventDismiss` on the sheet so adapters block native dismiss gestures (swipe, pan-to-close)
 2. Intercepts all close paths: `close()`, backdrop tap, back button, `closeAll()`
+3. With callback pattern, `closeAll()` waits for user decision before continuing cascade
 
-Use `forceClose()` from `useBottomSheetContext` to bypass the interceptor.
+Use `forceClose()` from `useBottomSheetContext` to bypass the interceptor entirely.
 
 See [Close Interception](/close-interception) for detailed guide and examples.

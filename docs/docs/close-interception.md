@@ -8,7 +8,7 @@ Close interception lets you prevent a sheet from closing until a condition is me
 
 ## useOnBeforeClose
 
-The `useOnBeforeClose` hook registers an interceptor that runs before the sheet closes. Return `false` to block the close, or `true` to allow it.
+The `useOnBeforeClose` hook registers an interceptor that runs before the sheet closes. It receives `onConfirm` and `onCancel` callbacks that you call when the user makes a decision.
 
 :::warning Inside Sheet Only
 This hook can **only** be used inside a sheet adapter component. It reads from React context — no ID parameter needed.
@@ -17,23 +17,21 @@ This hook can **only** be used inside a sheet adapter component. It reads from R
 ```tsx
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import {
-  useBottomSheetContext,
-  useOnBeforeClose,
-} from 'react-native-bottom-sheet-stack';
+import { useOnBeforeClose } from 'react-native-bottom-sheet-stack';
 
 function EditProfileSheet() {
   const [dirty, setDirty] = useState(false);
-  const { forceClose } = useBottomSheetContext();
 
-  useOnBeforeClose(() => {
-    if (!dirty) return true;
+  useOnBeforeClose(({ onConfirm, onCancel }) => {
+    if (!dirty) {
+      onConfirm(); // Allow close immediately
+      return;
+    }
 
     Alert.alert('Discard changes?', 'You have unsaved changes.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Discard', style: 'destructive', onPress: () => forceClose() },
+      { text: 'Cancel', style: 'cancel', onPress: onCancel },
+      { text: 'Discard', style: 'destructive', onPress: onConfirm },
     ]);
-    return false;
   });
 
   return (
@@ -41,6 +39,8 @@ function EditProfileSheet() {
   );
 }
 ```
+
+This callback-based API works seamlessly with `Alert.alert` and makes `closeAll()` properly wait for user decisions.
 
 ## How It Works
 
@@ -77,13 +77,42 @@ Close    Close
 proceeds cancelled
 ```
 
-## Async Interceptors
+## Alternative Patterns
 
-The callback can return a `Promise<boolean>` for async confirmation flows:
+### Callback Pattern (Recommended)
+
+The callback pattern with `onConfirm`/`onCancel` is recommended for most use cases. It naturally integrates with `Alert.alert` and works seamlessly with `closeAll()`:
+
+```tsx
+useOnBeforeClose(({ onConfirm, onCancel }) => {
+  if (isDirty) {
+    Alert.alert('Discard?', '', [
+      { text: 'Cancel', onPress: onCancel },
+      { text: 'Discard', onPress: onConfirm },
+    ]);
+  } else {
+    onConfirm();
+  }
+});
+```
+
+### Boolean Return (Backward Compatible)
+
+For simple synchronous checks, you can return a boolean:
+
+```tsx
+useOnBeforeClose(() => {
+  return !isDirty; // false blocks, true allows
+});
+```
+
+### Async Promise (Backward Compatible)
+
+For async confirmation flows using custom dialogs:
 
 ```tsx
 useOnBeforeClose(async () => {
-  const confirmed = await showConfirmDialog();
+  const confirmed = await showCustomDialog();
   return confirmed;
 });
 ```
@@ -92,34 +121,46 @@ If the promise rejects (throws), the close is cancelled for safety.
 
 ## forceClose — Bypassing the Interceptor
 
-`forceClose()` from `useBottomSheetContext` skips the interceptor entirely and closes the sheet immediately. This is the escape hatch for confirmation dialogs:
+`forceClose()` from `useBottomSheetContext` skips the interceptor entirely and closes the sheet immediately. With the callback pattern, you rarely need this — just call `onConfirm()` instead. However, it's still useful for programmatic force-closes from outside the interceptor:
 
 ```tsx
 const { forceClose } = useBottomSheetContext();
 
-useOnBeforeClose(() => {
-  Alert.alert('Are you sure?', '', [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Close', onPress: () => forceClose() },
-  ]);
-  return false; // Block the initial close
-});
+// Force close from anywhere (bypasses interceptor)
+<Button title="Force Close" onPress={forceClose} />
 ```
 
 ## closeAll Interaction
 
-When `closeAll()` encounters a sheet with an `onBeforeClose` interceptor that returns `false`, the cascade **stops at that sheet**. Sheets below it remain open:
+When `closeAll()` encounters a sheet with an `onBeforeClose` interceptor, it **waits for the user's decision** before continuing:
 
 ```
 Stack: [SheetA, SheetB (has interceptor), SheetC]
 
 closeAll() closes from top:
   1. SheetC → closed ✅
-  2. SheetB → interceptor returns false ❌
+  2. SheetB → shows confirmation alert, WAITS for user
+      - User clicks "Confirm" → onConfirm() called
+      - SheetB closes ✅
+  3. SheetA → closes ✅
+
+Result: All sheets closed (if user confirmed)
+```
+
+If the user clicks "Cancel" (calling `onCancel()`), the cascade stops at that sheet:
+
+```
+closeAll() with user cancellation:
+  1. SheetC → closed ✅
+  2. SheetB → shows confirmation alert
+      - User clicks "Cancel" → onCancel() called
+      - SheetB stays open ❌
   3. SheetA → never reached (cascade stopped)
 
 Result: [SheetA, SheetB] remain open
 ```
+
+This seamless integration with `closeAll()` is why the callback pattern is recommended over the boolean return pattern.
 
 ## Adapter Support
 
