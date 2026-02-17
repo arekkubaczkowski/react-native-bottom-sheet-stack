@@ -5,7 +5,7 @@ import {
   useBottomSheetContext,
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
-import { ReactNativeModalAdapter } from 'react-native-bottom-sheet-stack/react-native-modal';
+import { ReactNativeModalAdapter } from '../../../src/adapters/react-native-modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
