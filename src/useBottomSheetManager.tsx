@@ -24,6 +24,7 @@ export const useBottomSheetManager = () => {
       groupId?: string;
       mode?: OpenMode;
       scaleBackground?: boolean;
+      backdrop?: boolean;
     } = {}
   ) => {
     const groupId =
@@ -44,6 +45,7 @@ export const useBottomSheetManager = () => {
         groupId,
         content: contentWithRef,
         scaleBackground: options.scaleBackground,
+        backdrop: options.backdrop,
       },
       options.mode
     );

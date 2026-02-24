@@ -20,6 +20,10 @@ export const useSheetUsePortal = (id: string) =>
 
 export const useSheetKeepMounted = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.keepMounted, shallow);
+
+export const useSheetBackdrop = (id: string) =>
+  useBottomSheetStore((state) => state.sheetsById[id]?.backdrop, shallow);
+
 export const useSheetPortalSession = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.portalSession, shallow);
 export const useSheetPreventDismiss = (id: string) =>

@@ -54,6 +54,7 @@ export const useBottomSheetStore = create(
               status: 'opening',
               scaleBackground:
                 sheet.scaleBackground ?? existingSheet.scaleBackground,
+              backdrop: sheet.backdrop ?? existingSheet.backdrop,
               params: sheet.params ?? existingSheet.params,
               portalSession: existingSheet.keepMounted
                 ? existingSheet.portalSession
