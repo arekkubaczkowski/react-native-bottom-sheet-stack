@@ -9,6 +9,7 @@ export interface BottomSheetState {
   content?: ReactNode;
   status: BottomSheetStatus;
   scaleBackground?: boolean;
+  backdrop?: boolean;
   usePortal?: boolean;
   params?: Record<string, unknown>;
   keepMounted?: boolean;

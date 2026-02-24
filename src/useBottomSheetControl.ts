@@ -15,6 +15,7 @@ import type { CloseAllOptions } from './useBottomSheetManager';
 interface BaseOpenOptions<TParams> {
   mode?: OpenMode;
   scaleBackground?: boolean;
+  backdrop?: boolean;
   params?: TParams;
 }
 
@@ -64,6 +65,7 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
         content: null,
         usePortal: true,
         scaleBackground: options?.scaleBackground,
+        backdrop: options?.backdrop,
         params: options?.params as Record<string, unknown>,
       },
       options?.mode
