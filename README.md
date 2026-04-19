@@ -2,7 +2,7 @@
 
 A stack manager for bottom sheets and modals in React Native. Supports `push`, `switch`, and `replace` navigation modes, iOS-style scale animations, and React context preservation. Works with any bottom sheet or modal library via a pluggable adapter architecture.
 
-<img width="720" height="1564" alt="ezgif-26b0d890a857fdfb" src="https://github.com/user-attachments/assets/facfcbe6-aa33-4fbf-9d50-9031fe14554d" />
+<img width="360" height="782" alt="ezgif-26b0d890a857fdfb" src="https://github.com/user-attachments/assets/facfcbe6-aa33-4fbf-9d50-9031fe14554d" />
 
 ## Documentation
 
