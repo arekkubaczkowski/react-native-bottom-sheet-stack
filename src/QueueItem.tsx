@@ -60,7 +60,7 @@ export const QueueItem = memo(function QueueItem({
     <>
       {isActive && backdrop !== false && (
         <View
-          style={[StyleSheet.absoluteFillObject, { zIndex: backdropZIndex }]}
+          style={[StyleSheet.absoluteFill, { zIndex: backdropZIndex }]}
           pointerEvents="box-none"
         >
           <BottomSheetBackdrop sheetId={id} />
@@ -96,7 +96,7 @@ const ScaleWrapper = ({
   return (
     <Animated.View
       pointerEvents="box-none"
-      style={[StyleSheet.absoluteFillObject, { zIndex }, scaleStyle]}
+      style={[StyleSheet.absoluteFill, { zIndex }, scaleStyle]}
     >
       {children}
     </Animated.View>
