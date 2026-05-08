@@ -327,7 +327,7 @@ export const SlideUpModal = React.forwardRef<SheetAdapterRef, SlideUpModalProps>
 );
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
+  backdrop: { ...StyleSheet.absoluteFill, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: '#1c1c1e',
     borderTopLeftRadius: 20,
