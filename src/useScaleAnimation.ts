@@ -117,12 +117,11 @@ function useScaleAnimatedStyleInternal(scaleDepth: number) {
   return useAnimatedStyle(() => {
     const p = progress.value;
 
-    if (p === 0) {
-      return {
-        transform: [{ scale: 1 }, { translateY: 0 }],
-        borderRadius: 0,
-        overflow: 'visible',
-      };
+    // Identity transform on first frame collapses layout in
+    // React Native 0.85's new animation backend. Returning an empty
+    // style keeps the view at its natural position+size when idle.
+    if (!p) {
+      return {};
     }
 
     const currentScale = Math.pow(scale, p);
