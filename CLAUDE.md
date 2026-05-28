@@ -60,6 +60,7 @@ A library-agnostic stack manager for bottom sheets and modals in React Native. P
 | `CustomModalAdapter` | `react-native-bottom-sheet-stack` (main) | Custom animated modal (zero deps) |
 | `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` |
 | `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` |
+| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` (Fabric / New Arch) |
 
 ---
 
@@ -801,9 +802,12 @@ src/
     ├── react-native-modal/      # → 'react-native-bottom-sheet-stack/react-native-modal'
     │   ├── index.ts
     │   └── ReactNativeModalAdapter.tsx
-    └── actions-sheet/           # → 'react-native-bottom-sheet-stack/actions-sheet'
+    ├── actions-sheet/           # → 'react-native-bottom-sheet-stack/actions-sheet'
+    │   ├── index.ts
+    │   └── ActionsSheetAdapter.tsx
+    └── swmansion/               # → 'react-native-bottom-sheet-stack/swmansion'
         ├── index.ts
-        └── ActionsSheetAdapter.tsx
+        └── SwmansionSheetAdapter.tsx
 ```
 
 ---
@@ -827,6 +831,10 @@ react-native-bottom-sheet-stack/react-native-modal:
 
 react-native-bottom-sheet-stack/actions-sheet:
   react-native-actions-sheet ──▶ ActionsSheetAdapter
+
+react-native-bottom-sheet-stack/swmansion:
+  @swmansion/react-native-bottom-sheet ──▶ SwmansionSheetAdapter
+  (Fabric native component — requires New Architecture, RN >= 0.76)
 ```
 
 ---
@@ -841,7 +849,8 @@ Adapters with 3rd-party dependencies are shipped as **separate subpath exports**
   ".": "./lib/commonjs/index.js",
   "./gorhom": "./lib/commonjs/adapters/gorhom-sheet/index.js",
   "./react-native-modal": "./lib/commonjs/adapters/react-native-modal/index.js",
-  "./actions-sheet": "./lib/commonjs/adapters/actions-sheet/index.js"
+  "./actions-sheet": "./lib/commonjs/adapters/actions-sheet/index.js",
+  "./swmansion": "./lib/commonjs/adapters/swmansion/index.js"
 }
 ```
 
@@ -855,6 +864,7 @@ import { CustomModalAdapter } from 'react-native-bottom-sheet-stack'; // zero de
 import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
 import { ReactNativeModalAdapter } from 'react-native-bottom-sheet-stack/react-native-modal';
 import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack/actions-sheet';
+import { SwmansionSheetAdapter } from 'react-native-bottom-sheet-stack/swmansion';
 ```
 
 **Backward compatibility**: `BottomSheetManaged` and `BottomSheetManagedProps` are available as deprecated re-exports from the gorhom subpath.

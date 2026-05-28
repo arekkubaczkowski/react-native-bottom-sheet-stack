@@ -223,6 +223,31 @@ useImperativeHandle(ref, () => ({
 }), []);
 ```
 
+**Fully-controlled / position-controlled** (e.g., `@swmansion/react-native-bottom-sheet` with `index`/`detents`):
+
+Some libraries have no boolean visibility and no imperative ref at all — the position is a controlled value (an index into snap points). Map "open" to an expanded index and "close" to the collapsed index (`0`), then translate the library's *user-driven* change callback into `handleDismiss()`:
+
+```tsx
+const [index, setIndex] = useState(0); // 0 = collapsed
+const openIndex = detents.length - 1;
+
+useImperativeHandle(ref, () => ({
+  expand: () => setIndex(openIndex),
+  close: () => setIndex(0),
+}), [openIndex]);
+
+// Settle = animation finished → opened/closed
+const onSettle = (i: number) =>
+  i > 0 ? (animatedIndex.set(0), handleOpened()) : (animatedIndex.set(-1), handleClosed());
+
+// Index change = user-driven snap → reaching collapsed means dismiss
+const onIndexChange = (i: number) => {
+  if (i <= 0) handleDismiss();
+};
+```
+
+This is exactly how [`SwmansionSheetAdapter`](/built-in-adapters#swmansionsheetadapter) bridges Software Mansion's native sheet. When the library also reports a continuous position (e.g. `onPositionChange`), interpolate it into `animatedIndex` (`[-1, 0]`) for a smooth backdrop fade.
+
 ### Libraries Without Separate Dismiss/Close Phases
 
 Some libraries fire a single `onClose` for both user dismissal and animation completion. In that case, call both:

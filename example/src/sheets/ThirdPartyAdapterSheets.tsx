@@ -7,6 +7,7 @@ import {
 } from 'react-native-bottom-sheet-stack';
 import { ActionsSheetAdapter } from '../../../src/adapters/actions-sheet';
 import { ReactNativeModalAdapter } from '../../../src/adapters/react-native-modal';
+import { SwmansionSheetAdapter } from '../../../src/adapters/swmansion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -355,6 +356,97 @@ export function GorhomSheetDemoContent() {
 }
 
 // ---------------------------------------------------------------------------
+// @swmansion/react-native-bottom-sheet adapter
+// ---------------------------------------------------------------------------
+
+/**
+ * Demonstrates the SwmansionSheetAdapter stacking with itself.
+ *
+ * Software Mansion's bottom sheet is a fully controlled Fabric component — the
+ * adapter bridges its `index`/`detents` model onto the manager's imperative
+ * open/close contract. Requires the New Architecture.
+ */
+export function SwmansionSheetDemoContent() {
+  const { close } = useBottomSheetContext<'swmansion-sheet-demo'>();
+  const { open } = useBottomSheetManager();
+  const user = useUser();
+
+  const handlePush = () => {
+    open(<StackedSwmansionSheet mode="push" />, {
+      mode: 'push',
+      scaleBackground: true,
+    });
+  };
+
+  const handleSwitch = () => {
+    open(<StackedSwmansionSheet mode="switch" />, {
+      mode: 'switch',
+      scaleBackground: true,
+    });
+  };
+
+  const handleReplace = () => {
+    open(<StackedSwmansionSheet mode="replace" />, {
+      mode: 'replace',
+      scaleBackground: true,
+    });
+  };
+
+  return (
+    <SwmansionSheetAdapter detents={[0, 'content']} style={styles.swmSheet}>
+      <View style={styles.swmSheetContent}>
+        <View style={styles.badgeRow}>
+          <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
+          <Badge label="Stacking" color={colors.primary} />
+        </View>
+        <Text style={sharedStyles.h1}>Software Mansion Sheet</Text>
+        <Text style={sharedStyles.text}>
+          A fully native (Fabric) bottom sheet, controlled via the `index` /
+          `detents` model. The adapter bridges it onto the stack manager. Try
+          the navigation modes below.
+        </Text>
+
+        <View
+          style={[sharedStyles.contextBox, { borderColor: colors.success }]}
+        >
+          <Text style={sharedStyles.contextTitle}>Context Preserved</Text>
+          <Text style={[sharedStyles.contextValue, { color: colors.success }]}>
+            Username: {user?.username ?? 'undefined'}
+          </Text>
+        </View>
+
+        <View style={sharedStyles.scaleInfo}>
+          <Text style={sharedStyles.scaleInfoTitle}>Navigation Modes</Text>
+          <Text style={sharedStyles.scaleInfoItem}>
+            <Text style={{ fontWeight: '600', color: colors.text }}>Push</Text>{' '}
+            — Both sheets stay in the stack
+          </Text>
+          <Text style={sharedStyles.scaleInfoItem}>
+            <Text style={{ fontWeight: '600', color: colors.text }}>
+              Switch
+            </Text>{' '}
+            — This hides, new one shows. Close to restore
+          </Text>
+          <Text style={sharedStyles.scaleInfoItem}>
+            <Text style={{ fontWeight: '600', color: colors.text }}>
+              Replace
+            </Text>{' '}
+            — This is removed, replaced by new one
+          </Text>
+        </View>
+
+        <View style={styles.actions}>
+          <Button title="Push Sheet" onPress={handlePush} />
+          <Button title="Switch to Sheet" onPress={handleSwitch} />
+          <Button title="Replace with Sheet" onPress={handleReplace} />
+          <SecondaryButton title="Close" onPress={close} />
+        </View>
+      </View>
+    </SwmansionSheetAdapter>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Stacked components (same adapter type for each)
 // ---------------------------------------------------------------------------
 
@@ -568,6 +660,55 @@ const StackedGorhomSheet = ({ mode, ref }: StackedProps) => {
   );
 };
 
+const StackedSwmansionSheet = ({ mode, ref }: StackedProps) => {
+  const { close } = useBottomSheetContext();
+  const { open } = useBottomSheetManager();
+
+  const descriptions = modeDescriptions('Software Mansion sheet');
+
+  const handlePushAnother = () => {
+    open(<StackedSwmansionSheet mode="push" />, {
+      mode: 'push',
+      scaleBackground: true,
+    });
+  };
+
+  return (
+    <SwmansionSheetAdapter
+      ref={ref as any}
+      detents={[0, 'content']}
+      style={styles.swmSheet}
+    >
+      <View style={styles.swmSheetContent}>
+        <View style={styles.badgeRow}>
+          <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
+          <Badge
+            label={mode}
+            color={
+              mode === 'push'
+                ? colors.success
+                : mode === 'switch'
+                  ? colors.warning
+                  : colors.error
+            }
+          />
+        </View>
+        <Text style={sharedStyles.h1}>Stacked via {mode}</Text>
+        <Text style={sharedStyles.text}>{descriptions[mode]}</Text>
+
+        <View style={styles.actions}>
+          <SmallButton
+            title="Push Another Sheet"
+            color={colors.primaryDark}
+            onPress={handlePushAnother}
+          />
+          <SecondaryButton title="Close" onPress={close} />
+        </View>
+      </View>
+    </SwmansionSheetAdapter>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
@@ -610,6 +751,16 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   nativeSheetContent: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 48,
+  },
+  swmSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  swmSheetContent: {
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 48,

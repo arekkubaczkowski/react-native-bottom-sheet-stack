@@ -99,6 +99,7 @@ alert.open({ mode: 'push' }); // Modal pushes on top of bottom sheet
 | `GorhomSheetAdapter` | `react-native-bottom-sheet-stack/gorhom` | `@gorhom/bottom-sheet` | Feature-rich bottom sheets with snap points |
 | `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | Rich animations, swipe dismiss |
 | `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | Zero-dep sheets, snap points |
+| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | Fully native (Fabric) sheets, New Architecture |
 
 :::info
 Third-party adapters are shipped as separate [subpath exports](https://nodejs.org/api/packages.html#subpath-exports). Importing the main package never causes Metro resolution errors for uninstalled adapter dependencies.
