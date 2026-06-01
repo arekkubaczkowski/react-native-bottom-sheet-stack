@@ -18,7 +18,7 @@ A stack manager for bottom sheets and modals in React Native. Supports `push`, `
 
 ## Features
 
-- **Adapter Architecture** - Pluggable adapters for different bottom sheet/modal libraries. Ships with adapters for `@gorhom/bottom-sheet`, `react-native-modal`, `react-native-actions-sheet`, and a custom modal. You can also build your own.
+- **Adapter Architecture** - Pluggable adapters for different bottom sheet/modal libraries. Ships with adapters for `@gorhom/bottom-sheet`, `react-native-modal`, `react-native-actions-sheet`, `@swmansion/react-native-bottom-sheet`, and a custom modal. You can also build your own.
 - **Stack Navigation** - `push`, `switch`, and `replace` modes for managing multiple sheets
 - **Scale Animation** - iOS-style background scaling effect when sheets are stacked
 - **Context Preservation** - Portal-based API that preserves React context in bottom sheets
@@ -105,6 +105,7 @@ function YourAppContent() {
 | `CustomModalAdapter` | `react-native-bottom-sheet-stack` | Custom animated modal | None |
 | `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | `react-native-modal` |
 | `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | `react-native-actions-sheet` |
+| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | `@swmansion/react-native-bottom-sheet` (Fabric / New Architecture) |
 
 Adapters with 3rd-party dependencies are shipped as separate subpath exports so that importing the main package never triggers Metro resolution errors for uninstalled libraries. Each sheet in the stack can use a different adapter.
 

@@ -172,5 +172,6 @@ For `useOnBeforeClose` to fully work, the adapter must respect the `preventDismi
 | `CustomModalAdapter` | Disables backdrop press |
 | `ReactNativeModalAdapter` | Disables swipe and backdrop press |
 | `ActionsSheetAdapter` | `closable={false}` when active |
+| `SwmansionSheetAdapter` | Re-snaps up when the user swipes to the collapsed detent |
 
 If you're building a [custom adapter](/custom-adapters), read the `preventDismiss` value from the store and disable native dismiss gestures accordingly.

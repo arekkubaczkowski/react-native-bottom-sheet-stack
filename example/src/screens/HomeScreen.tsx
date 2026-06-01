@@ -22,6 +22,7 @@ import {
   RNModalDemoContent,
   SheetA,
   SimpleModalContent,
+  SwmansionSheetDemoContent,
 } from '../sheets';
 import { colors, sharedStyles } from '../styles/theme';
 import { CloseInterceptionDemo } from '../sheets/CloseInterceptionSheets';
@@ -42,6 +43,7 @@ export function HomeScreen() {
   const rnModalControl = useBottomSheetControl('rn-modal-demo');
   const actionsSheetControl = useBottomSheetControl('actions-sheet-demo');
   const gorhomSheetControl = useBottomSheetControl('gorhom-sheet-demo');
+  const swmansionSheetControl = useBottomSheetControl('swmansion-sheet-demo');
 
   return (
     <View style={sharedStyles.container}>
@@ -77,6 +79,9 @@ export function HomeScreen() {
       </BottomSheetPortal>
       <BottomSheetPortal id="gorhom-sheet-demo">
         <GorhomSheetDemoContent />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="swmansion-sheet-demo">
+        <SwmansionSheetDemoContent />
       </BottomSheetPortal>
 
       <ScrollView
@@ -230,6 +235,15 @@ export function HomeScreen() {
             description="Feature-rich bottom sheet with snap points, gestures, and spring animations"
             color={colors.cyan}
             onPress={() => gorhomSheetControl.open({ scaleBackground: true })}
+          />
+
+          <DemoCard
+            title="@swmansion/react-native-bottom-sheet"
+            description="Fully native (Fabric) bottom sheet, controlled index/detents model — requires New Architecture"
+            color={colors.cyan}
+            onPress={() =>
+              swmansionSheetControl.open({ scaleBackground: true })
+            }
           />
         </View>
 

@@ -177,3 +177,84 @@ Adapter defaults (overridable): `gestureEnabled`, `closeOnTouchBackdrop`, `close
 :::tip
 This adapter uses `isModal={false}` internally to avoid wrapping in a redundant Modal — the stack manager handles the overlay lifecycle.
 :::
+
+---
+
+## SwmansionSheetAdapter
+
+Wraps [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansion-labs/react-native-bottom-sheet) — Software Mansion's **fully native (Fabric)** bottom sheet driven by a `detents`/`index` model.
+
+:::caution New Architecture required
+`@swmansion/react-native-bottom-sheet` is a Fabric native component. It requires the **New Architecture** (`react-native >= 0.76`) and a native build (it does **not** run in Expo Go — use a development build / `expo prebuild`).
+:::
+
+### Installation
+
+```bash
+npm install @swmansion/react-native-bottom-sheet react-native-safe-area-context
+```
+
+### Usage
+
+```tsx
+import { SwmansionSheetAdapter } from 'react-native-bottom-sheet-stack/swmansion';
+import { useBottomSheetContext } from 'react-native-bottom-sheet-stack';
+
+function MySheet() {
+  const { close } = useBottomSheetContext();
+
+  return (
+    <SwmansionSheetAdapter detents={[0, 'content']}>
+      <View style={{ padding: 20 }}>
+        <Text>Native bottom sheet</Text>
+        <Button title="Close" onPress={close} />
+      </View>
+    </SwmansionSheetAdapter>
+  );
+}
+```
+
+### The controlled → imperative bridge
+
+Software Mansion's sheet is **fully controlled**: it exposes no imperative ref, and its position is driven entirely by the `index` prop (a zero-based index into `detents`). The stack manager, on the other hand, drives sheets imperatively (`expand()` / `close()`). The adapter bridges the two:
+
+| Manager action / event | What the adapter does |
+| --- | --- |
+| `expand()` | Sets `index` to `expandedIndex` (defaults to the last detent) |
+| `close()` | Sets `index` back to `0` (collapsed) |
+| `onSettle(i)` | `i > 0` → reports **opened**; `i === 0` → reports **closed** |
+| `onIndexChange(0)` | User swiped down to dismiss → reports **dismiss** (re-snaps up when the sheet is non-dismissable) |
+| `onPositionChange` | Drives the shared `animatedIndex` for a smooth backdrop fade |
+
+:::info Collapsed detent
+The detent at index `0` must resolve to `0` (collapsed) so the manager can close the sheet — this matches the library's default `detents` of `[0, 'content']`. A dev-mode warning fires if it doesn't.
+:::
+
+### Props
+
+Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansion-labs/react-native-bottom-sheet)'s `BottomSheet` (`detents`, `style`, `animateIn`, `scrimColor`, `disableScrollableNegotiation`, `onIndexChange`, `onSettle`, `onPositionChange`), **except** the props the manager owns:
+
+- `index` — the adapter is the source of truth. Use `expandedIndex` (a prop added by the adapter, defaults to the last detent) to choose which detent the sheet opens to.
+- `modal` — the sheet always renders inline so it participates in the manager's z-index stack and shares the manager's `BottomSheetBackdrop`.
+
+Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent` / `DetentValue` types are re-exported from the subpath for convenience.
+
+### Android back button
+
+This adapter does **not** register a back-button handler. Wire it yourself with the exported `useBackHandler` hook when you need hardware-back dismissal:
+
+```tsx
+import { useBackHandler, useBottomSheetContext } from 'react-native-bottom-sheet-stack';
+
+function MySheet() {
+  const { id, close } = useBottomSheetContext();
+  useBackHandler(id, close);
+  // ...
+}
+```
+
+### When to Use
+
+- You want a fully native sheet built on the New Architecture
+- You prefer a controlled `detents`/`index` model
+- You don't need Reanimated/Gesture Handler as dependencies (the sheet is native)

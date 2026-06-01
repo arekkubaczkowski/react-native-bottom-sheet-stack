@@ -27,5 +27,6 @@ declare module 'react-native-bottom-sheet-stack' {
     'rn-modal-demo': true;
     'actions-sheet-demo': true;
     'gorhom-sheet-demo': true;
+    'swmansion-sheet-demo': true;
   }
 }

@@ -32,6 +32,9 @@ yarn add react-native-modal
 # For ActionsSheetAdapter
 yarn add react-native-actions-sheet
 
+# For SwmansionSheetAdapter (native / New Architecture only)
+yarn add @swmansion/react-native-bottom-sheet react-native-safe-area-context
+
 ```
 
 :::tip

@@ -34,6 +34,10 @@ module.exports = function (api) {
                 root,
                 'src/adapters/actions-sheet'
               ),
+              [`${pkg.name}/swmansion`]: path.resolve(
+                root,
+                'src/adapters/swmansion'
+              ),
             },
           },
           'subpath-aliases',
