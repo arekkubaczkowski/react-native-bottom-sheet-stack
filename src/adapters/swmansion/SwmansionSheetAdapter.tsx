@@ -1,11 +1,5 @@
 import React, { useImperativeHandle, useRef, useState } from 'react';
-
-import type { SheetAdapterRef } from '../../adapter.types';
-import { useSheetPreventDismiss } from '../../bottomSheet.store';
-import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
-import { useAdapterRef } from '../../useAdapterRef';
-import { useAnimatedIndex } from '../../useAnimatedIndex';
-import { useBottomSheetContext } from '../../useBottomSheetContext';
+import { StyleSheet, View } from 'react-native';
 
 import type {
   BottomSheetProps,
@@ -13,13 +7,22 @@ import type {
   DetentValue,
 } from '@swmansion/react-native-bottom-sheet';
 
+import type { SheetAdapterRef } from '../../adapter.types';
+import { useSheetPreventDismiss } from '../../bottomSheet.store';
+import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
+import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
+import { useAdapterRef } from '../../useAdapterRef';
+import { useAnimatedIndex } from '../../useAnimatedIndex';
+import { useBackHandler } from '../../useBackHandler';
+import { useBottomSheetContext } from '../../useBottomSheetContext';
+
 // Loaded lazily so the main bundle never requires the native module unless
 // this adapter is actually imported (it ships as an optional peer dependency).
 const { BottomSheet } =
   require('@swmansion/react-native-bottom-sheet') as typeof import('@swmansion/react-native-bottom-sheet');
 
-export type { Detent, DetentValue };
 export { programmatic } from '@swmansion/react-native-bottom-sheet';
+export type { Detent, DetentValue };
 
 /**
  * Props for {@link SwmansionSheetAdapter}.
@@ -34,7 +37,7 @@ export { programmatic } from '@swmansion/react-native-bottom-sheet';
  *   layer so its z-index participates in the stack and the manager's shared
  *   `BottomSheetBackdrop` provides the scrim.
  *
- * Every other prop (`detents`, `style`, `animateIn`, `scrimColor`,
+ * Every other prop (`detents`, `style`, `animateIn`,
  * `disableScrollableNegotiation`) is forwarded. The lifecycle callbacks
  * (`onIndexChange`, `onSettle`, `onPositionChange`) are wrapped by the adapter
  * and your handlers are still invoked afterwards.
@@ -90,9 +93,14 @@ export const SwmansionSheetAdapter = React.forwardRef<
       detents = DEFAULT_DETENTS,
       expandedIndex,
       animateIn = true,
+      // The manager renders its own shared `BottomSheetBackdrop`; the sheet's
+      // native scrim would double up (and stays opaque in non-modal mode), so
+      // it is disabled by default. Consumers can still override.
+      scrimColor = 'transparent',
       onIndexChange,
       onSettle,
       onPositionChange,
+      surface,
       ...props
     },
     forwardedRef
@@ -102,15 +110,30 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
 
+    const surfaceWithDefaults = surface ?? (
+      <View style={[StyleSheet.absoluteFill, stylesheet.surface]} />
+    );
+
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
-    // The adapter owns the snap index: it starts collapsed (0) and the
-    // coordinator drives it open/closed via the imperative ref below.
-    const [index, setIndex] = useState(0);
+    // Android hardware back dismisses the top, fully-open sheet — the same
+    // contract the other adapters honor.
+    useBackHandler(id, handleDismiss);
 
-    const openIndex =
-      expandedIndex != null ? expandedIndex : Math.max(0, detents.length - 1);
+    const openIndex = expandedIndex ?? Math.max(0, detents.length - 1);
+
+    // Mount directly at the index the manager wants instead of mounting
+    // collapsed and waiting for the coordinator to call expand(). Open sheets
+    // (defaultIndex >= 0) mount at `openIndex` so the native animates straight in
+    // to the open detent — there is no post-mount expand() round-trip to race
+    // against (which previously caused intermittent no-op opens and, once the
+    // spurious-close was suppressed, a stuck `opening` status). Persistent/hidden
+    // sheets (defaultIndex < 0) mount collapsed and are expanded on demand.
+    const defaultIndex = useBottomSheetDefaultIndex();
+    const [index, setIndex] = useState(() =>
+      defaultIndex < 0 ? 0 : openIndex
+    );
 
     if (__DEV__ && resolveDetentValue(detents[0] ?? 0) !== 0) {
       console.warn(
@@ -129,6 +152,13 @@ export const SwmansionSheetAdapter = React.forwardRef<
         : null
     );
 
+    // The native sheet animates in to its mounted index (0 = collapsed) and
+    // emits a settle at that detent before the coordinator drives expand(). That
+    // initial settle must NOT be reported as a close, otherwise the sheet is
+    // finished/removed before it ever opens — racing expand() and making opens
+    // (especially stacked pushes) intermittently no-op.
+    const hasOpenedRef = useRef(false);
+
     useImperativeHandle(
       ref,
       () => ({
@@ -141,8 +171,15 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const handleNativeSettle = (settledIndex: number) => {
       if (settledIndex <= 0) {
         animatedIndex.set(-1);
-        handleClosed();
+        // Ignore the collapsed-detent settle that fires during the initial
+        // animate-in (before the sheet has ever opened). A real close only
+        // happens after an open, so reporting it here would dismiss the sheet
+        // prematurely and race expand().
+        if (hasOpenedRef.current) {
+          handleClosed();
+        }
       } else {
+        hasOpenedRef.current = true;
         animatedIndex.set(0);
         handleOpened();
       }
@@ -157,6 +194,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
           // Re-snap up: dismissal is blocked for this sheet.
           setIndex(openIndex);
         } else {
+          // Keep the controlled index in sync with the native position so a
+          // later expand() is a real 0 → openIndex transition.
+          setIndex(0);
           handleDismiss();
         }
       }
@@ -183,12 +223,14 @@ export const SwmansionSheetAdapter = React.forwardRef<
         {...props}
         detents={detents}
         animateIn={animateIn}
+        scrimColor={scrimColor}
         // Managed by adapter (not overridable):
         index={index}
         modal={false}
         onIndexChange={handleNativeIndexChange}
         onSettle={handleNativeSettle}
         onPositionChange={handleNativePositionChange}
+        surface={surfaceWithDefaults}
       >
         {children}
       </BottomSheet>
@@ -197,3 +239,11 @@ export const SwmansionSheetAdapter = React.forwardRef<
 );
 
 SwmansionSheetAdapter.displayName = 'SwmansionSheetAdapter';
+
+const stylesheet = StyleSheet.create({
+  surface: {
+    backgroundColor: '#151521',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+});

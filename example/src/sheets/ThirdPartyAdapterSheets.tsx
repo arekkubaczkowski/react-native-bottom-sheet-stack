@@ -5,10 +5,10 @@ import {
   useBottomSheetContext,
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionsSheetAdapter } from '../../../src/adapters/actions-sheet';
 import { ReactNativeModalAdapter } from '../../../src/adapters/react-native-modal';
 import { SwmansionSheetAdapter } from '../../../src/adapters/swmansion';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   Badge,
@@ -393,7 +393,7 @@ export function SwmansionSheetDemoContent() {
   };
 
   return (
-    <SwmansionSheetAdapter detents={[0, 'content']} style={styles.swmSheet}>
+    <SwmansionSheetAdapter detents={[0, 'content']}>
       <View style={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
@@ -674,11 +674,7 @@ const StackedSwmansionSheet = ({ mode, ref }: StackedProps) => {
   };
 
   return (
-    <SwmansionSheetAdapter
-      ref={ref as any}
-      detents={[0, 'content']}
-      style={styles.swmSheet}
-    >
+    <SwmansionSheetAdapter ref={ref as any} detents={[0, 'content']}>
       <View style={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
