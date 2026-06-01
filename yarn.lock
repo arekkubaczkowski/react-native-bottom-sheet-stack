@@ -12222,7 +12222,7 @@ __metadata:
     zustand: ^5.0.3
   peerDependencies:
     "@gorhom/bottom-sheet": ">=5.0.0"
-    "@swmansion/react-native-bottom-sheet": ">=0.13.0-next.0"
+    "@swmansion/react-native-bottom-sheet": ">=0.13.0-next.1"
     react: "*"
     react-native: "*"
     react-native-actions-sheet: ">=0.9.0"
