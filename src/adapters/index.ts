@@ -15,3 +15,7 @@ export {
   ActionsSheetAdapter,
   type ActionsSheetAdapterProps,
 } from './actions-sheet';
+export {
+  SwmansionSheetAdapter,
+  type SwmansionSheetAdapterProps,
+} from './swmansion';
