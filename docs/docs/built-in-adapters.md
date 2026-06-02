@@ -319,8 +319,8 @@ open(sheet, { backdrop: false });
 // (portal/persistent sheets: useBottomSheetControl(...).open({ backdrop: false }))
 ```
 
-:::warning Don't stack two backdrops
-If a native scrim is set while the manager backdrop is still enabled (the default), you get a double-dark overlay. The adapter logs a dev-mode warning when it detects this — pass `{ backdrop: false }` to `open()` to fix it. Prefer the manager backdrop unless you specifically need the native one.
+:::warning
+A native scrim **and** the manager backdrop together render a double-dark overlay. The adapter logs a dev warning if it detects this — `{ backdrop: false }` is the fix.
 :::
 
 ### Android back button
