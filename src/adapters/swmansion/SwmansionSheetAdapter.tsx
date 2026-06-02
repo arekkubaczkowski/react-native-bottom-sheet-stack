@@ -35,8 +35,8 @@ import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 import { SwmansionKeyboardInset } from './SwmansionKeyboardInset';
 
-// Loaded lazily so the main bundle never requires the native module unless
-// this adapter is actually imported (it ships as an optional peer dependency).
+// Lazy require so the main bundle never loads the native module unless this
+// adapter is imported (it's an optional peer dependency).
 const { BottomSheet, programmatic } =
   require('@swmansion/react-native-bottom-sheet') as typeof import('@swmansion/react-native-bottom-sheet');
 
@@ -70,11 +70,12 @@ export interface SwmansionHandleConfig {
  * - `modal` — the sheet always renders inline inside the manager's `QueueItem`
  *   layer so its z-index participates in the stack and the manager's shared
  *   `BottomSheetBackdrop` provides the scrim.
+ * - `animateIn` — the manager controls the open animation, so this is forced on.
  *
- * Every other native prop (`detents`, `style`, `animateIn`,
- * `disableScrollableNegotiation`) is forwarded. The lifecycle callbacks
- * (`onIndexChange`, `onSettle`, `onPositionChange`) are wrapped by the adapter
- * and your handlers are still invoked afterwards.
+ * Every other native prop (`detents`, `style`, `disableScrollableNegotiation`)
+ * is forwarded. The lifecycle callbacks (`onIndexChange`, `onSettle`,
+ * `onPositionChange`) are wrapped by the adapter and your handlers are still
+ * invoked afterwards.
  *
  * **Backdrop.** By default the manager renders its own shared, stack-aware
  * `BottomSheetBackdrop` and the native scrim is disabled (`scrimColor` defaults
@@ -93,7 +94,7 @@ export interface SwmansionHandleConfig {
  * native sheet.
  */
 export interface SwmansionSheetAdapterProps
-  extends Omit<BottomSheetProps, 'index' | 'modal'> {
+  extends Omit<BottomSheetProps, 'index' | 'modal' | 'animateIn'> {
   /**
    * Index into `detents` the sheet expands to when opened.
    *
@@ -176,18 +177,15 @@ export interface SwmansionSheetAdapterProps
 
 const DEFAULT_DETENTS: Detent[] = [0, 'content'];
 const DEFAULT_SURFACE_RADIUS = 20;
-// Backdrop fade used on the first open, before the open height is known (so the
-// position-coupled fade can't run yet). Matches the modal adapter's timing.
 const BACKDROP_FADE_DURATION = 300;
 const DEFAULT_HANDLE_COLOR = 'rgba(255, 255, 255, 0.25)';
 const DEFAULT_HANDLE_WIDTH = 40;
 const DEFAULT_HANDLE_HEIGHT = 4;
-// Chrome padding around the pill, plus a gap before the content begins.
 const HANDLE_CHROME_TOP = 12;
 const HANDLE_CHROME_BOTTOM = 8;
 const HANDLE_CHROME_GAP = 8;
-// Top inset given to the content for a custom-element handle, whose height the
-// adapter can't measure (matches the default pill's inset: 12 + 4 + 8 + 8).
+// Inset for a custom-element handle, whose height the adapter can't measure
+// (matches the default pill's inset: 12 + 4 + 8 + 8).
 const CUSTOM_HANDLE_CONTENT_INSET = 32;
 
 function resolveDetentValue(detent: Detent): DetentValue {
@@ -198,15 +196,12 @@ function resolveDetentValue(detent: Detent): DetentValue {
 }
 
 /**
- * Target `animatedIndex` for an open/close transition that the position-coupled
- * fade can't drive (open height not yet known): a timing toward the endpoint, or
- * an instant set when the sheet doesn't animate. `0` = open, `-1` = closed.
+ * Backdrop target for an open/close transition: a timing toward the endpoint
+ * (`0` = open, `-1` = closed). Overridden by the position-coupled fade once the
+ * open height is known.
  */
-function resolveBackdropTarget(open: boolean, animate: boolean): number {
-  const target = open ? 0 : -1;
-  return animate
-    ? withTiming(target, { duration: BACKDROP_FADE_DURATION })
-    : target;
+function resolveBackdropTarget(open: boolean): number {
+  return withTiming(open ? 0 : -1, { duration: BACKDROP_FADE_DURATION });
 }
 
 /**
@@ -258,9 +253,8 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * - `close()`  → moves `index` back to `0` (collapsed).
  * - `onSettle` reports completed animations → `handleOpened` / `handleClosed`.
  * - `onIndexChange` (user-driven only) reaching `0` → `handleDismiss`.
- * - `onPositionChange` drives the shared `animatedIndex` for a smooth backdrop
- *   fade once the open height is known; the first open of a content-sized sheet
- *   (height not yet known) fades the backdrop with a timing instead.
+ * - `onPositionChange` drives the shared `animatedIndex` for a position-coupled
+ *   backdrop fade once the open height is known; until then the fade is a timing.
  *
  * It also layers opt-in conveniences over the native sheet — a grab handle,
  * full-height/fill-content sizing, and keyboard avoidance — each off by default
@@ -280,11 +274,8 @@ export const SwmansionSheetAdapter = React.forwardRef<
       children,
       detents: detentsProp,
       expandedIndex,
-      animateIn = true,
-      // The manager renders its own shared `BottomSheetBackdrop`; the sheet's
-      // native scrim would double up with it, so it is disabled by default.
-      // Consumers can still opt into the native scrim by passing these (see the
-      // backdrop note on `SwmansionSheetAdapterProps`).
+      // Disabled by default so the sheet's native scrim doesn't double up with
+      // the manager backdrop; consumers can opt in (see the props' Backdrop note).
       scrimColor = 'transparent',
       scrimOpacities,
       onIndexChange,
@@ -308,10 +299,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const { height: windowHeight } = useWindowDimensions();
     const insets = useSafeAreaInsets();
 
-    // Opting into the native scrim means this sheet owns its backdrop, so
-    // suppress the manager's shared one — otherwise the two stack into a
-    // double-dark overlay. The manager backdrop starts at opacity 0 behind a
-    // short init delay, so toggling it off here is invisible (no flash).
+    // A native scrim means this sheet owns its backdrop — suppress the manager's
+    // shared one so the two don't stack. The manager backdrop starts invisible
+    // behind a short init delay, so toggling it off here causes no flash.
     const usesNativeScrim =
       scrimColor !== 'transparent' || scrimOpacities !== undefined;
     useEffect(() => {
@@ -320,8 +310,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
       return () => setBackdrop(id, true);
     }, [id, usesNativeScrim, setBackdrop]);
 
-    // Explicit `detents` always win; otherwise `fullHeight` derives a numeric
-    // open detent, falling back to the content-sized default.
     const detents =
       detentsProp ??
       (fullHeight ? [0, windowHeight - insets.top] : DEFAULT_DETENTS);
@@ -329,20 +317,14 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const openIndex = expandedIndex ?? Math.max(0, detents.length - 1);
     const expandedDetentValue = resolveDetentValue(detents[openIndex] ?? 0);
 
-    // Hide the grab handle when dismissal is blocked — the sheet can't be
-    // swiped down, so a handle would mislead.
     const handleResult =
       handle && !preventDismiss ? renderHandle(handle) : null;
 
-    // A fixed-height sheet lets the content flex to fill it, so scrollables bind
-    // and footers pin to the bottom. Content-detent sheets stay natural so they
-    // size to their content. The heuristic is overridable via `fillContent`.
     const isContentSized = expandedDetentValue === 'content';
     const shouldFill = fillContent ?? !isContentSized;
 
-    // The default surface owns its radius; a custom surface owns its own, so we
-    // only clip content to a known radius (default, or one the consumer states
-    // via `cornerRadius`).
+    // Only clip content to a radius we actually know: the default surface's, or
+    // one the consumer states for a custom surface via `cornerRadius`.
     const usingDefaultSurface = surface === undefined || surface === null;
     const surfaceRadius =
       cornerRadius ?? (usingDefaultSurface ? DEFAULT_SURFACE_RADIUS : 0);
@@ -359,8 +341,8 @@ export const SwmansionSheetAdapter = React.forwardRef<
         ]}
       />
     );
-    // Layer the grab handle over the (possibly user-provided) surface so the
-    // surface stays fully customizable while the adapter owns the handle.
+    // Layer the handle over the (possibly user-provided) surface so the surface
+    // stays customizable while the adapter owns the handle.
     const composedSurface = handleResult ? (
       <View style={StyleSheet.absoluteFill}>
         {baseSurface}
@@ -373,17 +355,11 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
-    // Android hardware back dismisses the top, fully-open sheet — the same
-    // contract the other adapters honor.
     useBackHandler(id, handleDismiss);
 
-    // Mount directly at the index the manager wants instead of mounting
-    // collapsed and waiting for the coordinator to call expand(). Open sheets
-    // (defaultIndex >= 0) mount at `openIndex` so the native animates straight in
-    // to the open detent — there is no post-mount expand() round-trip to race
-    // against (which previously caused intermittent no-op opens and, once the
-    // spurious-close was suppressed, a stuck `opening` status). Persistent/hidden
-    // sheets (defaultIndex < 0) mount collapsed and are expanded on demand.
+    // Open sheets mount straight at `openIndex` (and animate in) rather than
+    // mounting collapsed and waiting for expand() — that round-trip caused
+    // intermittent no-op opens. Persistent/hidden sheets mount collapsed.
     const defaultIndex = useBottomSheetDefaultIndex();
     const [index, setIndex] = useState(() =>
       defaultIndex < 0 ? 0 : openIndex
@@ -397,10 +373,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
       );
     }
 
-    // Open height, used to turn the native position (points from the bottom)
-    // into a 0→1 backdrop-fade progress. Known up front for a numeric expanded
-    // detent; for a `'content'` detent it's unknown until the sheet first opens,
-    // so it's learned from the position at the first open settle.
+    // Open height (points from the bottom), used to map the native position to a
+    // 0→1 backdrop fade. Known for a numeric detent; for `'content'` it's learned
+    // from the position at the first open settle.
     const openHeightRef = useRef<number | null>(
       typeof expandedDetentValue === 'number' && expandedDetentValue > 0
         ? expandedDetentValue
@@ -408,71 +383,50 @@ export const SwmansionSheetAdapter = React.forwardRef<
     );
     const lastPositionRef = useRef(0);
 
-    // The native sheet animates in to its mounted index (0 = collapsed) and
-    // emits a settle at that detent before the coordinator drives expand(). That
-    // initial settle must NOT be reported as a close, otherwise the sheet is
-    // finished/removed before it ever opens — racing expand() and making opens
-    // (especially stacked pushes) intermittently no-op.
+    // The initial animate-in emits a collapsed-detent settle before the sheet has
+    // ever opened; that one must not be reported as a close (it would dismiss the
+    // sheet prematurely and race the open).
     const hasOpenedRef = useRef(false);
 
     useImperativeHandle(
       ref,
       () => ({
+        // An index change always animates, so fade the backdrop toward the
+        // target; `onPositionChange` overrides this once the height is known.
         expand: () => {
-          // Position-coupling needs the open height; until it's known the
-          // backdrop is driven by a timing (instant when not animating).
-          if (typeof openHeightRef.current !== 'number') {
-            animatedIndex.set(resolveBackdropTarget(true, animateIn));
-          }
+          animatedIndex.set(resolveBackdropTarget(true));
           setIndex(openIndex);
         },
         close: () => {
-          if (typeof openHeightRef.current !== 'number') {
-            animatedIndex.set(resolveBackdropTarget(false, animateIn));
-          }
+          animatedIndex.set(resolveBackdropTarget(false));
           setIndex(0);
         },
       }),
-      [animateIn, animatedIndex, openIndex]
+      [animatedIndex, openIndex]
     );
 
-    // Inline/portal sheets mount already at the open index and animate in via
-    // the native `animateIn` — there's no `expand()` call to kick the fade. When
-    // such a sheet mounts open with an unknown height, drive the backdrop here
-    // the same way. Numeric detents are seeded, so they keep the position-coupled
-    // fade and skip this. Runs once on mount.
+    // Sheets that mount already open have no expand() call, so seed the fade
+    // here. Overridden by `onPositionChange` once the height is known.
     useEffect(() => {
-      if (defaultIndex >= 0 && typeof openHeightRef.current !== 'number') {
-        animatedIndex.set(resolveBackdropTarget(true, animateIn));
+      if (defaultIndex >= 0) {
+        animatedIndex.set(resolveBackdropTarget(true));
       }
-    }, [animateIn, animatedIndex, defaultIndex]);
+    }, [animatedIndex, defaultIndex]);
 
     const handleNativeSettle = (settledIndex: number) => {
-      // When the height is known the position-coupled fade already reached the
-      // endpoint, so settling just confirms it. When a timed fade owns the
-      // transition (height unknown + animating), DON'T snap — it would cut the
-      // timing short. A non-animated sheet has no fade to protect, so snap.
-      const confirmEndpoint =
-        typeof openHeightRef.current === 'number' || !animateIn;
+      // Don't touch `animatedIndex` here: the fade (timing or position-coupled)
+      // already reaches the endpoint, and snapping would cut it short.
       if (settledIndex <= 0) {
-        if (confirmEndpoint) {
-          animatedIndex.set(-1);
-        }
-        // Ignore the collapsed-detent settle that fires during the initial
-        // animate-in (before the sheet has ever opened). A real close only
-        // happens after an open, so reporting it here would dismiss the sheet
-        // prematurely and race expand().
         if (hasOpenedRef.current) {
           handleClosed();
         }
       } else {
         hasOpenedRef.current = true;
-        if (confirmEndpoint) {
-          animatedIndex.set(0);
-        } else if (lastPositionRef.current > 0) {
-          // First animated open of a content-sized sheet: learn the open height
-          // so the next move (drag-to-dismiss, reopen) is position-coupled. The
-          // timed fade kicked on open owns this animation — don't snap.
+        // Learn the open height so the next move (drag, reopen) is position-coupled.
+        if (
+          typeof openHeightRef.current !== 'number' &&
+          lastPositionRef.current > 0
+        ) {
           openHeightRef.current = lastPositionRef.current;
         }
         handleOpened();
@@ -481,15 +435,12 @@ export const SwmansionSheetAdapter = React.forwardRef<
     };
 
     const handleNativeIndexChange = (nextIndex: number) => {
-      // onIndexChange fires only for user-driven snaps. Reaching the collapsed
-      // detent means the user swiped the sheet down to dismiss it.
+      // onIndexChange fires only for user-driven snaps; reaching `0` means a
+      // swipe-down dismiss.
       if (nextIndex <= 0) {
         if (preventDismiss) {
-          // Re-snap up: dismissal is blocked for this sheet.
           setIndex(openIndex);
         } else {
-          // Keep the controlled index in sync with the native position so a
-          // later expand() is a real 0 → openIndex transition.
           setIndex(0);
           handleDismiss();
         }
@@ -501,35 +452,25 @@ export const SwmansionSheetAdapter = React.forwardRef<
       lastPositionRef.current = position;
       const target = openHeightRef.current;
       if (target && target > 0) {
-        // animatedIndex range: -1 (closed) → 0 (open).
         const ratio = Math.max(0, Math.min(position / target, 1));
         animatedIndex.set(ratio - 1);
       }
-      // While the open height is unknown (first open of a `'content'` sheet), the
-      // backdrop is driven by the timing kicked in `expand()`/`close()` instead.
       onPositionChange?.(position);
     };
 
-    // When dismissal is blocked, mark the collapsed detent (index 0) as
-    // programmatic so the native sheet cannot be dragged down to it. This is the
-    // native equivalent of "prevent pan-to-close" — `close()` still collapses it
-    // via the controlled `index`. The JS re-snap in `handleNativeIndexChange`
-    // alone cannot block the native gesture.
+    // When dismissal is blocked, make the collapsed detent programmatic so the
+    // native sheet can't be dragged down to it — `close()` still collapses it via
+    // the controlled `index`. The JS re-snap above can't block the native gesture.
     const resolvedDetents = preventDismiss
       ? detents.map((detent, detentIndex) =>
           detentIndex === 0 ? programmatic(resolveDetentValue(detent)) : detent
         )
       : detents;
 
-    // Wrap the content only when a convenience needs it, so raw sheets pass
-    // their children straight through with no extra view in the tree.
     const fillStyle = shouldFill ? stylesheet.fill : null;
     const handleInsetStyle = handleResult
       ? { paddingTop: handleResult.contentInset }
       : null;
-    // Clip content to the surface's rounded top so opaque content can't square
-    // off the corners. The content layer sits on top of the surface and isn't
-    // otherwise bounded by its radius.
     const clipStyle: ViewStyle | null =
       surfaceRadius > 0
         ? {
@@ -559,14 +500,12 @@ export const SwmansionSheetAdapter = React.forwardRef<
       <BottomSheet
         {...props}
         detents={resolvedDetents}
-        animateIn={animateIn}
-        // Off by default (manager owns the backdrop); overridable to opt into
-        // the native scrim.
         scrimColor={scrimColor}
         scrimOpacities={scrimOpacities}
-        // Managed by adapter (not overridable):
+        // Managed by the adapter (not overridable):
         index={index}
         modal={false}
+        animateIn
         onIndexChange={handleNativeIndexChange}
         onSettle={handleNativeSettle}
         onPositionChange={handleNativePositionChange}
