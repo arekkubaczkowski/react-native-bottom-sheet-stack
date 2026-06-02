@@ -239,19 +239,52 @@ Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https:
 
 Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent` / `DetentValue` types are re-exported from the subpath for convenience.
 
-### Android back button
+### Convenience props
 
-This adapter does **not** register a back-button handler. Wire it yourself with the exported `useBackHandler` hook when you need hardware-back dismissal:
+The native sheet is intentionally minimal. The adapter layers a few **opt-in** conveniences on top of it — each defaults to off, so a bare `<SwmansionSheetAdapter>` behaves exactly like the raw native sheet. They are additive: nothing here changes the controlled `detents`/`index` model, and you can still drive everything by hand.
+
+| Prop | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle as a chrome layer over the `surface` and insets the content to clear it. Pass `true` for the default pill, an object to restyle it, or a React element for full control. Auto-hidden when dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. |
+| `fullHeight` | `boolean` | `false` | Expands the sheet to the full available height (`windowHeight − topInset`). Ignored when explicit `detents` are passed. |
+| `fillContent` | `boolean` | _auto_ | Whether the content wrapper flexes to fill the sheet (`flex: 1`). Defaults to `true` for fixed-height sheets (numeric detents or `fullHeight`) so scrollables bind and footers pin to the bottom, and `false` for content-sized sheets. Pass a boolean to override. |
+| `keyboardBehavior` | `'none' \| 'inset'` | `'none'` | Keyboard avoidance. `'inset'` grows a content-sized sheet by the keyboard height so it lifts clear of the keyboard (native-iOS behavior). No-op for fixed-height sheets — those should rely on their own scrollable. |
 
 ```tsx
-import { useBackHandler, useBottomSheetContext } from 'react-native-bottom-sheet-stack';
+// Grab handle + full height + a flex:1 scrollable that binds to the sheet.
+<SwmansionSheetAdapter handle fullHeight>
+  <ScrollView>{/* ... */}</ScrollView>
+</SwmansionSheetAdapter>
 
-function MySheet() {
-  const { id, close } = useBottomSheetContext();
-  useBackHandler(id, close);
-  // ...
-}
+// Restyle the default pill.
+<SwmansionSheetAdapter handle={{ color: '#999', width: 56, height: 5 }}>
+  {/* ... */}
+</SwmansionSheetAdapter>
+
+// Or render your own handle for full control.
+<SwmansionSheetAdapter handle={<MyCustomGrabber />}>
+  {/* ... */}
+</SwmansionSheetAdapter>
+
+// Content-sized sheet with a text input that should stay above the keyboard.
+<SwmansionSheetAdapter detents={[0, 'content']} keyboardBehavior="inset">
+  <View style={{ padding: 20 }}>
+    <TextInput placeholder="Type…" />
+  </View>
+</SwmansionSheetAdapter>
 ```
+
+:::info `keyboardBehavior="inset"` needs an optional peer
+This is the only convenience with an extra dependency: it reads the keyboard height from [`react-native-keyboard-controller`](https://kirillzyusko.github.io/react-native-keyboard-controller/), declared as an **optional** peer. If the package isn't installed, the sheet renders without keyboard avoidance and logs a one-time dev warning — it never crashes. Install it only if you use `keyboardBehavior="inset"`:
+
+```bash
+npm install react-native-keyboard-controller
+```
+:::
+
+### Android back button
+
+This adapter registers a hardware-back handler automatically (via the internal `useBackHandler`): pressing Android back dismisses the top, fully-open sheet — the same contract the other adapters honor. You don't need to wire anything up yourself.
 
 ### When to Use
 

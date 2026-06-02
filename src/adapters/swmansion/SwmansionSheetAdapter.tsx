@@ -1,5 +1,13 @@
-import React, { useImperativeHandle, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, {
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type {
   BottomSheetProps,
@@ -15,6 +23,7 @@ import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
+import { SwmansionKeyboardInset } from './SwmansionKeyboardInset';
 
 // Loaded lazily so the main bundle never requires the native module unless
 // this adapter is actually imported (it ships as an optional peer dependency).
@@ -23,6 +32,21 @@ const { BottomSheet, programmatic } =
 
 export { programmatic } from '@swmansion/react-native-bottom-sheet';
 export type { Detent, DetentValue };
+
+/**
+ * Style overrides for the adapter-rendered grab handle (the default pill).
+ *
+ * For total control over the rendering, pass a custom React element to the
+ * `handle` prop instead of this config.
+ */
+export interface SwmansionHandleConfig {
+  /** Color of the grab-handle pill. Defaults to a translucent light gray. */
+  color?: string;
+  /** Width of the pill in px. Defaults to `40`. */
+  width?: number;
+  /** Height (thickness) of the pill in px. Defaults to `4`. */
+  height?: number;
+}
 
 /**
  * Props for {@link SwmansionSheetAdapter}.
@@ -37,10 +61,15 @@ export type { Detent, DetentValue };
  *   layer so its z-index participates in the stack and the manager's shared
  *   `BottomSheetBackdrop` provides the scrim.
  *
- * Every other prop (`detents`, `style`, `animateIn`,
+ * Every other native prop (`detents`, `style`, `animateIn`,
  * `disableScrollableNegotiation`) is forwarded. The lifecycle callbacks
  * (`onIndexChange`, `onSettle`, `onPositionChange`) are wrapped by the adapter
  * and your handlers are still invoked afterwards.
+ *
+ * On top of the native surface the adapter layers a set of **opt-in
+ * conveniences** ({@link handle}, {@link fullHeight}, {@link fillContent},
+ * {@link keyboardBehavior}). Each defaults to off, so a bare
+ * `<SwmansionSheetAdapter>` behaves exactly like the raw native sheet.
  */
 export interface SwmansionSheetAdapterProps
   extends Omit<BottomSheetProps, 'index' | 'modal'> {
@@ -52,15 +81,107 @@ export interface SwmansionSheetAdapterProps
    * `[0, 'content']` and is what the manager snaps back to when closing.
    */
   expandedIndex?: number;
+  /**
+   * Renders a grab handle as a chrome layer on top of the `surface`, and insets
+   * the content so it clears the handle. Accepts:
+   *
+   * - `true` — the default pill.
+   * - `{ color, width, height }` — the default pill with style overrides.
+   * - a React element — rendered as-is at the top of the surface (full control);
+   *   the content is given a default top inset, override it with your own
+   *   padding if your handle is taller.
+   *
+   * Automatically hidden when dismissal is blocked (`useOnBeforeClose`) — a
+   * non-draggable sheet showing a grab handle would mislead. Defaults to off
+   * (no handle), so raw usage is unaffected.
+   */
+  handle?: boolean | SwmansionHandleConfig | ReactElement;
+  /**
+   * Expands the sheet to the full available height (window height minus the top
+   * safe-area inset). A convenience for sheets that host a `flex: 1` scrollable
+   * whose content can't size the sheet on its own.
+   *
+   * Ignored when explicit `detents` are passed — those win. Defaults to off.
+   */
+  fullHeight?: boolean;
+  /**
+   * Whether the content wrapper should flex to fill the sheet (`flex: 1`).
+   *
+   * Defaults to `true` for fixed-height sheets (explicit numeric `detents` or
+   * {@link fullHeight}) so scrollables bind and footers pin to the bottom, and
+   * `false` for content-sized sheets (`'content'` detent) so they keep sizing
+   * to their content. Pass an explicit boolean to override the heuristic.
+   */
+  fillContent?: boolean;
+  /**
+   * Keyboard avoidance strategy. The native sheet has none of its own.
+   *
+   * - `'none'` (default) — no avoidance; raw behavior.
+   * - `'inset'` — for content-sized sheets, grows the content by the keyboard
+   *   height so it lifts clear of the keyboard (native-iOS behavior). No-op for
+   *   fixed-height sheets, which should rely on their own scrollable.
+   *
+   * `'inset'` requires the optional peer `react-native-keyboard-controller`; if
+   * it isn't installed the sheet renders without avoidance (a one-time dev
+   * warning is logged).
+   */
+  keyboardBehavior?: 'none' | 'inset';
 }
 
 const DEFAULT_DETENTS: Detent[] = [0, 'content'];
+const DEFAULT_HANDLE_COLOR = 'rgba(255, 255, 255, 0.25)';
+const DEFAULT_HANDLE_WIDTH = 40;
+const DEFAULT_HANDLE_HEIGHT = 4;
+// Chrome padding around the pill, plus a gap before the content begins.
+const HANDLE_CHROME_TOP = 12;
+const HANDLE_CHROME_BOTTOM = 8;
+const HANDLE_CHROME_GAP = 8;
+// Top inset given to the content for a custom-element handle, whose height the
+// adapter can't measure (matches the default pill's inset: 12 + 4 + 8 + 8).
+const CUSTOM_HANDLE_CONTENT_INSET = 32;
 
 function resolveDetentValue(detent: Detent): DetentValue {
   if (typeof detent === 'object' && detent !== null) {
     return detent.value;
   }
   return detent;
+}
+
+/**
+ * Builds the grab-handle overlay (rendered over the surface) and the top inset
+ * the content needs to clear it. `handle` is already known to be truthy.
+ */
+function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
+  overlay: ReactNode;
+  contentInset: number;
+} {
+  if (isValidElement(handle)) {
+    return {
+      overlay: <View style={stylesheet.customHandleContainer}>{handle}</View>,
+      contentInset: CUSTOM_HANDLE_CONTENT_INSET,
+    };
+  }
+
+  const config: SwmansionHandleConfig =
+    typeof handle === 'object' ? handle : {};
+  const width = config.width ?? DEFAULT_HANDLE_WIDTH;
+  const height = config.height ?? DEFAULT_HANDLE_HEIGHT;
+  const color = config.color ?? DEFAULT_HANDLE_COLOR;
+
+  return {
+    overlay: (
+      <View pointerEvents="none" style={stylesheet.handleContainer}>
+        <View
+          style={[
+            stylesheet.handleIndicator,
+            { width, height, backgroundColor: color },
+          ]}
+        />
+      </View>
+    ),
+    contentInset:
+      HANDLE_CHROME_TOP + height + HANDLE_CHROME_BOTTOM + HANDLE_CHROME_GAP,
+  };
 }
 
 /**
@@ -78,6 +199,10 @@ function resolveDetentValue(detent: Detent): DetentValue {
  * - `onPositionChange` drives the shared `animatedIndex` for a smooth backdrop
  *   fade, falling back to a binary value until the open height is known.
  *
+ * It also layers opt-in conveniences over the native sheet — a grab handle,
+ * full-height/fill-content sizing, and keyboard avoidance — each off by default
+ * so raw usage is unchanged. See {@link SwmansionSheetAdapterProps}.
+ *
  * Requires the New Architecture and the peer dependencies:
  * ```bash
  * npm install @swmansion/react-native-bottom-sheet react-native-safe-area-context
@@ -90,7 +215,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
   (
     {
       children,
-      detents = DEFAULT_DETENTS,
+      detents: detentsProp,
       expandedIndex,
       animateIn = true,
       // The manager renders its own shared `BottomSheetBackdrop`; the sheet's
@@ -101,6 +226,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
       onSettle,
       onPositionChange,
       surface,
+      handle,
+      fullHeight,
+      fillContent,
+      keyboardBehavior = 'none',
       ...props
     },
     forwardedRef
@@ -109,9 +238,39 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const ref = useAdapterRef(forwardedRef);
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
+    const { height: windowHeight } = useWindowDimensions();
+    const insets = useSafeAreaInsets();
 
-    const surfaceWithDefaults = surface ?? (
+    // Explicit `detents` always win; otherwise `fullHeight` derives a numeric
+    // open detent, falling back to the content-sized default.
+    const detents =
+      detentsProp ??
+      (fullHeight ? [0, windowHeight - insets.top] : DEFAULT_DETENTS);
+
+    const openIndex = expandedIndex ?? Math.max(0, detents.length - 1);
+    const expandedDetentValue = resolveDetentValue(detents[openIndex] ?? 0);
+
+    // Hide the grab handle when dismissal is blocked — the sheet can't be
+    // swiped down, so a handle would mislead.
+    const handleResult =
+      handle && !preventDismiss ? renderHandle(handle) : null;
+
+    // A fixed-height sheet lets the content flex to fill it, so scrollables bind
+    // and footers pin to the bottom. Content-detent sheets stay natural so they
+    // size to their content. The heuristic is overridable via `fillContent`.
+    const isContentSized = expandedDetentValue === 'content';
+    const shouldFill = fillContent ?? !isContentSized;
+
+    const baseSurface = surface ?? (
       <View style={[StyleSheet.absoluteFill, stylesheet.surface]} />
+    );
+    const surfaceWithDefaults = handleResult ? (
+      <View style={StyleSheet.absoluteFill}>
+        {baseSurface}
+        {handleResult.overlay}
+      </View>
+    ) : (
+      baseSurface
     );
 
     const { handleDismiss, handleOpened, handleClosed } =
@@ -120,8 +279,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // Android hardware back dismisses the top, fully-open sheet — the same
     // contract the other adapters honor.
     useBackHandler(id, handleDismiss);
-
-    const openIndex = expandedIndex ?? Math.max(0, detents.length - 1);
 
     // Mount directly at the index the manager wants instead of mounting
     // collapsed and waiting for the coordinator to call expand(). Open sheets
@@ -145,7 +302,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     // Open height, captured for a continuous backdrop fade. Seeded from a
     // numeric expanded detent when possible; otherwise learned on first settle.
-    const expandedDetentValue = resolveDetentValue(detents[openIndex] ?? 0);
     const openPositionRef = useRef<number | null>(
       typeof expandedDetentValue === 'number' && expandedDetentValue > 0
         ? expandedDetentValue
@@ -229,6 +385,25 @@ export const SwmansionSheetAdapter = React.forwardRef<
         )
       : detents;
 
+    // Wrap the content only when a convenience needs it, so raw sheets pass
+    // their children straight through with no extra view in the tree.
+    const fillStyle = shouldFill ? stylesheet.fill : null;
+    const handleInsetStyle = handleResult
+      ? { paddingTop: handleResult.contentInset }
+      : null;
+    const needsKeyboardInset = keyboardBehavior === 'inset' && !shouldFill;
+
+    let content = children;
+    if (needsKeyboardInset) {
+      content = (
+        <SwmansionKeyboardInset style={[fillStyle, handleInsetStyle]}>
+          {children}
+        </SwmansionKeyboardInset>
+      );
+    } else if (fillStyle || handleInsetStyle) {
+      content = <View style={[fillStyle, handleInsetStyle]}>{children}</View>;
+    }
+
     return (
       <BottomSheet
         {...props}
@@ -243,7 +418,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
         onPositionChange={handleNativePositionChange}
         surface={surfaceWithDefaults}
       >
-        {children}
+        {content}
       </BottomSheet>
     );
   }
@@ -256,5 +431,26 @@ const stylesheet = StyleSheet.create({
     backgroundColor: '#151521',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+  },
+  handleContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingTop: HANDLE_CHROME_TOP,
+    paddingBottom: HANDLE_CHROME_BOTTOM,
+  },
+  customHandleContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  handleIndicator: {
+    borderRadius: 999,
+  },
+  fill: {
+    flex: 1,
   },
 });

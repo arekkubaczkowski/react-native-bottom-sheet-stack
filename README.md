@@ -105,9 +105,11 @@ function YourAppContent() {
 | `CustomModalAdapter` | `react-native-bottom-sheet-stack` | Custom animated modal | None |
 | `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | `react-native-modal` |
 | `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | `react-native-actions-sheet` |
-| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | `@swmansion/react-native-bottom-sheet` (Fabric / New Architecture) |
+| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | `@swmansion/react-native-bottom-sheet` (Fabric / New Architecture); `react-native-keyboard-controller` (optional, only for `keyboardBehavior="inset"`) |
 
 Adapters with 3rd-party dependencies are shipped as separate subpath exports so that importing the main package never triggers Metro resolution errors for uninstalled libraries. Each sheet in the stack can use a different adapter.
+
+`SwmansionSheetAdapter` also adds a few opt-in conveniences over the bare native sheet (`handle`, `fullHeight`, `fillContent`, `keyboardBehavior`) — see [Shipped Adapters](https://github.com/arekkubaczkowski/react-native-bottom-sheet-stack/blob/main/docs/docs/built-in-adapters.md#convenience-props).
 
 ## License
 
