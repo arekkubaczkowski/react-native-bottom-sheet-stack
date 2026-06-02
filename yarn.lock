@@ -12227,6 +12227,7 @@ __metadata:
     react-native: "*"
     react-native-actions-sheet: ">=0.9.0"
     react-native-gesture-handler: ">=2.0.0"
+    react-native-keyboard-controller: ">=1.12.0"
     react-native-modal: ">=11.0.0"
     react-native-reanimated: ">=3.0.0"
     react-native-safe-area-context: ">=5.0.0"
@@ -12241,6 +12242,8 @@ __metadata:
     react-native-actions-sheet:
       optional: true
     react-native-gesture-handler:
+      optional: true
+    react-native-keyboard-controller:
       optional: true
     react-native-modal:
       optional: true
