@@ -82,6 +82,9 @@ export const useClearGroup = () =>
 export const useSetPreventDismiss = () =>
   useBottomSheetStore((state) => state.setPreventDismiss);
 
+export const useSetBackdrop = () =>
+  useBottomSheetStore((state) => state.setBackdrop);
+
 export const useMount = () => useBottomSheetStore((state) => state.mount);
 
 export const useUnmount = () => useBottomSheetStore((state) => state.unmount);

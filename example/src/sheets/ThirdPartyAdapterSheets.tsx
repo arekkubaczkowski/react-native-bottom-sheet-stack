@@ -393,7 +393,7 @@ export function SwmansionSheetDemoContent() {
   };
 
   return (
-    <SwmansionSheetAdapter detents={[0, 'content']}>
+    <SwmansionSheetAdapter detents={[0, 'content']} handle>
       <View style={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
@@ -674,7 +674,7 @@ const StackedSwmansionSheet = ({ mode, ref }: StackedProps) => {
   };
 
   return (
-    <SwmansionSheetAdapter ref={ref as any} detents={[0, 'content']}>
+    <SwmansionSheetAdapter ref={ref as any} detents={[0, 'content']} handle>
       <View style={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
   },
   swmSheetContent: {
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 48,
   },
   badgeRow: {

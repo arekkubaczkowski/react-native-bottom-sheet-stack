@@ -69,6 +69,7 @@ open(<MySheet />, {
 | `groupId` | `string` | context or `'default'` | Group ID for the sheet |
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
+| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when you give them their own native backdrop/scrim (e.g. `SwmansionSheetAdapter`'s `scrimColor`, a custom gorhom `backdropComponent`), so you rarely set it by hand. |
 
 ### Deprecated Aliases
 
@@ -111,6 +112,7 @@ console.log(params.userId); // type-safe: string
 |----------|------|-------------|
 | `id` | `string` | Current sheet's ID |
 | `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided |
+| `preventDismiss` | `boolean` | Whether dismissal is currently blocked for this sheet (set via `useOnBeforeClose`). Useful for UI that should reflect it — e.g. hiding a grab handle. |
 | `close` | `() => void` | Closes this sheet (respects `useOnBeforeClose`) |
 | `forceClose` | `() => void` | Closes this sheet immediately, bypassing any `useOnBeforeClose` interceptor |
 
@@ -170,6 +172,7 @@ open({
 |--------|------|---------|-------------|
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
+| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when given their own native backdrop/scrim, so you rarely set it by hand. |
 | `params` | `BottomSheetPortalParams<T>` | - | Type-safe params |
 
 ---

@@ -44,6 +44,20 @@ const MySheet = forwardRef((props, ref) => {
 
 Accepts all props from [`@gorhom/bottom-sheet`](https://gorhom.dev/react-native-bottom-sheet/props). The adapter overrides `enablePanDownToClose` to `true` by default.
 
+### Backdrop
+
+By default this adapter renders gorhom's `backdropComponent` as `null` so the **stack manager's shared backdrop** (`BottomSheetBackdrop`) is used instead. This is recommended — the manager's backdrop is **stack-aware** (correct opacity across stacked sheets, z-index, scale coordination, cascading tap-to-dismiss), which a per-sheet gorhom backdrop is not.
+
+You **can** override it by passing your own `backdropComponent`, but it's **not recommended** unless you specifically need gorhom's backdrop behavior. When you do, the adapter **automatically disables the manager backdrop** for that sheet so the two never stack:
+
+```tsx
+import { BottomSheetBackdrop as GorhomBackdrop } from '@gorhom/bottom-sheet';
+
+<GorhomSheetAdapter snapPoints={['50%']} backdropComponent={GorhomBackdrop}>
+  {/* ... */}
+</GorhomSheetAdapter>;
+```
+
 ### When to Use
 
 - You need snap points, scrollable content, keyboard handling
@@ -237,21 +251,68 @@ Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https:
 - `index` — the adapter is the source of truth. Use `expandedIndex` (a prop added by the adapter, defaults to the last detent) to choose which detent the sheet opens to.
 - `modal` — the sheet always renders inline so it participates in the manager's z-index stack and shares the manager's `BottomSheetBackdrop`.
 
-Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent` / `DetentValue` types are re-exported from the subpath for convenience.
+Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent`, `DetentValue`, `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types are exported from the subpath for convenience.
+
+### Convenience props
+
+The native sheet is intentionally minimal. The adapter layers a few **opt-in** conveniences on top of it — each defaults to off, so a bare `<SwmansionSheetAdapter>` behaves exactly like the raw native sheet. They are additive: nothing here changes the controlled `detents`/`index` model, and you can still drive everything by hand.
+
+| Prop | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle as a chrome layer over the `surface` and insets the content to clear it. Pass `true` for the default pill, an object to restyle it, or a React element for full control. Auto-hidden when dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. |
+| `fullHeight` | `boolean` | `false` | Expands the sheet to the full available height (`windowHeight − topInset`). swmansion detents are only `number` / `'content'`, so there's no built-in full-height value — this computes the pixel height for you, safe-area- and rotation-aware, with no `useWindowDimensions` / `useSafeAreaInsets` boilerplate. Ignored when explicit `detents` are passed. |
+| `fillContent` | `boolean` | _auto_ | Stretches the content to fill the sheet (`flex: 1`), so a `flex: 1` scrollable expands and a bottom footer pins to the bottom instead of floating up under the content. Auto and rarely set by hand: `true` for fixed-height sheets (numeric detents or `fullHeight`), `false` for content-sized ones (which must size to their content). Pass a boolean to override. |
+| `keyboardBehavior` | `'none' \| 'inset'` | `'none'` | Keyboard avoidance — the native sheet has none, so an input near the bottom would sit under the keyboard. `'inset'` keeps a content-sized sheet's inputs visible: it pads the content by the keyboard height, and because the sheet is bottom-anchored and sizes to its content it re-measures taller and lifts the content clear of the keyboard (native-iOS behavior). No-op for fixed-height sheets (numeric detents / `fullHeight`) — they can't grow, so put a scrollable inside instead. Reads the keyboard height from `react-native-keyboard-controller` (see below). |
+
+```tsx
+// Grab handle + full height + a flex:1 scrollable that binds to the sheet.
+<SwmansionSheetAdapter handle fullHeight>
+  <ScrollView>{/* ... */}</ScrollView>
+</SwmansionSheetAdapter>
+
+// Restyle the default pill.
+<SwmansionSheetAdapter handle={{ color: '#999', width: 56, height: 5 }}>
+  {/* ... */}
+</SwmansionSheetAdapter>
+
+// Or render your own handle for full control.
+<SwmansionSheetAdapter handle={<MyCustomGrabber />}>
+  {/* ... */}
+</SwmansionSheetAdapter>
+
+// Content-sized sheet with a text input that should stay above the keyboard.
+<SwmansionSheetAdapter detents={[0, 'content']} keyboardBehavior="inset">
+  <View style={{ padding: 20 }}>
+    <TextInput placeholder="Type…" />
+  </View>
+</SwmansionSheetAdapter>
+```
+
+:::info `keyboardBehavior="inset"` needs an optional peer
+This is the only convenience with an extra dependency: it reads the keyboard height from [`react-native-keyboard-controller`](https://kirillzyusko.github.io/react-native-keyboard-controller/), declared as an **optional** peer. If the package isn't installed, the sheet renders without keyboard avoidance and logs a one-time dev warning — it never crashes. Install it only if you use `keyboardBehavior="inset"`:
+
+```bash
+npm install react-native-keyboard-controller
+```
+:::
+
+### Backdrop
+
+By default the sheet uses the **stack manager's shared backdrop** (`BottomSheetBackdrop`) and the native scrim is disabled (`scrimColor` defaults to `'transparent'`). This is almost always what you want — the manager's backdrop is **stack-aware**: it interpolates opacity correctly across stacked sheets, sits at the right z-index, coordinates with the background scale animation, and participates in cascading tap-to-dismiss.
+
+You **can** opt into the native swmansion scrim by passing `scrimColor` / `scrimOpacities`, but it's **not recommended** — a per-sheet native scrim knows nothing about the rest of the stack. Reach for it only when you genuinely need the native one (e.g. a specific native blur/scrim behavior):
+
+```tsx
+<SwmansionSheetAdapter scrimColor="rgba(0,0,0,0.5)">
+  {/* ... */}
+</SwmansionSheetAdapter>
+```
+
+When you pass a scrim, the adapter **automatically disables the manager backdrop** for that sheet — so the two never stack into a double-dark overlay and you don't need to do anything else.
 
 ### Android back button
 
-This adapter does **not** register a back-button handler. Wire it yourself with the exported `useBackHandler` hook when you need hardware-back dismissal:
-
-```tsx
-import { useBackHandler, useBottomSheetContext } from 'react-native-bottom-sheet-stack';
-
-function MySheet() {
-  const { id, close } = useBottomSheetContext();
-  useBackHandler(id, close);
-  // ...
-}
-```
+This adapter registers a hardware-back handler automatically (via the internal `useBackHandler`): pressing Android back dismisses the top, fully-open sheet — the same contract the other adapters honor. You don't need to wire anything up yourself.
 
 ### When to Use
 
