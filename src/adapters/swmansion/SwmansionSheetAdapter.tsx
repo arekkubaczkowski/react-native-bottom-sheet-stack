@@ -254,7 +254,8 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * - `onSettle` reports completed animations → `handleOpened` / `handleClosed`.
  * - `onIndexChange` (user-driven only) reaching `0` → `handleDismiss`.
  * - `onPositionChange` drives the shared `animatedIndex` for a position-coupled
- *   backdrop fade once the open height is known; until then the fade is a timing.
+ *   backdrop fade once the sheet has opened (so a drag follows the finger); the
+ *   opening fade itself is a timing.
  *
  * It also layers opt-in conveniences over the native sheet — a grab handle,
  * full-height/fill-content sizing, and keyboard avoidance — each off by default
@@ -370,23 +371,13 @@ export const SwmansionSheetAdapter = React.forwardRef<
       );
     }
 
-    const openHeightRef = useRef<number | null>(
-      typeof expandedDetentValue === 'number' && expandedDetentValue > 0
-        ? expandedDetentValue
-        : null
-    );
-    const lastPositionRef = useRef(0);
-
-    // The initial animate-in emits a collapsed-detent settle before the sheet has
-    // ever opened; that one must not be reported as a close (it would dismiss the
-    // sheet prematurely and race the open).
+    // Peak position (the open height), to normalize the drag-to-dismiss fade.
+    const openPositionRef = useRef(0);
+    // Guards against reporting the initial collapsed-detent settle as a close.
     const hasOpenedRef = useRef(false);
 
     useImperativeHandle(
       ref,
-      // The coordinator calls these on every open/close. Fade the backdrop
-      // toward the target; `onPositionChange` overrides it once the height is
-      // known.
       () => ({
         expand: () => {
           animatedIndex.set(resolveBackdropTarget(true));
@@ -409,13 +400,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
         }
       } else {
         hasOpenedRef.current = true;
-        // Learn the open height so the next move (drag, reopen) is position-coupled.
-        if (
-          typeof openHeightRef.current !== 'number' &&
-          lastPositionRef.current > 0
-        ) {
-          openHeightRef.current = lastPositionRef.current;
-        }
         handleOpened();
       }
       onSettle?.(settledIndex);
@@ -436,10 +420,12 @@ export const SwmansionSheetAdapter = React.forwardRef<
     };
 
     const handleNativePositionChange = (position: number) => {
-      lastPositionRef.current = position;
-      const target = openHeightRef.current;
-      if (target && target > 0) {
-        const ratio = Math.max(0, Math.min(position / target, 1));
+      if (position > openPositionRef.current) {
+        openPositionRef.current = position;
+      }
+      // After it has opened, follow the position so a drag fades with the finger.
+      if (hasOpenedRef.current && openPositionRef.current > 0) {
+        const ratio = Math.min(position / openPositionRef.current, 1);
         animatedIndex.set(ratio - 1);
       }
       onPositionChange?.(position);
