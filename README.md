@@ -109,7 +109,7 @@ function YourAppContent() {
 
 Adapters with 3rd-party dependencies are shipped as separate subpath exports so that importing the main package never triggers Metro resolution errors for uninstalled libraries. Each sheet in the stack can use a different adapter.
 
-`SwmansionSheetAdapter` also adds a few opt-in conveniences over the bare native sheet (`handle`, `fullHeight`, `fillContent`, `keyboardBehavior`) — see [Shipped Adapters](https://github.com/arekkubaczkowski/react-native-bottom-sheet-stack/blob/main/docs/docs/built-in-adapters.md#convenience-props).
+`SwmansionSheetAdapter` also adds a few opt-in conveniences over the bare native sheet (`handle`, `fullHeight`, `fillContent`, `keyboardBehavior`, `cornerRadius`) — see [SwmansionSheetAdapter](https://github.com/arekkubaczkowski/react-native-bottom-sheet-stack/blob/main/docs/docs/built-in-adapters/swmansion.md#convenience-props).
 
 ## License
 

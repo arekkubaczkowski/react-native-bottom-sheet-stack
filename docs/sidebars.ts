@@ -15,7 +15,23 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Adapters',
       collapsed: false,
-      items: ['adapters', 'built-in-adapters', 'custom-adapters'],
+      items: [
+        'adapters',
+        {
+          type: 'category',
+          label: 'Built-in Adapters',
+          collapsed: false,
+          link: { type: 'doc', id: 'built-in-adapters/index' },
+          items: [
+            'built-in-adapters/gorhom',
+            'built-in-adapters/swmansion',
+            'built-in-adapters/custom-modal',
+            'built-in-adapters/react-native-modal',
+            'built-in-adapters/actions-sheet',
+          ],
+        },
+        'custom-adapters',
+      ],
     },
     {
       type: 'category',
