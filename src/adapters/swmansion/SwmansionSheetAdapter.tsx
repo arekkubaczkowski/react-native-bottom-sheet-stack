@@ -7,7 +7,12 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import {
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type {
@@ -82,8 +87,9 @@ export interface SwmansionHandleConfig {
  *
  * On top of the native surface the adapter layers a set of **opt-in
  * conveniences** ({@link handle}, {@link fullHeight}, {@link fillContent},
- * {@link keyboardBehavior}). Each defaults to off, so a bare
- * `<SwmansionSheetAdapter>` behaves exactly like the raw native sheet.
+ * {@link keyboardBehavior}, {@link cornerRadius}). Each defaults to off (or to
+ * the native default), so a bare `<SwmansionSheetAdapter>` behaves like the raw
+ * native sheet.
  */
 export interface SwmansionSheetAdapterProps
   extends Omit<BottomSheetProps, 'index' | 'modal'> {
@@ -158,9 +164,17 @@ export interface SwmansionSheetAdapterProps
    * without avoidance (a one-time dev warning is logged) — it never crashes.
    */
   keyboardBehavior?: 'none' | 'inset';
+  /**
+   * Top corner radius (px), applied to the default surface and used to clip the
+   * content so opaque top content can't square off the corners. Pass `0` for a
+   * flat top. Defaults to the built-in surface radius; with a custom `surface`,
+   * clipping is off unless you set this to match its radius.
+   */
+  cornerRadius?: number;
 }
 
 const DEFAULT_DETENTS: Detent[] = [0, 'content'];
+const DEFAULT_SURFACE_RADIUS = 20;
 const DEFAULT_HANDLE_COLOR = 'rgba(255, 255, 255, 0.25)';
 const DEFAULT_HANDLE_WIDTH = 40;
 const DEFAULT_HANDLE_HEIGHT = 4;
@@ -264,6 +278,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
       fullHeight,
       fillContent,
       keyboardBehavior = 'none',
+      cornerRadius,
       ...props
     },
     forwardedRef
@@ -308,8 +323,24 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const isContentSized = expandedDetentValue === 'content';
     const shouldFill = fillContent ?? !isContentSized;
 
+    // The default surface owns its radius; a custom surface owns its own, so we
+    // only clip content to a known radius (default, or one the consumer states
+    // via `cornerRadius`).
+    const usingDefaultSurface = surface === undefined || surface === null;
+    const surfaceRadius =
+      cornerRadius ?? (usingDefaultSurface ? DEFAULT_SURFACE_RADIUS : 0);
+
     const baseSurface = surface ?? (
-      <View style={[StyleSheet.absoluteFill, stylesheet.surface]} />
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          stylesheet.surface,
+          {
+            borderTopLeftRadius: surfaceRadius,
+            borderTopRightRadius: surfaceRadius,
+          },
+        ]}
+      />
     );
     // Layer the grab handle over the (possibly user-provided) surface so the
     // surface stays fully customizable while the adapter owns the handle.
@@ -440,17 +471,32 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const handleInsetStyle = handleResult
       ? { paddingTop: handleResult.contentInset }
       : null;
+    // Clip content to the surface's rounded top so opaque content can't square
+    // off the corners. The content layer sits on top of the surface and isn't
+    // otherwise bounded by its radius.
+    const clipStyle: ViewStyle | null =
+      surfaceRadius > 0
+        ? {
+            overflow: 'hidden',
+            borderTopLeftRadius: surfaceRadius,
+            borderTopRightRadius: surfaceRadius,
+          }
+        : null;
     const needsKeyboardInset = keyboardBehavior === 'inset' && !shouldFill;
 
     let content = children;
     if (needsKeyboardInset) {
       content = (
-        <SwmansionKeyboardInset style={[fillStyle, handleInsetStyle]}>
+        <SwmansionKeyboardInset
+          style={[fillStyle, handleInsetStyle, clipStyle]}
+        >
           {children}
         </SwmansionKeyboardInset>
       );
-    } else if (fillStyle || handleInsetStyle) {
-      content = <View style={[fillStyle, handleInsetStyle]}>{children}</View>;
+    } else if (fillStyle || handleInsetStyle || clipStyle) {
+      content = (
+        <View style={[fillStyle, handleInsetStyle, clipStyle]}>{children}</View>
+      );
     }
 
     return (
@@ -481,8 +527,6 @@ SwmansionSheetAdapter.displayName = 'SwmansionSheetAdapter';
 const stylesheet = StyleSheet.create({
   surface: {
     backgroundColor: '#151521',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
   },
   handleContainer: {
     position: 'absolute',
