@@ -255,7 +255,7 @@ Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https:
 - `index` — the adapter is the source of truth. Use `expandedIndex` (a prop added by the adapter, defaults to the last detent) to choose which detent the sheet opens to.
 - `modal` — the sheet always renders inline so it participates in the manager's z-index stack and shares the manager's `BottomSheetBackdrop`.
 
-Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent` / `DetentValue` types are re-exported from the subpath for convenience.
+Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent`, `DetentValue`, `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types are exported from the subpath for convenience.
 
 ### Convenience props
 
