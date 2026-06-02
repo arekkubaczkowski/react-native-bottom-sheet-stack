@@ -165,15 +165,10 @@ export interface SwmansionSheetAdapterProps
    */
   keyboardBehavior?: 'none' | 'inset';
   /**
-   * Top corner radius of the sheet, in px. Applied to the default surface *and*
-   * used to clip the content to those rounded corners — so opaque content (e.g.
-   * a non-transparent header rendered flush to the top) can't square off the
-   * corners. Pass `0` for a flat-top sheet.
-   *
-   * Defaults to the built-in surface radius when using the default surface. When
-   * you pass your own `surface`, content clipping is **off** unless you set this
-   * to match your surface's radius (the adapter can't infer a custom surface's
-   * corners).
+   * Top corner radius (px), applied to the default surface and used to clip the
+   * content so opaque top content can't square off the corners. Pass `0` for a
+   * flat top. Defaults to the built-in surface radius; with a custom `surface`,
+   * clipping is off unless you set this to match its radius.
    */
   cornerRadius?: number;
 }
