@@ -44,6 +44,24 @@ const MySheet = forwardRef((props, ref) => {
 
 Accepts all props from [`@gorhom/bottom-sheet`](https://gorhom.dev/react-native-bottom-sheet/props). The adapter overrides `enablePanDownToClose` to `true` by default.
 
+### Backdrop
+
+By default this adapter renders gorhom's `backdropComponent` as `null` so the **stack manager's shared backdrop** (`BottomSheetBackdrop`) is used instead. This is recommended — the manager's backdrop is **stack-aware** (correct opacity across stacked sheets, z-index, scale coordination, cascading tap-to-dismiss), which a per-sheet gorhom backdrop is not.
+
+You **can** override it by passing your own `backdropComponent`, but it's **not recommended** unless you specifically need gorhom's backdrop behavior. When you do, disable the manager backdrop for that sheet so the two don't stack:
+
+```tsx
+import { BottomSheetBackdrop as GorhomBackdrop } from '@gorhom/bottom-sheet';
+
+const sheet = (
+  <GorhomSheetAdapter snapPoints={['50%']} backdropComponent={GorhomBackdrop}>
+    {/* ... */}
+  </GorhomSheetAdapter>
+);
+
+open(sheet, { backdrop: false }); // turn off the manager backdrop for this sheet
+```
+
 ### When to Use
 
 - You need snap points, scrollable content, keyboard handling
@@ -280,6 +298,29 @@ This is the only convenience with an extra dependency: it reads the keyboard hei
 ```bash
 npm install react-native-keyboard-controller
 ```
+:::
+
+### Backdrop
+
+By default the sheet uses the **stack manager's shared backdrop** (`BottomSheetBackdrop`) and the native scrim is disabled (`scrimColor` defaults to `'transparent'`). This is almost always what you want — the manager's backdrop is **stack-aware**: it interpolates opacity correctly across stacked sheets, sits at the right z-index, coordinates with the background scale animation, and participates in cascading tap-to-dismiss.
+
+You **can** opt into the native swmansion scrim by passing `scrimColor` / `scrimOpacities`, but it's **not recommended** — a per-sheet native scrim knows nothing about the rest of the stack. Reach for it only when you genuinely need the native one (e.g. a specific native blur/scrim behavior). When you do, disable the manager backdrop for that sheet so the two don't stack into a double-dark overlay:
+
+```tsx
+// Opt into the native scrim…
+const sheet = (
+  <SwmansionSheetAdapter scrimColor="rgba(0,0,0,0.5)">
+    {/* ... */}
+  </SwmansionSheetAdapter>
+);
+
+// …and turn off the manager backdrop for that sheet:
+open(sheet, { backdrop: false });
+// (portal/persistent sheets: useBottomSheetControl(...).open({ backdrop: false }))
+```
+
+:::warning Don't stack two backdrops
+If a native scrim is set while the manager backdrop is still enabled (the default), you get a double-dark overlay. The adapter logs a dev-mode warning when it detects this — pass `{ backdrop: false }` to `open()` to fix it. Prefer the manager backdrop unless you specifically need the native one.
 :::
 
 ### Android back button
