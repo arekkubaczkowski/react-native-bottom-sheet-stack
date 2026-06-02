@@ -140,16 +140,22 @@ export interface SwmansionSheetAdapterProps
    */
   fillContent?: boolean;
   /**
-   * Keyboard avoidance strategy. The native sheet has none of its own.
+   * Keyboard avoidance for the sheet's content. The native swmansion sheet has
+   * none of its own, so a `TextInput` near the bottom would sit under the
+   * keyboard.
    *
-   * - `'none'` (default) — no avoidance; raw behavior.
-   * - `'inset'` — for content-sized sheets, grows the content by the keyboard
-   *   height so it lifts clear of the keyboard (native-iOS behavior). No-op for
-   *   fixed-height sheets, which should rely on their own scrollable.
+   * - `'none'` (default) — no avoidance; the raw native behavior.
+   * - `'inset'` — keeps a content-sized sheet's inputs above the keyboard.
+   *   Because the sheet is bottom-anchored and sizes to its content, padding the
+   *   content by the keyboard height re-measures the sheet taller and lifts the
+   *   content clear of the keyboard (the added strip hides behind it) — matching
+   *   native iOS. No-op for fixed-height sheets (numeric `detents` /
+   *   {@link fullHeight}): they can't grow, so put a scrollable inside and let it
+   *   scroll the focused input into view instead.
    *
-   * `'inset'` requires the optional peer `react-native-keyboard-controller`; if
-   * it isn't installed the sheet renders without avoidance (a one-time dev
-   * warning is logged).
+   * `'inset'` reads the keyboard height from the optional peer
+   * `react-native-keyboard-controller`. If it isn't installed the sheet renders
+   * without avoidance (a one-time dev warning is logged) — it never crashes.
    */
   keyboardBehavior?: 'none' | 'inset';
 }
