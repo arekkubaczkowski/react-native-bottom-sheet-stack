@@ -111,20 +111,32 @@ export interface SwmansionSheetAdapterProps
    */
   handle?: boolean | SwmansionHandleConfig | ReactElement;
   /**
-   * Expands the sheet to the full available height (window height minus the top
-   * safe-area inset). A convenience for sheets that host a `flex: 1` scrollable
-   * whose content can't size the sheet on its own.
+   * Expands the sheet to the full available height — the window height minus the
+   * top safe-area inset.
+   *
+   * Why this exists when `detents` already sets height: swmansion detents are
+   * only `number | 'content'`, so a full-height sheet needs a concrete pixel
+   * value (screen height minus the notch/status-bar inset). This prop computes
+   * it for you — safe-area- and rotation-aware — so you don't wire up
+   * `useWindowDimensions` / `useSafeAreaInsets` and the arithmetic yourself, and
+   * you express intent ("fill the screen") instead of a magic number.
    *
    * Ignored when explicit `detents` are passed — those win. Defaults to off.
    */
   fullHeight?: boolean;
   /**
-   * Whether the content wrapper should flex to fill the sheet (`flex: 1`).
+   * Stretches the content to fill the sheet's height (`flex: 1` on the content
+   * wrapper).
    *
-   * Defaults to `true` for fixed-height sheets (explicit numeric `detents` or
-   * {@link fullHeight}) so scrollables bind and footers pin to the bottom, and
-   * `false` for content-sized sheets (`'content'` detent) so they keep sizing
-   * to their content. Pass an explicit boolean to override the heuristic.
+   * A fixed-height sheet has a known height, but its content sizes to itself by
+   * default — so a `flex: 1` scrollable collapses instead of filling the sheet,
+   * and a footer meant for the bottom floats up under the content. Filling makes
+   * scrollables expand and footers pin to the bottom.
+   *
+   * Auto by default and rarely set by hand: `true` for fixed-height sheets
+   * (numeric `detents` or {@link fullHeight}), `false` for content-sized sheets
+   * (the `'content'` detent) — which must not fill, or they couldn't size to
+   * their content. Pass a boolean only to override this.
    */
   fillContent?: boolean;
   /**

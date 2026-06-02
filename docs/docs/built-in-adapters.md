@@ -260,8 +260,8 @@ The native sheet is intentionally minimal. The adapter layers a few **opt-in** c
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle as a chrome layer over the `surface` and insets the content to clear it. Pass `true` for the default pill, an object to restyle it, or a React element for full control. Auto-hidden when dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. |
-| `fullHeight` | `boolean` | `false` | Expands the sheet to the full available height (`windowHeight − topInset`). Ignored when explicit `detents` are passed. |
-| `fillContent` | `boolean` | _auto_ | Whether the content wrapper flexes to fill the sheet (`flex: 1`). Defaults to `true` for fixed-height sheets (numeric detents or `fullHeight`) so scrollables bind and footers pin to the bottom, and `false` for content-sized sheets. Pass a boolean to override. |
+| `fullHeight` | `boolean` | `false` | Expands the sheet to the full available height (`windowHeight − topInset`). swmansion detents are only `number` / `'content'`, so there's no built-in full-height value — this computes the pixel height for you, safe-area- and rotation-aware, with no `useWindowDimensions` / `useSafeAreaInsets` boilerplate. Ignored when explicit `detents` are passed. |
+| `fillContent` | `boolean` | _auto_ | Stretches the content to fill the sheet (`flex: 1`), so a `flex: 1` scrollable expands and a bottom footer pins to the bottom instead of floating up under the content. Auto and rarely set by hand: `true` for fixed-height sheets (numeric detents or `fullHeight`), `false` for content-sized ones (which must size to their content). Pass a boolean to override. |
 | `keyboardBehavior` | `'none' \| 'inset'` | `'none'` | Keyboard avoidance. `'inset'` grows a content-sized sheet by the keyboard height so it lifts clear of the keyboard (native-iOS behavior). No-op for fixed-height sheets — those should rely on their own scrollable. |
 
 ```tsx
