@@ -141,6 +141,14 @@ export const useBottomSheetStore = create(
         };
       }),
 
+    setBackdrop: (id, backdrop) =>
+      set((state) => {
+        if (!state.sheetsById[id]) return state;
+        return {
+          sheetsById: updateSheet(state.sheetsById, id, { backdrop }),
+        };
+      }),
+
     clearGroup: (groupId) =>
       set((state) => {
         const idsToRemove = new Set(

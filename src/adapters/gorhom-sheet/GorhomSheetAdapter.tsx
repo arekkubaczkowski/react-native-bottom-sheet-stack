@@ -3,11 +3,14 @@ import BottomSheetOriginal, {
   type BottomSheetProps,
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import React, { useImperativeHandle, useRef } from 'react';
+import React, { useEffect, useImperativeHandle, useRef } from 'react';
 import { useAnimatedReaction } from 'react-native-reanimated';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { useSheetPreventDismiss } from '../../bottomSheet.store';
+import {
+  useSetBackdrop,
+  useSheetPreventDismiss,
+} from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useAdapterRef } from '../../useAdapterRef';
@@ -41,8 +44,18 @@ export const GorhomSheetAdapter = React.forwardRef<
     const contextAnimatedIndex = useAnimatedIndex();
     const defaultIndex = useBottomSheetDefaultIndex();
     const preventDismiss = useSheetPreventDismiss(id);
+    const setBackdrop = useSetBackdrop();
 
     const gorhomRef = useRef<BottomSheetMethods | null>(null);
+
+    // Passing a custom backdrop means this sheet owns its backdrop, so suppress
+    // the manager's shared one to avoid stacking two into a double-dark overlay.
+    const usesCustomBackdrop = backdropComponent !== nullBackdrop;
+    useEffect(() => {
+      if (!usesCustomBackdrop) return;
+      setBackdrop(id, false);
+      return () => setBackdrop(id, true);
+    }, [id, usesCustomBackdrop, setBackdrop]);
 
     useImperativeHandle(
       ref,

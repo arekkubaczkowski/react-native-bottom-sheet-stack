@@ -18,7 +18,7 @@ import type {
 
 import type { SheetAdapterRef } from '../../adapter.types';
 import {
-  useSheetBackdrop,
+  useSetBackdrop,
   useSheetPreventDismiss,
 } from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
@@ -76,9 +76,9 @@ export interface SwmansionHandleConfig {
  * `scrimColor` / `scrimOpacities` — but it's **not recommended**: the manager
  * backdrop is aware of the whole stack (correct opacity across stacked sheets,
  * z-index layering, scale coordination, cascading tap-to-dismiss), which a
- * per-sheet native scrim is not. Reach for the native scrim only when you truly
- * need it, and pair it with `open({ backdrop: false })` so the two don't stack
- * into a double-dark overlay (a dev-mode warning fires if you forget).
+ * per-sheet native scrim is not. When you do pass a scrim, the adapter
+ * automatically disables the manager backdrop for this sheet so the two never
+ * stack into a double-dark overlay.
  *
  * On top of the native surface the adapter layers a set of **opt-in
  * conveniences** ({@link handle}, {@link fullHeight}, {@link fillContent},
@@ -254,27 +254,21 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const ref = useAdapterRef(forwardedRef);
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
-    const managerBackdrop = useSheetBackdrop(id);
+    const setBackdrop = useSetBackdrop();
     const { height: windowHeight } = useWindowDimensions();
     const insets = useSafeAreaInsets();
 
-    // Opting into the native scrim while the manager's backdrop is still on
-    // stacks two overlays into a double-dark scrim. Warn so the consumer pairs
-    // it with `open({ backdrop: false })`.
+    // Opting into the native scrim means this sheet owns its backdrop, so
+    // suppress the manager's shared one — otherwise the two stack into a
+    // double-dark overlay. The manager backdrop starts at opacity 0 behind a
+    // short init delay, so toggling it off here is invisible (no flash).
     const usesNativeScrim =
       scrimColor !== 'transparent' || scrimOpacities != null;
     useEffect(() => {
-      if (__DEV__ && usesNativeScrim && managerBackdrop !== false) {
-        console.warn(
-          '[SwmansionSheetAdapter] A native scrim (scrimColor/scrimOpacities) ' +
-            'is set while the manager backdrop is still enabled — they will ' +
-            'stack into a double-dark overlay. Open the sheet with ' +
-            '`{ backdrop: false }` to use the native scrim alone. The manager ' +
-            'backdrop is stack-aware and recommended; prefer it unless you ' +
-            'specifically need the native one.'
-        );
-      }
-    }, [usesNativeScrim, managerBackdrop]);
+      if (!usesNativeScrim) return;
+      setBackdrop(id, false);
+      return () => setBackdrop(id, true);
+    }, [id, usesNativeScrim, setBackdrop]);
 
     // Explicit `detents` always win; otherwise `fullHeight` derives a numeric
     // open detent, falling back to the content-sized default.

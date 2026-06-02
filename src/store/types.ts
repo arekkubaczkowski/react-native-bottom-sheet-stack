@@ -42,6 +42,7 @@ export interface BottomSheetStoreActions {
   finishClosing(id: string): void;
   updateParams(id: string, params: Record<string, unknown> | undefined): void;
   setPreventDismiss(id: string, prevent: boolean): void;
+  setBackdrop(id: string, backdrop: boolean): void;
   clearGroup(groupId: string): void;
   clearAll(): void;
   mount(sheet: Omit<BottomSheetState, 'status'>): void;
