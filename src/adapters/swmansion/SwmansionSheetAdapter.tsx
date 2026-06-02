@@ -411,23 +411,34 @@ export const SwmansionSheetAdapter = React.forwardRef<
           // (it would divide by an unknown target and jump straight to opaque),
           // so drive the backdrop with a timing on the first open instead.
           if (openHeightRef.current == null) {
-            animatedIndex.value = withTiming(0, {
-              duration: BACKDROP_FADE_DURATION,
-            });
+            animatedIndex.set(
+              withTiming(0, { duration: BACKDROP_FADE_DURATION })
+            );
           }
           setIndex(openIndex);
         },
         close: () => {
           if (openHeightRef.current == null) {
-            animatedIndex.value = withTiming(-1, {
-              duration: BACKDROP_FADE_DURATION,
-            });
+            animatedIndex.set(
+              withTiming(-1, { duration: BACKDROP_FADE_DURATION })
+            );
           }
           setIndex(0);
         },
       }),
       [animatedIndex, openIndex]
     );
+
+    // Inline/portal sheets mount already at the open index and animate in via
+    // the native `animateIn` — without an `expand()` call to kick the fade. So
+    // when such a sheet mounts open with an unknown height (content-sized), fade
+    // the backdrop with a timing here too. Numeric detents are seeded, so they
+    // keep the position-coupled fade. Runs once on mount.
+    useEffect(() => {
+      if (defaultIndex >= 0 && animateIn && openHeightRef.current == null) {
+        animatedIndex.set(withTiming(0, { duration: BACKDROP_FADE_DURATION }));
+      }
+    }, [animateIn, animatedIndex, defaultIndex]);
 
     const handleNativeSettle = (settledIndex: number) => {
       if (settledIndex <= 0) {
