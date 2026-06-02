@@ -66,11 +66,11 @@ Adapters with 3rd-party dependencies are shipped as separate subpath exports:
 
 | Adapter | Import | Library | Docs |
 |---------|--------|---------|------|
-| `GorhomSheetAdapter` | `react-native-bottom-sheet-stack/gorhom` | `@gorhom/bottom-sheet` | [Shipped Adapters](/built-in-adapters) |
-| `CustomModalAdapter` | `react-native-bottom-sheet-stack` | Custom Animated View | [Shipped Adapters](/built-in-adapters) |
-| `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | [Shipped Adapters](/built-in-adapters) |
-| `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | [Shipped Adapters](/built-in-adapters) |
-| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | [Shipped Adapters](/built-in-adapters) |
+| `GorhomSheetAdapter` | `react-native-bottom-sheet-stack/gorhom` | `@gorhom/bottom-sheet` | [GorhomSheetAdapter](/built-in-adapters/gorhom) |
+| `CustomModalAdapter` | `react-native-bottom-sheet-stack` | Custom Animated View | [CustomModalAdapter](/built-in-adapters/custom-modal) |
+| `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | [ReactNativeModalAdapter](/built-in-adapters/react-native-modal) |
+| `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | [ActionsSheetAdapter](/built-in-adapters/actions-sheet) |
+| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | [SwmansionSheetAdapter](/built-in-adapters/swmansion) |
 
 :::tip
 `BottomSheetManaged` is available as a deprecated re-export from `react-native-bottom-sheet-stack/gorhom` for backward compatibility.

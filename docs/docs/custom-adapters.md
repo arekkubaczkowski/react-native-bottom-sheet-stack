@@ -246,7 +246,7 @@ const onIndexChange = (i: number) => {
 };
 ```
 
-This is exactly how [`SwmansionSheetAdapter`](/built-in-adapters#swmansionsheetadapter) bridges Software Mansion's native sheet. When the library also reports a continuous position (e.g. `onPositionChange`), interpolate it into `animatedIndex` (`[-1, 0]`) for a smooth backdrop fade.
+This is exactly how [`SwmansionSheetAdapter`](/built-in-adapters/swmansion) bridges Software Mansion's native sheet. When the library also reports a continuous position (e.g. `onPositionChange`), interpolate it into `animatedIndex` (`[-1, 0]`) for a smooth backdrop fade.
 
 ### Libraries Without Separate Dismiss/Close Phases
 
