@@ -264,7 +264,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const baseSurface = surface ?? (
       <View style={[StyleSheet.absoluteFill, stylesheet.surface]} />
     );
-    const surfaceWithDefaults = handleResult ? (
+    // Layer the grab handle over the (possibly user-provided) surface so the
+    // surface stays fully customizable while the adapter owns the handle.
+    const composedSurface = handleResult ? (
       <View style={StyleSheet.absoluteFill}>
         {baseSurface}
         {handleResult.overlay}
@@ -416,7 +418,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
         onIndexChange={handleNativeIndexChange}
         onSettle={handleNativeSettle}
         onPositionChange={handleNativePositionChange}
-        surface={surfaceWithDefaults}
+        surface={composedSurface}
       >
         {content}
       </BottomSheet>
