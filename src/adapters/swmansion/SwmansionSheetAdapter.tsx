@@ -18,7 +18,7 @@ import { useBottomSheetContext } from '../../useBottomSheetContext';
 
 // Loaded lazily so the main bundle never requires the native module unless
 // this adapter is actually imported (it ships as an optional peer dependency).
-const { BottomSheet } =
+const { BottomSheet, programmatic } =
   require('@swmansion/react-native-bottom-sheet') as typeof import('@swmansion/react-native-bottom-sheet');
 
 export { programmatic } from '@swmansion/react-native-bottom-sheet';
@@ -218,10 +218,21 @@ export const SwmansionSheetAdapter = React.forwardRef<
       onPositionChange?.(position);
     };
 
+    // When dismissal is blocked, mark the collapsed detent (index 0) as
+    // programmatic so the native sheet cannot be dragged down to it. This is the
+    // native equivalent of "prevent pan-to-close" — `close()` still collapses it
+    // via the controlled `index`. The JS re-snap in `handleNativeIndexChange`
+    // alone cannot block the native gesture.
+    const resolvedDetents = preventDismiss
+      ? detents.map((detent, detentIndex) =>
+          detentIndex === 0 ? programmatic(resolveDetentValue(detent)) : detent
+        )
+      : detents;
+
     return (
       <BottomSheet
         {...props}
-        detents={detents}
+        detents={resolvedDetents}
         animateIn={animateIn}
         scrimColor={scrimColor}
         // Managed by adapter (not overridable):

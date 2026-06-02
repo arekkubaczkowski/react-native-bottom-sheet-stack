@@ -1,5 +1,9 @@
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
-import { useSheetParams, useStartClosing } from './bottomSheet.store';
+import {
+  useSheetParams,
+  useSheetPreventDismiss,
+  useStartClosing,
+} from './bottomSheet.store';
 import { requestClose } from './bottomSheetCoordinator';
 import type {
   BottomSheetPortalId,
@@ -9,6 +13,12 @@ import type {
 export interface UseBottomSheetContextReturn<TParams> {
   id: string;
   params: TParams;
+  /**
+   * Whether dismissal is currently blocked for this sheet (set via
+   * `useOnBeforeClose`). Adapters block user gestures when this is true; UI can
+   * read it to e.g. hide a grab handle.
+   */
+  preventDismiss: boolean;
   close: () => void;
   /**
    * Close the sheet, bypassing any onBeforeClose interceptor.
@@ -30,6 +40,7 @@ export function useBottomSheetContext<
 >(): UseBottomSheetContextReturn<BottomSheetPortalParams<T> | unknown> {
   const context = useMaybeBottomSheetContext();
   const params = useSheetParams(context?.id || '');
+  const preventDismiss = useSheetPreventDismiss(context?.id || '');
   const startClosing = useStartClosing();
 
   if (!context?.id) {
@@ -46,6 +57,7 @@ export function useBottomSheetContext<
   return {
     id: context.id,
     params: params as BottomSheetPortalParams<T>,
+    preventDismiss,
     close,
     forceClose,
     closeBottomSheet: close,
