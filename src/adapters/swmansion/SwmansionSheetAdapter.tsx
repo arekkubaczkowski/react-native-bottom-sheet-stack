@@ -4,22 +4,27 @@ import React, {
   type ReactNode,
   useEffect,
   useImperativeHandle,
-  useRef,
   useState,
 } from 'react';
 import {
+  type NativeSyntheticEvent,
   StyleSheet,
   useWindowDimensions,
   View,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { withTiming } from 'react-native-reanimated';
+import Animated, {
+  useEvent,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import type {
   BottomSheetProps,
   Detent,
   DetentValue,
+  PositionChangeEventData,
 } from '@swmansion/react-native-bottom-sheet';
 
 import type { SheetAdapterRef } from '../../adapter.types';
@@ -71,11 +76,13 @@ export interface SwmansionHandleConfig {
  *   layer so its z-index participates in the stack and the manager's shared
  *   `BottomSheetBackdrop` provides the scrim.
  * - `animateIn` — the manager controls the open animation, so this is forced on.
+ * - `onPositionChange` / `wrapNativeView` — the adapter consumes these to drive
+ *   the backdrop fade on the UI thread (via a Reanimated worklet), so they are
+ *   not forwarded.
  *
  * Every other native prop (`detents`, `style`, `disableScrollableNegotiation`)
- * is forwarded. The lifecycle callbacks (`onIndexChange`, `onSettle`,
- * `onPositionChange`) are wrapped by the adapter and your handlers are still
- * invoked afterwards.
+ * is forwarded. The `onIndexChange` / `onSettle` callbacks are wrapped by the
+ * adapter and your handlers are still invoked afterwards.
  *
  * **Backdrop.** By default the manager renders its own shared, stack-aware
  * `BottomSheetBackdrop` and the native scrim is disabled (`scrimColor` defaults
@@ -94,7 +101,10 @@ export interface SwmansionHandleConfig {
  * native sheet.
  */
 export interface SwmansionSheetAdapterProps
-  extends Omit<BottomSheetProps, 'index' | 'modal' | 'animateIn'> {
+  extends Omit<
+    BottomSheetProps,
+    'index' | 'modal' | 'animateIn' | 'onPositionChange' | 'wrapNativeView'
+  > {
   /**
    * Index into `detents` the sheet expands to when opened.
    *
@@ -281,7 +291,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
       scrimOpacities,
       onIndexChange,
       onSettle,
-      onPositionChange,
       surface,
       handle,
       fullHeight,
@@ -371,10 +380,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
       );
     }
 
-    // Peak position (the open height), to normalize the drag-to-dismiss fade.
-    const openPositionRef = useRef(0);
+    // Peak position (open height), to normalize the drag-to-dismiss fade.
+    const openPositionSV = useSharedValue(0);
     // Guards against reporting the initial collapsed-detent settle as a close.
-    const hasOpenedRef = useRef(false);
+    const hasOpenedSV = useSharedValue(false);
 
     useImperativeHandle(
       ref,
@@ -392,14 +401,14 @@ export const SwmansionSheetAdapter = React.forwardRef<
     );
 
     const handleNativeSettle = (settledIndex: number) => {
-      // Don't touch `animatedIndex` here: the fade (timing or position-coupled)
-      // already reaches the endpoint, and snapping would cut it short.
+      // Don't touch `animatedIndex` here: the fade (timing or worklet) already
+      // reaches the endpoint, and snapping would cut it short.
       if (settledIndex <= 0) {
-        if (hasOpenedRef.current) {
+        if (hasOpenedSV.value) {
           handleClosed();
         }
       } else {
-        hasOpenedRef.current = true;
+        hasOpenedSV.value = true;
         handleOpened();
       }
       onSettle?.(settledIndex);
@@ -419,17 +428,25 @@ export const SwmansionSheetAdapter = React.forwardRef<
       onIndexChange?.(nextIndex);
     };
 
-    const handleNativePositionChange = (position: number) => {
-      if (position > openPositionRef.current) {
-        openPositionRef.current = position;
-      }
-      // After it has opened, follow the position so a drag fades with the finger.
-      if (hasOpenedRef.current && openPositionRef.current > 0) {
-        const ratio = Math.min(position / openPositionRef.current, 1);
-        animatedIndex.set(ratio - 1);
-      }
-      onPositionChange?.(position);
-    };
+    // Backdrop fade runs on the UI thread: `wrapNativeView` makes the sheet view
+    // animated so this worklet receives every position frame. After the sheet has
+    // opened, follow the position so a drag fades the backdrop with the finger.
+    const onPositionChange = useEvent<
+      NativeSyntheticEvent<PositionChangeEventData>
+    >(
+      (event) => {
+        'worklet';
+        const position = event.position;
+        if (position > openPositionSV.value) {
+          openPositionSV.value = position;
+        }
+        if (hasOpenedSV.value && openPositionSV.value > 0) {
+          const ratio = Math.min(position / openPositionSV.value, 1);
+          animatedIndex.set(ratio - 1);
+        }
+      },
+      ['onPositionChange']
+    );
 
     // When dismissal is blocked, make the collapsed detent programmatic so the
     // native sheet can't be dragged down to it — `close()` still collapses it via
@@ -479,9 +496,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
         index={index}
         modal={false}
         animateIn
+        wrapNativeView={Animated.createAnimatedComponent}
         onIndexChange={handleNativeIndexChange}
         onSettle={handleNativeSettle}
-        onPositionChange={handleNativePositionChange}
+        onPositionChange={onPositionChange}
         surface={composedSurface}
       >
         {content}

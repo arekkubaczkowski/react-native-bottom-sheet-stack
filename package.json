@@ -69,7 +69,7 @@
     "@gorhom/bottom-sheet": "^5.2.8",
     "@react-native/eslint-config": "^0.78.0",
     "@release-it/conventional-changelog": "^9.0.2",
-    "@swmansion/react-native-bottom-sheet": "0.13.0-next.1",
+    "@swmansion/react-native-bottom-sheet": "0.14.0",
     "@types/jest": "^29.5.5",
     "@types/react": "^19.0.12",
     "babel-plugin-react-compiler": "^1.0.0",
@@ -94,7 +94,7 @@
   },
   "peerDependencies": {
     "@gorhom/bottom-sheet": ">=5.0.0",
-    "@swmansion/react-native-bottom-sheet": ">=0.13.0-next.1",
+    "@swmansion/react-native-bottom-sheet": ">=0.14.0",
     "react": "*",
     "react-native": "*",
     "react-native-actions-sheet": ">=0.9.0",
