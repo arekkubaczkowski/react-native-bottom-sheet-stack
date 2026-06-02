@@ -835,6 +835,8 @@ react-native-bottom-sheet-stack/actions-sheet:
 react-native-bottom-sheet-stack/swmansion:
   @swmansion/react-native-bottom-sheet ──▶ SwmansionSheetAdapter
   (Fabric native component — requires New Architecture, RN >= 0.76)
+  react-native-keyboard-controller ──────▶ SwmansionKeyboardInset (OPTIONAL peer;
+    lazy require, only used by keyboardBehavior="inset"; degrades gracefully)
 ```
 
 ---

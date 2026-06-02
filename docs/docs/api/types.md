@@ -251,6 +251,7 @@ Return type of `useBottomSheetContext` hook.
 interface UseBottomSheetContextReturn<TParams> {
   id: string;
   params: TParams;
+  preventDismiss: boolean;
   close: () => void;
   forceClose: () => void;
 }

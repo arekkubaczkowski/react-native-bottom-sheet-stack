@@ -111,6 +111,7 @@ console.log(params.userId); // type-safe: string
 |----------|------|-------------|
 | `id` | `string` | Current sheet's ID |
 | `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided |
+| `preventDismiss` | `boolean` | Whether dismissal is currently blocked for this sheet (set via `useOnBeforeClose`). Useful for UI that should reflect it — e.g. hiding a grab handle. |
 | `close` | `() => void` | Closes this sheet (respects `useOnBeforeClose`) |
 | `forceClose` | `() => void` | Closes this sheet immediately, bypassing any `useOnBeforeClose` interceptor |
 
