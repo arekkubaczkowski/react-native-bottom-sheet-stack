@@ -2,6 +2,7 @@ import React, {
   isValidElement,
   type ReactElement,
   type ReactNode,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -16,7 +17,10 @@ import type {
 } from '@swmansion/react-native-bottom-sheet';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { useSheetPreventDismiss } from '../../bottomSheet.store';
+import {
+  useSheetBackdrop,
+  useSheetPreventDismiss,
+} from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useAdapterRef } from '../../useAdapterRef';
@@ -65,6 +69,16 @@ export interface SwmansionHandleConfig {
  * `disableScrollableNegotiation`) is forwarded. The lifecycle callbacks
  * (`onIndexChange`, `onSettle`, `onPositionChange`) are wrapped by the adapter
  * and your handlers are still invoked afterwards.
+ *
+ * **Backdrop.** By default the manager renders its own shared, stack-aware
+ * `BottomSheetBackdrop` and the native scrim is disabled (`scrimColor` defaults
+ * to `'transparent'`). You *can* opt into the native swmansion scrim by passing
+ * `scrimColor` / `scrimOpacities` — but it's **not recommended**: the manager
+ * backdrop is aware of the whole stack (correct opacity across stacked sheets,
+ * z-index layering, scale coordination, cascading tap-to-dismiss), which a
+ * per-sheet native scrim is not. Reach for the native scrim only when you truly
+ * need it, and pair it with `open({ backdrop: false })` so the two don't stack
+ * into a double-dark overlay (a dev-mode warning fires if you forget).
  *
  * On top of the native surface the adapter layers a set of **opt-in
  * conveniences** ({@link handle}, {@link fullHeight}, {@link fillContent},
@@ -219,9 +233,11 @@ export const SwmansionSheetAdapter = React.forwardRef<
       expandedIndex,
       animateIn = true,
       // The manager renders its own shared `BottomSheetBackdrop`; the sheet's
-      // native scrim would double up (and stays opaque in non-modal mode), so
-      // it is disabled by default. Consumers can still override.
+      // native scrim would double up with it, so it is disabled by default.
+      // Consumers can still opt into the native scrim by passing these (see the
+      // backdrop note on `SwmansionSheetAdapterProps`).
       scrimColor = 'transparent',
+      scrimOpacities,
       onIndexChange,
       onSettle,
       onPositionChange,
@@ -238,8 +254,27 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const ref = useAdapterRef(forwardedRef);
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
+    const managerBackdrop = useSheetBackdrop(id);
     const { height: windowHeight } = useWindowDimensions();
     const insets = useSafeAreaInsets();
+
+    // Opting into the native scrim while the manager's backdrop is still on
+    // stacks two overlays into a double-dark scrim. Warn so the consumer pairs
+    // it with `open({ backdrop: false })`.
+    const usesNativeScrim =
+      scrimColor !== 'transparent' || scrimOpacities != null;
+    useEffect(() => {
+      if (__DEV__ && usesNativeScrim && managerBackdrop !== false) {
+        console.warn(
+          '[SwmansionSheetAdapter] A native scrim (scrimColor/scrimOpacities) ' +
+            'is set while the manager backdrop is still enabled — they will ' +
+            'stack into a double-dark overlay. Open the sheet with ' +
+            '`{ backdrop: false }` to use the native scrim alone. The manager ' +
+            'backdrop is stack-aware and recommended; prefer it unless you ' +
+            'specifically need the native one.'
+        );
+      }
+    }, [usesNativeScrim, managerBackdrop]);
 
     // Explicit `detents` always win; otherwise `fullHeight` derives a numeric
     // open detent, falling back to the content-sized default.
@@ -411,7 +446,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
         {...props}
         detents={resolvedDetents}
         animateIn={animateIn}
+        // Off by default (manager owns the backdrop); overridable to opt into
+        // the native scrim.
         scrimColor={scrimColor}
+        scrimOpacities={scrimOpacities}
         // Managed by adapter (not overridable):
         index={index}
         modal={false}
