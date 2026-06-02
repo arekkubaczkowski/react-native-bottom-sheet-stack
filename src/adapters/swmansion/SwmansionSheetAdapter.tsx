@@ -14,6 +14,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { withTiming } from 'react-native-reanimated';
 
 import type {
   BottomSheetProps,
@@ -175,6 +176,9 @@ export interface SwmansionSheetAdapterProps
 
 const DEFAULT_DETENTS: Detent[] = [0, 'content'];
 const DEFAULT_SURFACE_RADIUS = 20;
+// Backdrop fade used on the first open, before the open height is known (so the
+// position-coupled fade can't run yet). Matches the modal adapter's timing.
+const BACKDROP_FADE_DURATION = 300;
 const DEFAULT_HANDLE_COLOR = 'rgba(255, 255, 255, 0.25)';
 const DEFAULT_HANDLE_WIDTH = 40;
 const DEFAULT_HANDLE_HEIGHT = 4;
@@ -243,7 +247,8 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * - `onSettle` reports completed animations → `handleOpened` / `handleClosed`.
  * - `onIndexChange` (user-driven only) reaching `0` → `handleDismiss`.
  * - `onPositionChange` drives the shared `animatedIndex` for a smooth backdrop
- *   fade, falling back to a binary value until the open height is known.
+ *   fade once the open height is known; the first open of a content-sized sheet
+ *   (height not yet known) fades the backdrop with a timing instead.
  *
  * It also layers opt-in conveniences over the native sheet — a grab handle,
  * full-height/fill-content sizing, and keyboard avoidance — each off by default
@@ -380,13 +385,16 @@ export const SwmansionSheetAdapter = React.forwardRef<
       );
     }
 
-    // Open height, captured for a continuous backdrop fade. Seeded from a
-    // numeric expanded detent when possible; otherwise learned on first settle.
-    const openPositionRef = useRef<number | null>(
+    // Open height, used to turn the native position (points from the bottom)
+    // into a 0→1 backdrop-fade progress. Known up front for a numeric expanded
+    // detent; for a `'content'` detent it's unknown until the sheet first opens,
+    // so it's learned from the position at the first open settle.
+    const openHeightRef = useRef<number | null>(
       typeof expandedDetentValue === 'number' && expandedDetentValue > 0
         ? expandedDetentValue
         : null
     );
+    const lastPositionRef = useRef(0);
 
     // The native sheet animates in to its mounted index (0 = collapsed) and
     // emits a settle at that detent before the coordinator drives expand(). That
@@ -398,10 +406,27 @@ export const SwmansionSheetAdapter = React.forwardRef<
     useImperativeHandle(
       ref,
       () => ({
-        expand: () => setIndex(openIndex),
-        close: () => setIndex(0),
+        expand: () => {
+          // Until the open height is known, the position-coupled fade can't run
+          // (it would divide by an unknown target and jump straight to opaque),
+          // so drive the backdrop with a timing on the first open instead.
+          if (openHeightRef.current == null) {
+            animatedIndex.value = withTiming(0, {
+              duration: BACKDROP_FADE_DURATION,
+            });
+          }
+          setIndex(openIndex);
+        },
+        close: () => {
+          if (openHeightRef.current == null) {
+            animatedIndex.value = withTiming(-1, {
+              duration: BACKDROP_FADE_DURATION,
+            });
+          }
+          setIndex(0);
+        },
       }),
-      [openIndex]
+      [animatedIndex, openIndex]
     );
 
     const handleNativeSettle = (settledIndex: number) => {
@@ -416,6 +441,11 @@ export const SwmansionSheetAdapter = React.forwardRef<
         }
       } else {
         hasOpenedRef.current = true;
+        // Learn the open height from the settled position so subsequent moves
+        // (drag-to-dismiss, reopen) get the position-coupled fade.
+        if (openHeightRef.current == null && lastPositionRef.current > 0) {
+          openHeightRef.current = lastPositionRef.current;
+        }
         animatedIndex.set(0);
         handleOpened();
       }
@@ -440,17 +470,15 @@ export const SwmansionSheetAdapter = React.forwardRef<
     };
 
     const handleNativePositionChange = (position: number) => {
-      if (position > 0 && position > (openPositionRef.current ?? 0)) {
-        openPositionRef.current = position;
-      }
-      const target = openPositionRef.current;
+      lastPositionRef.current = position;
+      const target = openHeightRef.current;
       if (target && target > 0) {
-        const ratio = Math.max(0, Math.min(position / target, 1));
         // animatedIndex range: -1 (closed) → 0 (open).
+        const ratio = Math.max(0, Math.min(position / target, 1));
         animatedIndex.set(ratio - 1);
-      } else {
-        animatedIndex.set(position > 0 ? 0 : -1);
       }
+      // While the open height is unknown (first open of a `'content'` sheet), the
+      // backdrop is driven by the timing kicked in `expand()`/`close()` instead.
       onPositionChange?.(position);
     };
 
