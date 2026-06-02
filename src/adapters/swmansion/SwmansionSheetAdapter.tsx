@@ -198,6 +198,18 @@ function resolveDetentValue(detent: Detent): DetentValue {
 }
 
 /**
+ * Target `animatedIndex` for an open/close transition that the position-coupled
+ * fade can't drive (open height not yet known): a timing toward the endpoint, or
+ * an instant set when the sheet doesn't animate. `0` = open, `-1` = closed.
+ */
+function resolveBackdropTarget(open: boolean, animate: boolean): number {
+  const target = open ? 0 : -1;
+  return animate
+    ? withTiming(target, { duration: BACKDROP_FADE_DURATION })
+    : target;
+}
+
+/**
  * Builds the grab-handle overlay (rendered over the surface) and the top inset
  * the content needs to clear it. `handle` is already known to be truthy.
  */
@@ -301,7 +313,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // double-dark overlay. The manager backdrop starts at opacity 0 behind a
     // short init delay, so toggling it off here is invisible (no flash).
     const usesNativeScrim =
-      scrimColor !== 'transparent' || scrimOpacities != null;
+      scrimColor !== 'transparent' || scrimOpacities !== undefined;
     useEffect(() => {
       if (!usesNativeScrim) return;
       setBackdrop(id, false);
@@ -407,42 +419,45 @@ export const SwmansionSheetAdapter = React.forwardRef<
       ref,
       () => ({
         expand: () => {
-          // Until the open height is known, the position-coupled fade can't run
-          // (it would divide by an unknown target and jump straight to opaque),
-          // so drive the backdrop with a timing on the first open instead.
-          if (openHeightRef.current == null) {
-            animatedIndex.set(
-              withTiming(0, { duration: BACKDROP_FADE_DURATION })
-            );
+          // Position-coupling needs the open height; until it's known the
+          // backdrop is driven by a timing (instant when not animating).
+          if (typeof openHeightRef.current !== 'number') {
+            animatedIndex.set(resolveBackdropTarget(true, animateIn));
           }
           setIndex(openIndex);
         },
         close: () => {
-          if (openHeightRef.current == null) {
-            animatedIndex.set(
-              withTiming(-1, { duration: BACKDROP_FADE_DURATION })
-            );
+          if (typeof openHeightRef.current !== 'number') {
+            animatedIndex.set(resolveBackdropTarget(false, animateIn));
           }
           setIndex(0);
         },
       }),
-      [animatedIndex, openIndex]
+      [animateIn, animatedIndex, openIndex]
     );
 
     // Inline/portal sheets mount already at the open index and animate in via
-    // the native `animateIn` — without an `expand()` call to kick the fade. So
-    // when such a sheet mounts open with an unknown height (content-sized), fade
-    // the backdrop with a timing here too. Numeric detents are seeded, so they
-    // keep the position-coupled fade. Runs once on mount.
+    // the native `animateIn` — there's no `expand()` call to kick the fade. When
+    // such a sheet mounts open with an unknown height, drive the backdrop here
+    // the same way. Numeric detents are seeded, so they keep the position-coupled
+    // fade and skip this. Runs once on mount.
     useEffect(() => {
-      if (defaultIndex >= 0 && animateIn && openHeightRef.current == null) {
-        animatedIndex.set(withTiming(0, { duration: BACKDROP_FADE_DURATION }));
+      if (defaultIndex >= 0 && typeof openHeightRef.current !== 'number') {
+        animatedIndex.set(resolveBackdropTarget(true, animateIn));
       }
     }, [animateIn, animatedIndex, defaultIndex]);
 
     const handleNativeSettle = (settledIndex: number) => {
+      // When the height is known the position-coupled fade already reached the
+      // endpoint, so settling just confirms it. When a timed fade owns the
+      // transition (height unknown + animating), DON'T snap — it would cut the
+      // timing short. A non-animated sheet has no fade to protect, so snap.
+      const confirmEndpoint =
+        typeof openHeightRef.current === 'number' || !animateIn;
       if (settledIndex <= 0) {
-        animatedIndex.set(-1);
+        if (confirmEndpoint) {
+          animatedIndex.set(-1);
+        }
         // Ignore the collapsed-detent settle that fires during the initial
         // animate-in (before the sheet has ever opened). A real close only
         // happens after an open, so reporting it here would dismiss the sheet
@@ -452,12 +467,14 @@ export const SwmansionSheetAdapter = React.forwardRef<
         }
       } else {
         hasOpenedRef.current = true;
-        // Learn the open height from the settled position so subsequent moves
-        // (drag-to-dismiss, reopen) get the position-coupled fade.
-        if (openHeightRef.current == null && lastPositionRef.current > 0) {
+        if (confirmEndpoint) {
+          animatedIndex.set(0);
+        } else if (lastPositionRef.current > 0) {
+          // First animated open of a content-sized sheet: learn the open height
+          // so the next move (drag-to-dismiss, reopen) is position-coupled. The
+          // timed fade kicked on open owns this animation — don't snap.
           openHeightRef.current = lastPositionRef.current;
         }
-        animatedIndex.set(0);
         handleOpened();
       }
       onSettle?.(settledIndex);
