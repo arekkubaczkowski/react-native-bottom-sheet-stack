@@ -331,7 +331,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // The default surface owns its radius; a custom surface owns its own, so we
     // only clip content to a known radius (default, or one the consumer states
     // via `cornerRadius`).
-    const usingDefaultSurface = surface == null;
+    const usingDefaultSurface = surface === undefined || surface === null;
     const surfaceRadius =
       cornerRadius ?? (usingDefaultSurface ? DEFAULT_SURFACE_RADIUS : 0);
 
