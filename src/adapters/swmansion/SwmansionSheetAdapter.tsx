@@ -304,6 +304,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // behind a short init delay, so toggling it off here causes no flash.
     const usesNativeScrim =
       scrimColor !== 'transparent' || scrimOpacities !== undefined;
+
     useEffect(() => {
       if (!usesNativeScrim) return;
       setBackdrop(id, false);
@@ -341,8 +342,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
         ]}
       />
     );
-    // Layer the handle over the (possibly user-provided) surface so the surface
-    // stays customizable while the adapter owns the handle.
+
     const composedSurface = handleResult ? (
       <View style={StyleSheet.absoluteFill}>
         {baseSurface}
@@ -357,9 +357,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     useBackHandler(id, handleDismiss);
 
-    // Open sheets mount straight at `openIndex` (and animate in) rather than
-    // mounting collapsed and waiting for expand() — that round-trip caused
-    // intermittent no-op opens. Persistent/hidden sheets mount collapsed.
     const defaultIndex = useBottomSheetDefaultIndex();
     const [index, setIndex] = useState(() =>
       defaultIndex < 0 ? 0 : openIndex
@@ -373,9 +370,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
       );
     }
 
-    // Open height (points from the bottom), used to map the native position to a
-    // 0→1 backdrop fade. Known for a numeric detent; for `'content'` it's learned
-    // from the position at the first open settle.
     const openHeightRef = useRef<number | null>(
       typeof expandedDetentValue === 'number' && expandedDetentValue > 0
         ? expandedDetentValue
@@ -390,9 +384,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     useImperativeHandle(
       ref,
+      // The coordinator calls these on every open/close. Fade the backdrop
+      // toward the target; `onPositionChange` overrides it once the height is
+      // known.
       () => ({
-        // An index change always animates, so fade the backdrop toward the
-        // target; `onPositionChange` overrides this once the height is known.
         expand: () => {
           animatedIndex.set(resolveBackdropTarget(true));
           setIndex(openIndex);
@@ -404,14 +399,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
       }),
       [animatedIndex, openIndex]
     );
-
-    // Sheets that mount already open have no expand() call, so seed the fade
-    // here. Overridden by `onPositionChange` once the height is known.
-    useEffect(() => {
-      if (defaultIndex >= 0) {
-        animatedIndex.set(resolveBackdropTarget(true));
-      }
-    }, [animatedIndex, defaultIndex]);
 
     const handleNativeSettle = (settledIndex: number) => {
       // Don't touch `animatedIndex` here: the fade (timing or position-coupled)
