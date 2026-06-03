@@ -3798,14 +3798,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swmansion/react-native-bottom-sheet@npm:0.13.0-next.1":
-  version: 0.13.0-next.1
-  resolution: "@swmansion/react-native-bottom-sheet@npm:0.13.0-next.1"
+"@swmansion/react-native-bottom-sheet@npm:0.15.0-next.1":
+  version: 0.15.0-next.1
+  resolution: "@swmansion/react-native-bottom-sheet@npm:0.15.0-next.1"
   peerDependencies:
     react: ">=18.0.0"
     react-native: ">=0.76.0"
     react-native-safe-area-context: ">=4.0.0"
-  checksum: c0452132833a6390cc02cf97344bdc8a055c74f0a6e2372529bcfd4cafd609185d4f28db33aba29c16f8720414437a7a5e38decb79c8049b0997df765a5f6002
+  checksum: 4037d7f9264bde4cb512d14620c8dc14b49acb09e2ca9fb341543f73608615c52a342505deacb66bb3b1958fb7a57d693b89b37988843aba021d5f504fc871bc
   languageName: node
   linkType: hard
 
@@ -12162,7 +12162,7 @@ __metadata:
     "@expo/metro-runtime": ^6.1.2
     "@gorhom/bottom-sheet": ^5.2.8
     "@react-native-clipboard/clipboard": ^1.16.3
-    "@swmansion/react-native-bottom-sheet": 0.13.0-next.1
+    "@swmansion/react-native-bottom-sheet": 0.15.0-next.1
     babel-plugin-module-resolver: ^5.0.2
     expo: ^54.0.31
     expo-dev-client: ~6.0.13
@@ -12177,7 +12177,7 @@ __metadata:
     react-native-modal: ^14.0.0-rc.1
     react-native-reanimated: ^4.2.1
     react-native-safe-area-context: ^5.6.2
-    react-native-teleport: ^0.5.6
+    react-native-teleport: ^1.1.7
     react-native-web: ~0.19.13
     react-native-worklets: ^0.7.1
     use-sync-external-store: ^1.6.0
@@ -12198,7 +12198,7 @@ __metadata:
     "@gorhom/bottom-sheet": ^5.2.8
     "@react-native/eslint-config": ^0.78.0
     "@release-it/conventional-changelog": ^9.0.2
-    "@swmansion/react-native-bottom-sheet": 0.13.0-next.1
+    "@swmansion/react-native-bottom-sheet": 0.15.0-next.1
     "@types/jest": ^29.5.5
     "@types/react": ^19.0.12
     babel-plugin-react-compiler: ^1.0.0
@@ -12215,14 +12215,14 @@ __metadata:
     react-native-gesture-handler: ^2.30.0
     react-native-reanimated: ^4.2.1
     react-native-safe-area-context: ^5.6.2
-    react-native-teleport: ^0.5.6
+    react-native-teleport: ^1.1.7
     react-native-worklets: ^0.7.1
     release-it: ^17.10.0
     typescript: ^5.2.2
     zustand: ^5.0.3
   peerDependencies:
     "@gorhom/bottom-sheet": ">=5.0.0"
-    "@swmansion/react-native-bottom-sheet": ">=0.13.0-next.1"
+    "@swmansion/react-native-bottom-sheet": ">=0.15.0-next.1"
     react: "*"
     react-native: "*"
     react-native-actions-sheet: ">=0.9.0"
@@ -12231,7 +12231,7 @@ __metadata:
     react-native-modal: ">=11.0.0"
     react-native-reanimated: ">=3.0.0"
     react-native-safe-area-context: ">=5.0.0"
-    react-native-teleport: ">=0.5.0"
+    react-native-teleport: ">=0.1.0"
     react-native-worklets: ">=0.7.0"
     zustand: ">=5.0.0"
   peerDependenciesMeta:
@@ -12342,14 +12342,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-teleport@npm:^0.5.6":
-  version: 0.5.6
-  resolution: "react-native-teleport@npm:0.5.6"
+"react-native-teleport@npm:^1.1.7":
+  version: 1.1.7
+  resolution: "react-native-teleport@npm:1.1.7"
   peerDependencies:
     react: "*"
     react-dom: "*"
     react-native: "*"
-  checksum: febeec41d207b938f9c82c9623e5d9d96eab23685bcd8f5d1bef4c27ad4b24aa547a84d8385032de13a7104b4755366e29362af48f2f809a3bbc291daf99b529
+  checksum: 70d36cd44deb38b0b499f6d94da13ae4ca0435b5c8661e88c90547473ba25b25ee92d580324c92048be6f035241704f07415e05653a2f7604925dd534bdc8780
   languageName: node
   linkType: hard
 
