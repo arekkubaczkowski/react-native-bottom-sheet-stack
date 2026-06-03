@@ -4,6 +4,7 @@ import React, {
   type ReactNode,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -14,11 +15,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  useEvent,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useEvent } from 'react-native-reanimated';
 
 import type {
   BottomSheetProps,
@@ -187,15 +184,13 @@ export interface SwmansionSheetAdapterProps
 
 const DEFAULT_DETENTS: Detent[] = [0, 'content'];
 const DEFAULT_SURFACE_RADIUS = 20;
-const BACKDROP_FADE_DURATION = 300;
 const DEFAULT_HANDLE_COLOR = 'rgba(255, 255, 255, 0.25)';
 const DEFAULT_HANDLE_WIDTH = 40;
 const DEFAULT_HANDLE_HEIGHT = 4;
 const HANDLE_CHROME_TOP = 12;
 const HANDLE_CHROME_BOTTOM = 8;
 const HANDLE_CHROME_GAP = 8;
-// Inset for a custom-element handle, whose height the adapter can't measure
-// (matches the default pill's inset: 12 + 4 + 8 + 8).
+
 const CUSTOM_HANDLE_CONTENT_INSET = 32;
 
 function resolveDetentValue(detent: Detent): DetentValue {
@@ -205,19 +200,6 @@ function resolveDetentValue(detent: Detent): DetentValue {
   return detent;
 }
 
-/**
- * Backdrop target for an open/close transition: a timing toward the endpoint
- * (`0` = open, `-1` = closed). Overridden by the position-coupled fade once the
- * open height is known.
- */
-function resolveBackdropTarget(open: boolean): number {
-  return withTiming(open ? 0 : -1, { duration: BACKDROP_FADE_DURATION });
-}
-
-/**
- * Builds the grab-handle overlay (rendered over the surface) and the top inset
- * the content needs to clear it. `handle` is already known to be truthy.
- */
 function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
   overlay: ReactNode;
   contentInset: number;
@@ -263,9 +245,9 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * - `close()`  → moves `index` back to `0` (collapsed).
  * - `onSettle` reports completed animations → `handleOpened` / `handleClosed`.
  * - `onIndexChange` (user-driven only) reaching `0` → `handleDismiss`.
- * - `onPositionChange` drives the shared `animatedIndex` for a position-coupled
- *   backdrop fade once the sheet has opened (so a drag follows the finger); the
- *   opening fade itself is a timing.
+ * - `onPositionChange` drives the shared `animatedIndex` straight from the native
+ *   fractional detent `index`, so the backdrop fades with the sheet on open,
+ *   close, and drag-to-dismiss — no JS-side position normalization.
  *
  * It also layers opt-in conveniences over the native sheet — a grab handle,
  * full-height/fill-content sizing, and keyboard avoidance — each off by default
@@ -380,43 +362,31 @@ export const SwmansionSheetAdapter = React.forwardRef<
       );
     }
 
-    // Peak position (open height), to normalize the drag-to-dismiss fade.
-    const openPositionSV = useSharedValue(0);
     // Guards against reporting the initial collapsed-detent settle as a close.
-    const hasOpenedSV = useSharedValue(false);
+    const hasOpenedRef = useRef(false);
 
     useImperativeHandle(
       ref,
       () => ({
-        expand: () => {
-          animatedIndex.set(resolveBackdropTarget(true));
-          setIndex(openIndex);
-        },
-        close: () => {
-          animatedIndex.set(resolveBackdropTarget(false));
-          setIndex(0);
-        },
+        expand: () => setIndex(openIndex),
+        close: () => setIndex(0),
       }),
-      [animatedIndex, openIndex]
+      [openIndex]
     );
 
     const handleNativeSettle = (settledIndex: number) => {
-      // Don't touch `animatedIndex` here: the fade (timing or worklet) already
-      // reaches the endpoint, and snapping would cut it short.
       if (settledIndex <= 0) {
-        if (hasOpenedSV.value) {
+        if (hasOpenedRef.current) {
           handleClosed();
         }
       } else {
-        hasOpenedSV.value = true;
+        hasOpenedRef.current = true;
         handleOpened();
       }
       onSettle?.(settledIndex);
     };
 
     const handleNativeIndexChange = (nextIndex: number) => {
-      // onIndexChange fires only for user-driven snaps; reaching `0` means a
-      // swipe-down dismiss.
       if (nextIndex <= 0) {
         if (preventDismiss) {
           setIndex(openIndex);
@@ -428,29 +398,16 @@ export const SwmansionSheetAdapter = React.forwardRef<
       onIndexChange?.(nextIndex);
     };
 
-    // Backdrop fade runs on the UI thread: `wrapNativeView` makes the sheet view
-    // animated so this worklet receives every position frame. After the sheet has
-    // opened, follow the position so a drag fades the backdrop with the finger.
     const onPositionChange = useEvent<
       NativeSyntheticEvent<PositionChangeEventData>
     >(
       (event) => {
         'worklet';
-        const position = event.position;
-        if (position > openPositionSV.value) {
-          openPositionSV.value = position;
-        }
-        if (hasOpenedSV.value && openPositionSV.value > 0) {
-          const ratio = Math.min(position / openPositionSV.value, 1);
-          animatedIndex.set(ratio - 1);
-        }
+        animatedIndex.set(event.index - 1);
       },
       ['onPositionChange']
     );
 
-    // When dismissal is blocked, make the collapsed detent programmatic so the
-    // native sheet can't be dragged down to it — `close()` still collapses it via
-    // the controlled `index`. The JS re-snap above can't block the native gesture.
     const resolvedDetents = preventDismiss
       ? detents.map((detent, detentIndex) =>
           detentIndex === 0 ? programmatic(resolveDetentValue(detent)) : detent
