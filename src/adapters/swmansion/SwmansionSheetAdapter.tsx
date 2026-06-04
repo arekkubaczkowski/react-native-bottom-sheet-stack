@@ -155,22 +155,16 @@ export interface SwmansionSheetAdapterProps
    */
   fillContent?: boolean;
   /**
-   * Keyboard avoidance for the sheet's content. The native swmansion sheet has
-   * none of its own, so a `TextInput` near the bottom would sit under the
-   * keyboard.
+   * Keyboard avoidance for the sheet's content.
    *
-   * - `'none'` (default) — no avoidance; the raw native behavior.
-   * - `'inset'` — keeps a content-sized sheet's inputs above the keyboard.
-   *   Because the sheet is bottom-anchored and sizes to its content, padding the
-   *   content by the keyboard height re-measures the sheet taller and lifts the
-   *   content clear of the keyboard (the added strip hides behind it) — matching
-   *   native iOS. No-op for fixed-height sheets (numeric `detents` /
-   *   {@link fullHeight}): they can't grow, so put a scrollable inside and let it
-   *   scroll the focused input into view instead.
+   * - `'none'` (default) — the content owns the keyboard (use a keyboard-aware
+   *   scrollable inside).
+   * - `'inset'` — the sheet insets its content by the keyboard height (content
+   *   must be a plain scrollable/view; don't also nest a keyboard-aware one).
    *
-   * `'inset'` reads the keyboard height from the optional peer
-   * `react-native-keyboard-controller`. If it isn't installed the sheet renders
-   * without avoidance (a one-time dev warning is logged) — it never crashes.
+   * `'inset'` needs the optional peer `react-native-keyboard-controller`; without
+   * it the sheet renders without avoidance. See the
+   * Keyboard avoidance guide for when to use which.
    */
   keyboardBehavior?: 'none' | 'inset';
   /**
@@ -426,7 +420,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
             borderTopRightRadius: surfaceRadius,
           }
         : null;
-    const needsKeyboardInset = keyboardBehavior === 'inset' && !shouldFill;
+    // Applies to every sheet size: a content-sized sheet re-measures taller, a
+    // fixed-height one (carries `fillStyle`) shrinks its scroll area instead.
+    const needsKeyboardInset = keyboardBehavior === 'inset';
 
     let content = children;
     if (needsKeyboardInset) {
