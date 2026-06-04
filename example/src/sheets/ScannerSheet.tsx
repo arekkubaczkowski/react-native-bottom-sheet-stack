@@ -1,4 +1,3 @@
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { forwardRef, useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
@@ -6,11 +5,13 @@ import {
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
 
-import { Badge, Button, SecondaryButton, Sheet } from '../components';
+import type { SheetAdapterRef } from '../../../src/adapter.types';
+import { SwmansionSheetAdapter } from '../../../src/adapters/swmansion';
+import { Badge, Button, SecondaryButton } from '../components';
 import { ScannerNestedSheet1 } from './ScannerNestedSheets';
 import { colors, sharedStyles } from '../styles/theme';
 
-export const ScannerSheet = forwardRef<BottomSheetMethods>((_, ref) => {
+export const ScannerSheet = forwardRef<SheetAdapterRef>((_, ref) => {
   const { close, params } = useBottomSheetContext<'scanner-sheet'>();
   const { open } = useBottomSheetManager();
   const [isScanning, setIsScanning] = useState(false);
@@ -39,92 +40,101 @@ export const ScannerSheet = forwardRef<BottomSheetMethods>((_, ref) => {
   }, []);
 
   return (
-    <Sheet ref={ref} enableDynamicSizing>
-      <View style={styles.badgeRow}>
-        <Badge label="Persistent" color={colors.cyan} />
-        <Badge
-          label={sourceLabel}
-          color={
-            params?.source === 'navigation' ? colors.purple : colors.primary
-          }
-        />
-      </View>
-      <Text style={sharedStyles.h1}>{title}</Text>
-      <Text style={sharedStyles.text}>
-        This sheet is always mounted (keepMounted). It opens instantly without
-        mount delay and preserves state between open/close cycles.
-      </Text>
-
-      {/* Scanner viewport */}
-      <View style={styles.scannerViewport}>
-        {isScanning ? (
-          <View style={styles.scanningOverlay}>
-            <View style={styles.scanLine} />
-            <Text style={styles.scanningText}>Scanning...</Text>
-          </View>
-        ) : scanResult ? (
-          <View style={styles.resultContainer}>
-            <Text style={styles.resultLabel}>Scanned Code:</Text>
-            <Text style={styles.resultValue}>{scanResult}</Text>
-          </View>
-        ) : (
-          <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderIcon}>[ ]</Text>
-            <Text style={styles.placeholderText}>Ready to scan</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Actions */}
-      <View style={styles.actions}>
-        {scanResult ? (
-          <>
-            <Button title="Scan Again" onPress={handleReset} />
-            <Button
-              title="Open Nested Sheet"
-              onPress={() =>
-                open(<ScannerNestedSheet1 />, {
-                  scaleBackground: true,
-                  mode: 'switch',
-                })
-              }
-            />
-            <SecondaryButton title="Close" onPress={close} />
-          </>
-        ) : (
-          <>
-            <Button
-              title={isScanning ? 'Scanning...' : 'Start Scan'}
-              onPress={isScanning ? () => {} : handleStartScan}
-            />
-            <Button
-              title="Open Nested Sheet"
-              onPress={() =>
-                open(<ScannerNestedSheet1 />, {
-                  scaleBackground: true,
-                  mode: 'switch',
-                })
-              }
-            />
-            <SecondaryButton title="Close" onPress={close} />
-          </>
-        )}
-      </View>
-
-      {/* Info box */}
-      <View style={styles.infoBox}>
-        <Text style={styles.infoText}>
-          Try closing and reopening - the sheet appears instantly because it's
-          pre-mounted with keepMounted flag.
+    <SwmansionSheetAdapter ref={ref} detents={[0, 'content']} handle>
+      <View style={styles.content}>
+        <View style={styles.badgeRow}>
+          <Badge label="Persistent" color={colors.cyan} />
+          <Badge
+            label={sourceLabel}
+            color={
+              params?.source === 'navigation' ? colors.purple : colors.primary
+            }
+          />
+        </View>
+        <Text style={sharedStyles.h1}>{title}</Text>
+        <Text style={sharedStyles.text}>
+          This sheet is always mounted (keepMounted). It opens instantly without
+          mount delay and preserves state between open/close cycles.
         </Text>
+
+        {/* Scanner viewport */}
+        <View style={styles.scannerViewport}>
+          {isScanning ? (
+            <View style={styles.scanningOverlay}>
+              <View style={styles.scanLine} />
+              <Text style={styles.scanningText}>Scanning...</Text>
+            </View>
+          ) : scanResult ? (
+            <View style={styles.resultContainer}>
+              <Text style={styles.resultLabel}>Scanned Code:</Text>
+              <Text style={styles.resultValue}>{scanResult}</Text>
+            </View>
+          ) : (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderIcon}>[ ]</Text>
+              <Text style={styles.placeholderText}>Ready to scan</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Actions */}
+        <View style={styles.actions}>
+          {scanResult ? (
+            <>
+              <Button title="Scan Again" onPress={handleReset} />
+              <Button
+                title="Open Nested Sheet"
+                onPress={() =>
+                  open(<ScannerNestedSheet1 />, {
+                    scaleBackground: true,
+                    mode: 'switch',
+                  })
+                }
+              />
+              <SecondaryButton title="Close" onPress={close} />
+            </>
+          ) : (
+            <>
+              <Button
+                title={isScanning ? 'Scanning...' : 'Start Scan'}
+                onPress={isScanning ? () => {} : handleStartScan}
+              />
+              <Button
+                title="Open Nested Sheet"
+                onPress={() =>
+                  open(<ScannerNestedSheet1 />, {
+                    scaleBackground: true,
+                    mode: 'switch',
+                  })
+                }
+              />
+              <SecondaryButton title="Close" onPress={close} />
+            </>
+          )}
+        </View>
+
+        {/* Info box */}
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            Try closing and reopening - the sheet appears instantly because it's
+            pre-mounted with keepMounted flag.
+          </Text>
+        </View>
       </View>
-    </Sheet>
+    </SwmansionSheetAdapter>
   );
 });
 
 ScannerSheet.displayName = 'ScannerSheet';
 
 const styles = StyleSheet.create({
+  content: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 32,
+    gap: 8,
+  },
   badgeRow: {
     flexDirection: 'row',
     gap: 8,

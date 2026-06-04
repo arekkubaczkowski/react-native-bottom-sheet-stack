@@ -4,7 +4,6 @@ import React, {
   type ReactNode,
   useEffect,
   useImperativeHandle,
-  useRef,
   useState,
 } from 'react';
 import {
@@ -356,9 +355,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
       );
     }
 
-    // Guards against reporting the initial collapsed-detent settle as a close.
-    const hasOpenedRef = useRef(false);
-
     useImperativeHandle(
       ref,
       () => ({
@@ -370,11 +366,8 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     const handleNativeSettle = (settledIndex: number) => {
       if (settledIndex <= 0) {
-        if (hasOpenedRef.current) {
-          handleClosed();
-        }
+        handleClosed();
       } else {
-        hasOpenedRef.current = true;
         handleOpened();
       }
       onSettle?.(settledIndex);
