@@ -33,9 +33,9 @@ interface Props {
 }
 
 function KeyboardInsetActive({ children, style }: Props) {
-  // Bottom-anchored, content-sized sheets re-measure when their content grows,
-  // so padding the content by the keyboard height lifts it clear of the keyboard
-  // (the added strip hides behind the keyboard) — matching native iOS.
+  // Pad by the keyboard height: a content-sized sheet re-measures taller (the
+  // strip hides behind the keyboard); a fixed-height one (gets `flex: 1` via
+  // `style`) shrinks its scroll area above the keyboard instead.
   const keyboardHeight = keyboardController!.useKeyboardState(
     (state) => state.height
   );

@@ -66,7 +66,7 @@ The native sheet is intentionally minimal. The adapter layers a few **opt-in** c
 | `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle as a chrome layer over the `surface` and insets the content to clear it. Pass `true` for the default pill, an object to restyle it, or a React element for full control. Auto-hidden when dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. |
 | `fullHeight` | `boolean` | `false` | Expands the sheet to the full available height (`windowHeight − topInset`). swmansion detents are only `number` / `'content'`, so there's no built-in full-height value — this computes the pixel height for you, safe-area- and rotation-aware, with no `useWindowDimensions` / `useSafeAreaInsets` boilerplate. Ignored when explicit `detents` are passed. |
 | `fillContent` | `boolean` | _auto_ | Stretches the content to fill the sheet (`flex: 1`), so a `flex: 1` scrollable expands and a bottom footer pins to the bottom instead of floating up under the content. Auto and rarely set by hand: `true` for fixed-height sheets (numeric detents or `fullHeight`), `false` for content-sized ones (which must size to their content). Pass a boolean to override. |
-| `keyboardBehavior` | `'none' \| 'inset'` | `'none'` | Keyboard avoidance — the native sheet has none, so an input near the bottom would sit under the keyboard. `'inset'` keeps a content-sized sheet's inputs visible: it pads the content by the keyboard height, and because the sheet is bottom-anchored and sizes to its content it re-measures taller and lifts the content clear of the keyboard (native-iOS behavior). No-op for fixed-height sheets (numeric detents / `fullHeight`) — they can't grow, so put a scrollable inside instead. Reads the keyboard height from `react-native-keyboard-controller` (see below). |
+| `keyboardBehavior` | `'none' \| 'inset'` | `'none'` | Keyboard avoidance — the native sheet has none. `'inset'` insets the content by the keyboard height (works for both content-sized and fixed-height sheets); `'none'` lets the content handle it. See [Keyboard avoidance](#keyboard-avoidance) for when to use which. Reads the keyboard height from `react-native-keyboard-controller`. |
 | `cornerRadius` | `number` | _surface default_ | Top corner radius, applied to the default surface **and** used to clip the content to those corners, so opaque content (e.g. a non-transparent header flush to the top) can't square off the rounded corners. Pass `0` for a flat top. With a custom `surface`, content clipping is off unless you set this to match your surface's radius (the adapter can't infer a custom surface's corners). |
 
 ```tsx
@@ -84,13 +84,6 @@ The native sheet is intentionally minimal. The adapter layers a few **opt-in** c
 <SwmansionSheetAdapter handle={<MyCustomGrabber />}>
   {/* ... */}
 </SwmansionSheetAdapter>
-
-// Content-sized sheet with a text input that should stay above the keyboard.
-<SwmansionSheetAdapter detents={[0, 'content']} keyboardBehavior="inset">
-  <View style={{ padding: 20 }}>
-    <TextInput placeholder="Type…" />
-  </View>
-</SwmansionSheetAdapter>
 ```
 
 :::info `keyboardBehavior="inset"` needs an optional peer
@@ -100,6 +93,56 @@ This is the only convenience with an extra dependency: it reads the keyboard hei
 npm install react-native-keyboard-controller
 ```
 :::
+
+## Keyboard avoidance
+
+The native swmansion sheet does nothing about the keyboard, so a `TextInput` near the bottom sits under it. `keyboardBehavior` picks **one** layer to handle this — the sheet, or the content. Never both.
+
+### `'inset'` — the sheet handles it
+
+The sheet pads its content by the keyboard height. The effect adapts to the sheet's size automatically:
+
+- **Content-sized** sheet (`'content'` detent): it re-measures taller and the added strip hides behind the keyboard, lifting the content clear of it — matching native iOS.
+- **Fixed-height** sheet (numeric `detents` / `fullHeight`): the content area shrinks by the keyboard height, so a scrollable child scrolls within the remaining space above the keyboard.
+
+```tsx
+// Content-sized sheet with an input that should stay above the keyboard.
+<SwmansionSheetAdapter detents={[0, 'content']} keyboardBehavior="inset">
+  <View style={{ padding: 20 }}>
+    <TextInput placeholder="Type…" />
+  </View>
+</SwmansionSheetAdapter>
+
+// Full-height list with a search field in the header.
+<SwmansionSheetAdapter fullHeight keyboardBehavior="inset">
+  <FlatList style={{ flex: 1 }} ListHeaderComponent={<SearchInput />} /* … */ />
+</SwmansionSheetAdapter>
+```
+
+The content must be a **plain** scrollable/view. For a fixed-height sheet the scrollable should fill (`flex: 1`) so it can shrink. Do **not** also nest a keyboard-aware scrollable inside — that double-insets and over-scrolls the content (the input jumps out of view on focus).
+
+`'inset'` keeps the focused input *visible*, but it does not *auto-scroll* to a specific input deep in the content. That's fine for a search field in a header (already at the top); for a long form, see `'none'`.
+
+### `'none'` — the content handles it
+
+The sheet ignores the keyboard. Put a keyboard-aware scrollable inside that pads by the keyboard height **and** auto-scrolls the focused field into view — e.g. `KeyboardAwareScrollView` from `react-native-keyboard-controller`. Use this for **multi-field forms**, where focusing a field lower down should bring it above the keyboard.
+
+```tsx
+<SwmansionSheetAdapter fullHeight keyboardBehavior="none">
+  <KeyboardAwareScrollView style={{ flex: 1 }}>
+    {/* many fields — focusing one scrolls it into view */}
+  </KeyboardAwareScrollView>
+</SwmansionSheetAdapter>
+```
+
+### Which one?
+
+| Content | `keyboardBehavior` |
+| --- | --- |
+| List, simple scroll, search-in-header, short form | `'inset'` (plain scrollable/view inside) |
+| Multi-field form that must auto-scroll to the focused field | `'none'` (keyboard-aware scrollable inside) |
+
+Pick exactly one. Combining `'inset'` with a keyboard-aware scrollable lifts the content twice.
 
 ## Backdrop
 
