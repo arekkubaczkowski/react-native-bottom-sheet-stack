@@ -5,6 +5,7 @@ import BottomSheetOriginal, {
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import React, { useEffect, useImperativeHandle, useRef } from 'react';
 import { useAnimatedReaction } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import type { SheetAdapterRef } from '../../adapter.types';
 import {
@@ -57,6 +58,9 @@ export const GorhomSheetAdapter = React.forwardRef<
       return () => setBackdrop(id, true);
     }, [id, usesCustomBackdrop, setBackdrop]);
 
+    const { handleDismiss, handleOpened, handleClosed } =
+      createSheetEventHandlers(id);
+
     useImperativeHandle(
       ref,
       () => ({
@@ -68,13 +72,17 @@ export const GorhomSheetAdapter = React.forwardRef<
 
     useAnimatedReaction(
       () => contextAnimatedIndex.value,
-      (value) => {
+      (value, prev) => {
         externalAnimatedIndex?.set(value);
+        // gorhom can drop its onChange under rapid open/close interruptions
+        // (e.g. switch then immediate dismiss), leaving the sheet stuck mid-open.
+        // The animated index is the reliable signal: report opened when it
+        // crosses into an open snap point (idempotent via the status guard).
+        if (typeof prev === 'number' && prev < 0 && value >= 0) {
+          scheduleOnRN(handleOpened);
+        }
       }
     );
-
-    const { handleDismiss, handleOpened, handleClosed } =
-      createSheetEventHandlers(id);
 
     useBackHandler(id, handleDismiss);
 
@@ -96,7 +104,6 @@ export const GorhomSheetAdapter = React.forwardRef<
       position,
       type
     ) => {
-      // index >= 0 means sheet reached a valid snap point (opened)
       if (index >= 0) {
         handleOpened();
       }
