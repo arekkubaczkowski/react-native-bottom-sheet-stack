@@ -80,6 +80,10 @@ export interface SwmansionHandleConfig {
  * is forwarded. The `onIndexChange` / `onSettle` callbacks are wrapped by the
  * adapter and your handlers are still invoked afterwards.
  *
+ * **`onIndexChange` timing.** Wider than the native prop: the adapter also fires
+ * it for the programmatic open it drives (at animation start), so you get an
+ * immediate open signal (e.g. haptics) — `onSettle` only reports the end.
+ *
  * **Backdrop.** By default the manager renders its own shared, stack-aware
  * `BottomSheetBackdrop` and the native scrim is disabled (`scrimColor` defaults
  * to `'transparent'`). You *can* opt into the native swmansion scrim by passing
@@ -237,7 +241,8 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * - `expand()` → moves `index` to {@link SwmansionSheetAdapterProps.expandedIndex}.
  * - `close()`  → moves `index` back to `0` (collapsed).
  * - `onSettle` reports completed animations → `handleOpened` / `handleClosed`.
- * - `onIndexChange` (user-driven only) reaching `0` → `handleDismiss`.
+ * - `onIndexChange` (user-driven) reaching `0` → `handleDismiss`; the adapter also
+ *   emits `onIndexChange(openIndex)` for the programmatic open it drives.
  * - `onPositionChange` drives the shared `animatedIndex` straight from the native
  *   fractional detent `index`, so the backdrop fades with the sheet on open,
  *   close, and drag-to-dismiss — no JS-side position normalization.
@@ -358,10 +363,15 @@ export const SwmansionSheetAdapter = React.forwardRef<
     useImperativeHandle(
       ref,
       () => ({
-        expand: () => setIndex(openIndex),
+        expand: () => {
+          // Native onIndexChange skips programmatic changes; surface the open at
+          // animation start (onSettle only reports the end).
+          onIndexChange?.(openIndex);
+          setIndex(openIndex);
+        },
         close: () => setIndex(0),
       }),
-      [openIndex]
+      [openIndex, onIndexChange]
     );
 
     const handleNativeSettle = (settledIndex: number) => {
