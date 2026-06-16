@@ -380,12 +380,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
       defaultIndex < 0 ? 0 : openIndex
     );
 
-    // Tracks the last index reported through `onIndexChange` so the next call
-    // can supply it as `prevIndex`. The controlled `index` state only swings
-    // between 0 and `openIndex` (it isn't updated for user snaps between
-    // non-zero detents), so it can't serve as the previous index — this ref
-    // mirrors every emission and programmatic move instead. Read/written only
-    // in event handlers, never during render.
+    // Last index seen, mirrored on every move — supplies `prevIndex` to
+    // `onIndexChange`. The `index` state only swings between 0 and `openIndex`,
+    // so it can't track snaps between non-zero detents.
     const lastIndexRef = useRef(index);
 
     if (__DEV__ && resolveDetentValue(detents[0] ?? 0) !== 0) {
@@ -408,9 +405,8 @@ export const SwmansionSheetAdapter = React.forwardRef<
           setIndex(openIndex);
         },
         close: () => {
-          // No onIndexChange here (native stays silent for programmatic moves and
-          // we mirror that), but keep the tracker accurate so the next open
-          // reports the collapsed index as its previous one.
+          // No emission (native is silent for programmatic moves), but keep the
+          // tracker in sync so the next open sees 0 as its previous index.
           lastIndexRef.current = 0;
           setIndex(0);
         },
