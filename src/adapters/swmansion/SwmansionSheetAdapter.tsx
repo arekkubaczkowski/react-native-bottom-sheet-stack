@@ -4,6 +4,7 @@ import React, {
   type ReactNode,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -80,9 +81,11 @@ export interface SwmansionHandleConfig {
  * is forwarded. The `onIndexChange` / `onSettle` callbacks are wrapped by the
  * adapter and your handlers are still invoked afterwards.
  *
- * **`onIndexChange` timing.** Wider than the native prop: the adapter also fires
- * it for the programmatic open it drives (at animation start), so you get an
- * immediate open signal (e.g. haptics) — `onSettle` only reports the end.
+ * **`onIndexChange`.** Wider than the native prop: the adapter also fires it for
+ * the programmatic open it drives (at animation start), so you get an immediate
+ * open signal (e.g. haptics) — `onSettle` only reports the end. It also receives
+ * the previous index as a second argument — `(nextIndex, prevIndex)` — while the
+ * first argument keeps the native meaning (the index being moved to).
  *
  * **Backdrop.** By default the manager renders its own shared, stack-aware
  * `BottomSheetBackdrop` and the native scrim is disabled (`scrimColor` defaults
@@ -103,7 +106,12 @@ export interface SwmansionHandleConfig {
 export interface SwmansionSheetAdapterProps
   extends Omit<
     BottomSheetProps,
-    'index' | 'modal' | 'animateIn' | 'onPositionChange' | 'wrapNativeView'
+    | 'index'
+    | 'modal'
+    | 'animateIn'
+    | 'onPositionChange'
+    | 'wrapNativeView'
+    | 'onIndexChange'
   > {
   /**
    * Index into `detents` the sheet expands to when opened.
@@ -177,6 +185,25 @@ export interface SwmansionSheetAdapterProps
    * clipping is off unless you set this to match its radius.
    */
   cornerRadius?: number;
+  /**
+   * Called when the sheet's snap index changes.
+   *
+   * Wider than the native prop in two ways:
+   * - It also fires for the programmatic open the manager drives (at animation
+   *   start), so you get an immediate open signal (e.g. haptics) — native
+   *   `onIndexChange` skips programmatic changes and `onSettle` only reports the
+   *   end of the animation.
+   * - It receives the **previous** index as a second argument, so you can tell
+   *   the direction of a change without tracking it yourself.
+   *
+   * The first argument keeps the native semantics (the index the sheet is moving
+   * to), so handlers that read only it are unaffected.
+   *
+   * @param nextIndex The index the sheet is moving to (same as the native prop's
+   *   single argument).
+   * @param prevIndex The index the sheet was at before this change.
+   */
+  onIndexChange?: (nextIndex: number, prevIndex: number) => void;
 }
 
 const DEFAULT_DETENTS: Detent[] = [0, 'content'];
@@ -242,7 +269,8 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * - `close()`  → moves `index` back to `0` (collapsed).
  * - `onSettle` reports completed animations → `handleOpened` / `handleClosed`.
  * - `onIndexChange` (user-driven) reaching `0` → `handleDismiss`; the adapter also
- *   emits `onIndexChange(openIndex)` for the programmatic open it drives.
+ *   emits `onIndexChange(openIndex, prevIndex)` for the programmatic open it
+ *   drives, and forwards the previous index as the second argument on every call.
  * - `onPositionChange` drives the shared `animatedIndex` straight from the native
  *   fractional detent `index`, so the backdrop fades with the sheet on open,
  *   close, and drag-to-dismiss — no JS-side position normalization.
@@ -352,6 +380,14 @@ export const SwmansionSheetAdapter = React.forwardRef<
       defaultIndex < 0 ? 0 : openIndex
     );
 
+    // Tracks the last index reported through `onIndexChange` so the next call
+    // can supply it as `prevIndex`. The controlled `index` state only swings
+    // between 0 and `openIndex` (it isn't updated for user snaps between
+    // non-zero detents), so it can't serve as the previous index — this ref
+    // mirrors every emission and programmatic move instead. Read/written only
+    // in event handlers, never during render.
+    const lastIndexRef = useRef(index);
+
     if (__DEV__ && resolveDetentValue(detents[0] ?? 0) !== 0) {
       console.warn(
         '[SwmansionSheetAdapter] The first detent should resolve to 0 ' +
@@ -366,10 +402,18 @@ export const SwmansionSheetAdapter = React.forwardRef<
         expand: () => {
           // Native onIndexChange skips programmatic changes; surface the open at
           // animation start (onSettle only reports the end).
-          onIndexChange?.(openIndex);
+          const prevIndex = lastIndexRef.current;
+          lastIndexRef.current = openIndex;
+          onIndexChange?.(openIndex, prevIndex);
           setIndex(openIndex);
         },
-        close: () => setIndex(0),
+        close: () => {
+          // No onIndexChange here (native stays silent for programmatic moves and
+          // we mirror that), but keep the tracker accurate so the next open
+          // reports the collapsed index as its previous one.
+          lastIndexRef.current = 0;
+          setIndex(0);
+        },
       }),
       [openIndex, onIndexChange]
     );
@@ -384,6 +428,8 @@ export const SwmansionSheetAdapter = React.forwardRef<
     };
 
     const handleNativeIndexChange = (nextIndex: number) => {
+      const prevIndex = lastIndexRef.current;
+      lastIndexRef.current = nextIndex;
       if (nextIndex <= 0) {
         if (preventDismiss) {
           setIndex(openIndex);
@@ -392,7 +438,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
           handleDismiss();
         }
       }
-      onIndexChange?.(nextIndex);
+      onIndexChange?.(nextIndex, prevIndex);
     };
 
     const onPositionChange = useEvent<

@@ -57,6 +57,26 @@ Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https:
 
 Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent`, `DetentValue`, `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types are exported from the subpath for convenience.
 
+:::info `onIndexChange` is wider than the native prop
+The adapter's `onIndexChange` differs from the native one in two ways:
+
+- **It fires on the programmatic open too.** The native callback skips programmatic `index` changes (and `onSettle` only reports the *end* of the animation), so there's no native signal for the start of a manager-driven open. The adapter emits `onIndexChange` at open-animation start, giving you an immediate open hook (e.g. haptics).
+- **It receives the previous index.** The signature is `(nextIndex, prevIndex)` — the first argument keeps the native meaning (the index the sheet is moving to), and the second is the index the sheet was at before the change, so you can tell the direction without tracking it yourself.
+
+```tsx
+<SwmansionSheetAdapter
+  detents={[0, 'content']}
+  onIndexChange={(nextIndex, prevIndex) => {
+    if (nextIndex > prevIndex) haptics.impact(); // opening / expanding
+  }}
+>
+  {/* ... */}
+</SwmansionSheetAdapter>
+```
+
+Handlers that read only the first argument are unaffected.
+:::
+
 ## Convenience props
 
 The native sheet is intentionally minimal. The adapter layers a few **opt-in** conveniences on top of it — each defaults to off, so a bare `<SwmansionSheetAdapter>` behaves exactly like the raw native sheet. They are additive: nothing here changes the controlled `detents`/`index` model, and you can still drive everything by hand.
