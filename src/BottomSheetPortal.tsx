@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { Portal } from 'react-native-teleport';
 
 import { BottomSheetContext } from './BottomSheet.context';
@@ -26,7 +27,7 @@ export function BottomSheetPortal({ id, children }: BottomSheetPortalProps) {
   const portalName = `bottomsheet-${id}-${portalSession}`;
 
   return (
-    <Portal hostName={portalName}>
+    <Portal hostName={portalName} style={StyleSheet.absoluteFill}>
       <BottomSheetContext.Provider value={{ id }}>
         <BottomSheetDefaultIndexContext.Provider value={{ defaultIndex: 0 }}>
           <BottomSheetRefContext.Provider value={ref}>
