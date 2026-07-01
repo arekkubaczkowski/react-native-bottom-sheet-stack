@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import type { SheetAdapterRef } from './adapter.types';
 
+import { StyleSheet } from 'react-native';
 import { Portal } from 'react-native-teleport';
 import { BottomSheetContext } from './BottomSheet.context';
 import {
@@ -55,7 +56,10 @@ export function BottomSheetPersistent({
   }
 
   return (
-    <Portal hostName={`bottomsheet-${id}-${portalSession}`}>
+    <Portal
+      hostName={`bottomsheet-${id}-${portalSession}`}
+      style={StyleSheet.absoluteFill}
+    >
       <BottomSheetContext.Provider value={{ id }}>
         <BottomSheetDefaultIndexContext.Provider value={{ defaultIndex: -1 }}>
           <BottomSheetRefContext.Provider value={sheetRef}>
