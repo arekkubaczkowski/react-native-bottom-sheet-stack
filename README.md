@@ -1,116 +1,47 @@
-# react-native-bottom-sheet-stack
+**Hello, it is not possible to create an Issue as Discussion are disabled on the repository.**
 
-A stack manager for bottom sheets and modals in React Native. Supports `push`, `switch`, and `replace` navigation modes, iOS-style scale animations, and React context preservation. Works with any bottom sheet or modal library via a pluggable adapter architecture.
 
-## Documentation
+I do enjoy this library, but it is not working on Expo 57 (following a worklets update)
 
-**[View Full Documentation](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/)**
+I do have this error : `[Worklets] Cannot copy value of type NativeWorklets.`
 
-- [Getting Started](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/getting-started)
-- [Imperative vs Portal API](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/api-comparison)
-- [Navigation Modes](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/navigation-modes)
-- [Scale Animation](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/scale-animation)
-- [Portal API (Context Preservation)](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/context-preservation)
-- [Persistent Sheets](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/persistent-sheets)
-- [Type-Safe IDs & Params](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/type-safe-ids)
-- [Adapters](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/adapters) / [Shipped Adapters](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/built-in-adapters) / [Custom Adapters](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/custom-adapters)
-- [API Reference](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/api/components)
+I am getting help from AI (Claude) and it pointed me to the fact that the library shipped precompile CommonJS. It managed to fix the issue by relying only on tsx in my metro config.
 
-## Features
 
-- **Adapter Architecture** - Pluggable adapters for different bottom sheet/modal libraries. Ships with adapters for `@gorhom/bottom-sheet`, `react-native-modal`, `react-native-actions-sheet`, `@swmansion/react-native-bottom-sheet`, and a custom modal. You can also build your own.
-- **Stack Navigation** - `push`, `switch`, and `replace` modes for managing multiple sheets
-- **Scale Animation** - iOS-style background scaling effect when sheets are stacked
-- **Context Preservation** - Portal-based API that preserves React context in bottom sheets
-- **Mixed Stacking** - Bottom sheets and modals coexist in the same stack
-- **Persistent Sheets** - Pre-mounted sheets that open instantly and preserve state
-- **Type-Safe** - Full TypeScript support with type-safe portal IDs and params
-- **Group Support** - Isolated stacks for different parts of your app
+<details>
+Here is the AI report
 
-## Installation
+**The symptom**
 
-```bash
-yarn add react-native-bottom-sheet-stack
+Opening any bottom sheet → [Worklets] Cannot copy value of type NativeWorklets.
+
+**What a worklet needs**
+
+A worklet runs on the UI thread. To get there, Reanimated/Worklets serializes the worklet + everything its closure captures, and copies it across threads. Serializable = primitives, plain objects, arrays, other worklets, functions. Not serializable = the WorkletsModule native singleton (an instance of class NativeWorklets).
+
+The offending worklet
 ```
-
-### Peer Dependencies
-
-```bash
-yarn add react-native-reanimated react-native-safe-area-context react-native-teleport react-native-worklets zustand
+GorhomSheetAdapter (in the sheet-stack) has:
+import { scheduleOnRN } from 'react-native-worklets'
+...
+useAnimatedReaction(
+  () => externalAnimatedIndex?.value,
+  (value) => {
+    externalAnimatedIndex?.set(value)
+    if (opened) scheduleOnRN(handleOpened)   // ← calls a worklets API inside the worklet
+  },
+)
 ```
+That reaction worklet references scheduleOnRN. Fine in source — the Worklets Babel plugin recognizes a direct named import from react-native-worklets and marks it a global (available on the UI runtime, not captured in the closure).
 
-Additionally, install the dependencies required by the adapter(s) you plan to use (e.g. `@gorhom/bottom-sheet` and `react-native-gesture-handler` for `GorhomSheetAdapter`).
+**Why it broke**
 
-## Quick Example (with `@gorhom/bottom-sheet`)
-
-```tsx
-import { forwardRef } from 'react';
-import { View, Text, Button } from 'react-native';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
-import {
-  BottomSheetManagerProvider,
-  BottomSheetHost,
-  BottomSheetScaleView,
-  useBottomSheetManager,
-  useBottomSheetContext,
-} from 'react-native-bottom-sheet-stack';
-import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
-
-// 1. Define a bottom sheet component
-const MySheet = forwardRef((props, ref) => {
-  const { close } = useBottomSheetContext();
-
-  return (
-    <GorhomSheetAdapter ref={ref} snapPoints={['50%']}>
-      <BottomSheetView>
-        <View style={{ padding: 20 }}>
-          <Text>Hello from Bottom Sheet!</Text>
-          <Button title="Close" onPress={close} />
-        </View>
-      </BottomSheetView>
-    </GorhomSheetAdapter>
-  );
-});
-
-// 2. Setup provider and host
-function App() {
-  return (
-    <BottomSheetManagerProvider id="default">
-      <BottomSheetScaleView>
-        <YourAppContent />
-      </BottomSheetScaleView>
-      <BottomSheetHost />
-    </BottomSheetManagerProvider>
-  );
-}
-
-// 3. Open bottom sheets from anywhere
-function YourAppContent() {
-  const { open } = useBottomSheetManager();
-
-  return (
-    <Button
-      title="Open Sheet"
-      onPress={() => open(<MySheet />, { mode: 'push' })}
-    />
-  );
-}
+The library ships precompiled CommonJS (lib/commonjs), and your app imports react-native-bottom-sheet-stack/gorhom, which its exports map resolves to that compiled build. In CJS the named import became a namespace access:
 ```
+var _reactNativeWorklets = require("react-native-worklets");   // whole module object
+...
+(0, _reactNativeWorklets.scheduleOnRN)(handleOpened);           // member access inside the worklet
+```
+Now the Babel worklets plugin (running in your app on this already-compiled code) sees _reactNativeWorklets.scheduleOnRN — a member access on a local variable, not a recognizable named import. It can't hoist that as a global, so to be safe it captures the whole _reactNativeWorklets namespace object into the worklet closure.
 
-## Shipped Adapters
-
-| Adapter | Import | Wraps | Extra Peer Dependencies |
-|---------|--------|-------|-----------------------|
-| `GorhomSheetAdapter` | `react-native-bottom-sheet-stack/gorhom` | `@gorhom/bottom-sheet` | `@gorhom/bottom-sheet`, `react-native-gesture-handler` |
-| `CustomModalAdapter` | `react-native-bottom-sheet-stack` | Custom animated modal | None |
-| `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | `react-native-modal` |
-| `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | `react-native-actions-sheet` |
-| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | `@swmansion/react-native-bottom-sheet` (Fabric / New Architecture); `react-native-keyboard-controller` (optional, only for `keyboardBehavior="inset"`) |
-
-Adapters with 3rd-party dependencies are shipped as separate subpath exports so that importing the main package never triggers Metro resolution errors for uninstalled libraries. Each sheet in the stack can use a different adapter.
-
-`SwmansionSheetAdapter` also adds a few opt-in conveniences over the bare native sheet (`handle`, `fullHeight`, `fillContent`, `keyboardBehavior`, `cornerRadius`) — see [SwmansionSheetAdapter](https://github.com/arekkubaczkowski/react-native-bottom-sheet-stack/blob/main/docs/docs/built-in-adapters/swmansion.md#convenience-props).
-
-## License
-
-MIT
+</details>
