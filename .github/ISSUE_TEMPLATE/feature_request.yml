@@ -1,0 +1,54 @@
+name: 💡 Feature request
+description: Suggest a new feature or improvement for this library.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Feature request
+
+        👋 Hi, and thanks for taking the time to suggest an improvement!
+
+        **Please fill the following carefully before opening a new request ❗**
+        *(Keep in mind this library is a stack manager for bottom sheets/modals — not a single-sheet component — so please frame requests around that model.)*
+  - type: checkboxes
+    attributes:
+      label: Before submitting a new request
+      description: Please perform simple checks first.
+      options:
+        - label: I checked for possible duplicate requests, with possible answers.
+          required: true
+        - label: I read the README and confirmed this feature does not already exist.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: |
+        Describe the use case and the limitation you are hitting.
+        Focus on the problem rather than a specific solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        Describe the API or behavior you would like to see.
+        If needed, provide code samples of how you would expect to use it.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternative solutions or workarounds you have tried.
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context, screenshots, or references about the request here.
+    validations:
+      required: false
