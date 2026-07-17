@@ -4,33 +4,41 @@
   "description": "Bottom Sheet Stack Manager",
   "source": "./src/index.tsx",
   "main": "lib/commonjs/index.js",
+  "module": "lib/module/index.js",
+  "react-native": "lib/module/index.js",
   "types": "lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
       "types": "./lib/typescript/src/index.d.ts",
+      "react-native": "./lib/module/index.js",
       "default": "./lib/commonjs/index.js"
     },
     "./gorhom": {
       "types": "./lib/typescript/src/adapters/gorhom-sheet/index.d.ts",
+      "react-native": "./lib/module/adapters/gorhom-sheet/index.js",
       "default": "./lib/commonjs/adapters/gorhom-sheet/index.js"
     },
     "./react-native-modal": {
       "types": "./lib/typescript/src/adapters/react-native-modal/index.d.ts",
+      "react-native": "./lib/module/adapters/react-native-modal/index.js",
       "default": "./lib/commonjs/adapters/react-native-modal/index.js"
     },
     "./actions-sheet": {
       "types": "./lib/typescript/src/adapters/actions-sheet/index.d.ts",
+      "react-native": "./lib/module/adapters/actions-sheet/index.js",
       "default": "./lib/commonjs/adapters/actions-sheet/index.js"
     },
     "./swmansion": {
       "types": "./lib/typescript/src/adapters/swmansion/index.d.ts",
+      "react-native": "./lib/module/adapters/swmansion/index.js",
       "default": "./lib/commonjs/adapters/swmansion/index.js"
     }
   },
   "files": [
     "src",
     "lib/typescript",
-    "lib/commonjs"
+    "lib/commonjs",
+    "lib/module"
   ],
   "scripts": {
     "example": "yarn workspace react-native-bottom-sheet-stack-example",
@@ -187,6 +195,12 @@
     "source": "src",
     "output": "lib",
     "targets": [
+      [
+        "module",
+        {
+          "configFile": true
+        }
+      ],
       [
         "commonjs",
         {
