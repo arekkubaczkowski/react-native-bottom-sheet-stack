@@ -57,10 +57,13 @@ export function useSheetRenderData(): SheetRenderItem[] {
 }
 
 function getHiddenPersistentSheets(
-  state: { sheetsById: Record<string, BottomSheetState>; stackOrder: string[] },
+  state: {
+    sheetsById: Record<string, BottomSheetState>;
+    stackOrderByGroup: Record<string, string[]>;
+  },
   groupId: string
 ): SheetRenderItem[] {
-  const inStack = new Set(state.stackOrder);
+  const inStack = new Set(state.stackOrderByGroup[groupId] ?? []);
 
   return Object.values(state.sheetsById)
     .filter((sheet) => isHiddenPersistent(sheet, groupId, inStack))
@@ -85,14 +88,17 @@ function isHiddenPersistent(
 }
 
 function getActiveSheets(
-  state: { sheetsById: Record<string, BottomSheetState>; stackOrder: string[] },
+  state: {
+    sheetsById: Record<string, BottomSheetState>;
+    stackOrderByGroup: Record<string, string[]>;
+  },
   groupId: string
 ): SheetRenderItem[] {
-  return state.stackOrder
-    .filter((id) => state.sheetsById[id]?.groupId === groupId)
-    .map((id, index) => ({
-      id,
-      stackIndex: index,
-      isActive: true,
-    }));
+  // Already scoped to the group, so no filtering is needed — and stackIndex is
+  // now per-group, which is what the z-index layering wants.
+  return (state.stackOrderByGroup[groupId] ?? []).map((id, index) => ({
+    id,
+    stackIndex: index,
+    isActive: true,
+  }));
 }

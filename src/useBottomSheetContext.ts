@@ -10,6 +10,13 @@ import type {
   BottomSheetPortalParams,
 } from './portal.types';
 
+/**
+ * Sentinel ID used when a sheet-scoped hook runs outside a sheet. Never matches
+ * a real sheet, so store selectors resolve to `undefined` instead of needing a
+ * conditional call.
+ */
+const NO_SHEET_ID = '__no_sheet__';
+
 export interface UseBottomSheetContextReturn<TParams> {
   id: string;
   params: TParams;
@@ -19,7 +26,13 @@ export interface UseBottomSheetContextReturn<TParams> {
    * read it to e.g. hide a grab handle.
    */
   preventDismiss: boolean;
-  close: () => void;
+  /**
+   * Closes the sheet.
+   *
+   * @returns `true` once the sheet is closing, `false` if an `onBeforeClose`
+   * interceptor blocked it or there was nothing to close.
+   */
+  close: () => Promise<boolean>;
   /**
    * Close the sheet, bypassing any onBeforeClose interceptor.
    * Useful for force-closing from within onBeforeClose confirmation flows.
@@ -39,8 +52,11 @@ export function useBottomSheetContext<
   T extends BottomSheetPortalId,
 >(): UseBottomSheetContextReturn<BottomSheetPortalParams<T> | unknown> {
   const context = useMaybeBottomSheetContext();
-  const params = useSheetParams(context?.id || '');
-  const preventDismiss = useSheetPreventDismiss(context?.id || '');
+  // NO_SHEET_ID keeps the hook count stable when there is no context: the
+  // selectors still run, and simply find nothing.
+  const id = context?.id ?? NO_SHEET_ID;
+  const params = useSheetParams(id);
+  const preventDismiss = useSheetPreventDismiss(id);
   const startClosing = useStartClosing();
 
   if (!context?.id) {
@@ -49,9 +65,7 @@ export function useBottomSheetContext<
     );
   }
 
-  const close = () => {
-    requestClose(context.id);
-  };
+  const close = () => requestClose(context.id);
   const forceClose = () => startClosing(context.id);
 
   return {

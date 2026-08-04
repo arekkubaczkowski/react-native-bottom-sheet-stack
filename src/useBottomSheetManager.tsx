@@ -17,6 +17,13 @@ export const useBottomSheetManager = () => {
   const storeOpen = useOpen();
   const storeClearGroup = useClearGroup();
 
+  /**
+   * Opens a sheet with inline content.
+   *
+   * @returns The sheet's ID, or `null` when the store declined to open it —
+   * because the sheet is already on the stack, or another sheet in the group is
+   * still animating open. A `__DEV__` warning explains which.
+   */
   const openBottomSheet = (
     content: React.ReactElement,
     options: {
@@ -25,37 +32,51 @@ export const useBottomSheetManager = () => {
       mode?: OpenMode;
       scaleBackground?: boolean;
       backdrop?: boolean;
+      params?: Record<string, unknown>;
     } = {}
-  ) => {
+  ): string | null => {
     const groupId =
       options.groupId || bottomSheetManagerContext?.groupId || 'default';
 
     const id = options.id || Math.random().toString(36);
     const ref = React.createRef<SheetAdapterRef>();
 
-    setSheetRef(id, ref);
-
     const contentWithRef = React.cloneElement(content, {
       ref,
     } as { ref: typeof ref });
 
-    storeOpen(
+    const result = storeOpen(
       {
         id,
         groupId,
         content: contentWithRef,
         scaleBackground: options.scaleBackground,
         backdrop: options.backdrop,
+        params: options.params,
       },
       options.mode
     );
 
+    // Registered only after the store accepts the sheet. The ref map is
+    // module-global and is only ever cleaned up by QueueItem's unmount — so
+    // registering before a rejected open would leak an entry that nothing can
+    // reclaim, once per rejected call, since inline IDs are random.
+    if (!result.opened) {
+      return null;
+    }
+
+    setSheetRef(id, ref);
+
     return id;
   };
 
-  const close = (id: string) => {
-    requestClose(id);
-  };
+  /**
+   * Closes a sheet.
+   *
+   * @returns `true` once the sheet is closing, `false` if an `onBeforeClose`
+   * interceptor blocked it or there was nothing to close.
+   */
+  const close = (id: string) => requestClose(id);
 
   const closeAll = (options?: CloseAllOptions) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';

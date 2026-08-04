@@ -3,40 +3,68 @@ import { createWithEqualityFn as create } from 'zustand/traditional';
 
 import {
   applyModeToTopSheet,
+  getGroupStack,
   getSheetBelowId,
   getTopSheetId,
   isActivatableKeepMounted,
   isHidden,
   removeFromStack,
   updateSheet,
+  withGroupStack,
 } from './helpers';
 import { ensureAnimatedIndex, resetAnimatedIndex } from '../animatedRegistry';
 import { getNextPortalSession } from '../portalSessionRegistry';
-import type { BottomSheetState, BottomSheetStore } from './types';
+import type {
+  BottomSheetState,
+  BottomSheetStore,
+  OpenRejectionReason,
+  OpenResult,
+} from './types';
+
+function warnRejectedOpen(id: string, reason: OpenRejectionReason) {
+  if (!__DEV__) return;
+
+  const explanation =
+    reason === 'already-active'
+      ? `Sheet "${id}" is already on the stack. Re-opening an active sheet is a no-op by design; close it first, or use updateParams() to change its content.`
+      : `Sheet "${id}" was not opened because another sheet in the same group is still animating open. Wait for it to settle (useBottomSheetStatus) before opening the next one.`;
+
+  console.warn(`[BottomSheet] open() ignored. ${explanation}`);
+}
 
 export const useBottomSheetStore = create(
-  subscribeWithSelector<BottomSheetStore>((set) => ({
+  subscribeWithSelector<BottomSheetStore>((set, get) => ({
     sheetsById: {},
-    stackOrder: [],
+    stackOrderByGroup: {},
 
-    open: (sheet, mode = 'push') =>
-      set((state) => {
-        const existingSheet = state.sheetsById[sheet.id];
+    open: (sheet, mode = 'push'): OpenResult => {
+      const state = get();
+      const existingSheet = state.sheetsById[sheet.id];
 
-        if (existingSheet && !isActivatableKeepMounted(existingSheet)) {
-          return state;
-        }
+      // Guards run before the write so the caller can be told what happened —
+      // a silently dropped open is indistinguishable from a broken one.
+      if (existingSheet && !isActivatableKeepMounted(existingSheet)) {
+        warnRejectedOpen(sheet.id, 'already-active');
+        return { opened: false, id: sheet.id, reason: 'already-active' };
+      }
 
-        const hasOpeningInGroup = Object.values(state.sheetsById).some(
-          (s) => s.groupId === sheet.groupId && s.status === 'opening'
+      const hasOpeningInGroup = Object.values(state.sheetsById).some(
+        (s) => s.groupId === sheet.groupId && s.status === 'opening'
+      );
+      if (hasOpeningInGroup) {
+        warnRejectedOpen(sheet.id, 'group-busy');
+        return { opened: false, id: sheet.id, reason: 'group-busy' };
+      }
+
+      set((current) => {
+        const groupStack = getGroupStack(
+          current.stackOrderByGroup,
+          sheet.groupId
         );
-        if (hasOpeningInGroup) {
-          return state;
-        }
 
         const updatedSheetsById = applyModeToTopSheet(
-          state.sheetsById,
-          state.stackOrder,
+          current.sheetsById,
+          groupStack,
           mode
         );
 
@@ -64,9 +92,16 @@ export const useBottomSheetStore = create(
 
         return {
           sheetsById: { ...updatedSheetsById, [sheet.id]: newSheet },
-          stackOrder: [...state.stackOrder, sheet.id],
+          stackOrderByGroup: withGroupStack(
+            current.stackOrderByGroup,
+            sheet.groupId,
+            [...groupStack, sheet.id]
+          ),
         };
-      }),
+      });
+
+      return { opened: true, id: sheet.id };
+    },
 
     markOpen: (id) =>
       set((state) => {
@@ -85,7 +120,11 @@ export const useBottomSheetStore = create(
           status: 'closing',
         });
 
-        const belowId = getSheetBelowId(state.stackOrder, id);
+        const groupStack = getGroupStack(
+          state.stackOrderByGroup,
+          sheet.groupId
+        );
+        const belowId = getSheetBelowId(groupStack, id);
         if (belowId && isHidden(updatedSheetsById[belowId])) {
           updatedSheetsById = updateSheet(updatedSheetsById, belowId, {
             status: 'opening',
@@ -110,8 +149,12 @@ export const useBottomSheetStore = create(
           delete updatedSheetsById[id];
         }
 
-        const newStackOrder = removeFromStack(state.stackOrder, id);
-        const topId = getTopSheetId(newStackOrder);
+        const groupStack = getGroupStack(
+          state.stackOrderByGroup,
+          sheet.groupId
+        );
+        const newGroupStack = removeFromStack(groupStack, id);
+        const topId = getTopSheetId(newGroupStack);
 
         if (topId && isHidden(updatedSheetsById[topId])) {
           updatedSheetsById = updateSheet(updatedSheetsById, topId, {
@@ -121,7 +164,11 @@ export const useBottomSheetStore = create(
 
         return {
           sheetsById: updatedSheetsById,
-          stackOrder: newStackOrder,
+          stackOrderByGroup: withGroupStack(
+            state.stackOrderByGroup,
+            sheet.groupId,
+            newGroupStack
+          ),
         };
       }),
 
@@ -164,11 +211,15 @@ export const useBottomSheetStore = create(
 
         return {
           sheetsById: updatedSheetsById,
-          stackOrder: state.stackOrder.filter((id) => !idsToRemove.has(id)),
+          stackOrderByGroup: withGroupStack(
+            state.stackOrderByGroup,
+            groupId,
+            []
+          ),
         };
       }),
 
-    clearAll: () => set({ sheetsById: {}, stackOrder: [] }),
+    clearAll: () => set({ sheetsById: {}, stackOrderByGroup: {} }),
 
     mount: (sheet) =>
       set((state) => {
@@ -192,14 +243,24 @@ export const useBottomSheetStore = create(
 
     unmount: (id) =>
       set((state) => {
-        if (!state.sheetsById[id]) return state;
+        const sheet = state.sheetsById[id];
+        if (!sheet) return state;
 
         const updatedSheetsById = { ...state.sheetsById };
         delete updatedSheetsById[id];
 
+        const groupStack = getGroupStack(
+          state.stackOrderByGroup,
+          sheet.groupId
+        );
+
         return {
           sheetsById: updatedSheetsById,
-          stackOrder: removeFromStack(state.stackOrder, id),
+          stackOrderByGroup: withGroupStack(
+            state.stackOrderByGroup,
+            sheet.groupId,
+            removeFromStack(groupStack, id)
+          ),
         };
       }),
   }))

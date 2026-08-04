@@ -4,7 +4,7 @@ import { useMaybeBottomSheetContext } from './BottomSheet.context';
 import { useSetPreventDismiss } from './bottomSheet.store';
 import type { OnBeforeCloseCallback } from './onBeforeCloseRegistry';
 import { removeOnBeforeClose, setOnBeforeClose } from './onBeforeCloseRegistry';
-import { useEvent } from './useEvent';
+import { useStableCallback } from './useStableCallback';
 
 /**
  * Registers an interceptor that is called before the sheet closes.
@@ -71,17 +71,15 @@ import { useEvent } from './useEvent';
 export function useOnBeforeClose(callback: OnBeforeCloseCallback): void {
   const context = useMaybeBottomSheetContext();
   const setPreventDismiss = useSetPreventDismiss();
-
-  if (!context?.id) {
-    throw new Error(
-      'useOnBeforeClose must be used within a BottomSheet component'
-    );
-  }
-
-  const id = context.id;
-  const stableCallback = useEvent(callback);
+  // Every hook runs unconditionally, before the guard below. Throwing first
+  // would change the hook count between renders — if the context disappears
+  // mid-unmount, React reports "rendered fewer hooks than expected" and buries
+  // the real cause.
+  const stableCallback = useStableCallback(callback);
+  const id = context?.id;
 
   useEffect(() => {
+    if (!id) return;
     setOnBeforeClose(id, stableCallback);
     setPreventDismiss(id, true);
     return () => {
@@ -89,4 +87,10 @@ export function useOnBeforeClose(callback: OnBeforeCloseCallback): void {
       setPreventDismiss(id, false);
     };
   }, [id, stableCallback, setPreventDismiss]);
+
+  if (!id) {
+    throw new Error(
+      'useOnBeforeClose must be used within a BottomSheet component'
+    );
+  }
 }

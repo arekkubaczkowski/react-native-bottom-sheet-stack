@@ -124,7 +124,9 @@ function pollAnimatedIndexValues() {
 export function BottomSheetDebugMonitor() {
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { sheetsById, stackOrder } = useBottomSheetStore();
+  const { sheetsById, stackOrderByGroup } = useBottomSheetStore();
+  // Flattened for display only — the store keys the stack by group.
+  const stackOrder = Object.values(stackOrderByGroup).flat();
 
   const pan = useRef(new Animated.ValueXY({ x: 20, y: 100 })).current;
 
@@ -158,7 +160,7 @@ export function BottomSheetDebugMonitor() {
     const unsubscribe = useBottomSheetStore.subscribe(
       (state) => ({
         sheetsById: state.sheetsById,
-        stackOrder: state.stackOrder,
+        stackOrderByGroup: state.stackOrderByGroup,
       }),
       (current, previous) => {
         // Detect new sheets
@@ -192,15 +194,19 @@ export function BottomSheetDebugMonitor() {
           }
         });
 
-        // Detect stack changes
+        // Detect stack changes, per group
         if (
-          JSON.stringify(current.stackOrder) !==
-          JSON.stringify(previous.stackOrder)
+          JSON.stringify(current.stackOrderByGroup) !==
+          JSON.stringify(previous.stackOrderByGroup)
         ) {
-          addDebugLog(
-            'status',
-            'stack',
-            `Stack: [${current.stackOrder.join(', ')}]`
+          Object.entries(current.stackOrderByGroup).forEach(
+            ([groupId, stack]) => {
+              addDebugLog(
+                'status',
+                'stack',
+                `Stack[${groupId}]: [${stack.join(', ')}]`
+              );
+            }
           );
         }
       }

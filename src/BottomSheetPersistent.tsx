@@ -15,7 +15,7 @@ import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider
 import { BottomSheetRefContext } from './BottomSheetRef.context';
 import type { BottomSheetPortalId } from './portal.types';
 import { setSheetRef } from './refsMap';
-import { useEvent } from './useEvent';
+import { useStableCallback } from './useStableCallback';
 
 interface BottomSheetPersistentProps {
   id: BottomSheetPortalId;
@@ -34,7 +34,7 @@ export function BottomSheetPersistent({
   const sheetRef = useRef<SheetAdapterRef>(null);
   const groupId = bottomSheetManagerContext?.groupId || 'default';
 
-  const mountSheet = useEvent(() => {
+  const mountSheet = useStableCallback(() => {
     mount({ id, groupId, content: null, usePortal: true, keepMounted: true });
   });
 

@@ -4,15 +4,68 @@ import { getOnBeforeClose } from './onBeforeCloseRegistry';
 import { getSheetRef } from './refsMap';
 
 /**
+ * Frames to keep retrying a ref call before giving up.
+ *
+ * The store can reach a terminal status before the adapter has mounted — a
+ * portal sheet has to teleport its content into the `PortalHost` first. A
+ * single attempt would be a silent no-op, leaving the sheet stuck in that
+ * status forever (and, for 'closing', blocking every later open in the group).
+ */
+const REF_CALL_MAX_FRAMES = 10;
+
+/**
+ * Calls `action` on the sheet's adapter ref, retrying across frames until the
+ * ref exists — and re-checking the status each time, so a sheet that changed
+ * its mind mid-wait is not driven to a stale target.
+ */
+function driveSheetRef(
+  id: string,
+  expectedStatus: string,
+  action: (ref: NonNullable<ReturnType<typeof getSheetRef>>['current']) => void
+) {
+  let framesLeft = REF_CALL_MAX_FRAMES;
+
+  const attempt = () => {
+    const currentStatus = useBottomSheetStore.getState().sheetsById[id]?.status;
+    if (currentStatus !== expectedStatus) {
+      return;
+    }
+
+    const ref = getSheetRef(id)?.current;
+    if (ref) {
+      action(ref);
+      return;
+    }
+
+    if (--framesLeft <= 0) {
+      if (__DEV__) {
+        console.warn(
+          `[BottomSheet] Sheet "${id}" reached status "${expectedStatus}" but its ` +
+            'adapter never registered a ref, so the transition could not be driven. ' +
+            'The sheet will be stuck in this status. Make sure the adapter forwards ' +
+            'its ref (see useAdapterRef).'
+        );
+      }
+      return;
+    }
+
+    requestAnimationFrame(attempt);
+  };
+
+  requestAnimationFrame(attempt);
+}
+
+/**
  * Subscribes to store changes and calls adapter ref methods.
  * Direction: Store → Adapter (via SheetAdapterRef)
  */
 export function initBottomSheetCoordinator(groupId: string) {
   return useBottomSheetStore.subscribe(
     (s) =>
-      s.stackOrder
-        .filter((id) => s.sheetsById[id]?.groupId === groupId)
-        .map((id) => ({ id, status: s.sheetsById[id]?.status })),
+      (s.stackOrderByGroup[groupId] ?? []).map((id) => ({
+        id,
+        status: s.sheetsById[id]?.status,
+      })),
     (next, prev) => {
       next.forEach(({ id, status }) => {
         const prevStatus = prev.find((p) => p.id === id)?.status;
@@ -21,21 +74,13 @@ export function initBottomSheetCoordinator(groupId: string) {
           return;
         }
 
-        const ref = getSheetRef(id)?.current;
-
         switch (status) {
           case 'opening':
-            requestAnimationFrame(() => {
-              const currentStatus =
-                useBottomSheetStore.getState().sheetsById[id]?.status;
-              if (currentStatus === 'opening') {
-                getSheetRef(id)?.current?.expand();
-              }
-            });
+            driveSheetRef(id, 'opening', (ref) => ref?.expand());
             break;
           case 'hidden':
           case 'closing':
-            ref?.close();
+            driveSheetRef(id, status, (ref) => ref?.close());
             break;
         }
       });
@@ -49,7 +94,9 @@ export function initBottomSheetCoordinator(groupId: string) {
  * If an onBeforeClose callback is registered for the sheet and it returns
  * `false` (or resolves to `false`), the close is cancelled.
  *
- * @returns `true` if the close proceeded, `false` if it was intercepted.
+ * @returns `true` if the sheet is now closing, `false` if the interceptor
+ * blocked it — or if there was nothing to close (the sheet is already closing,
+ * hidden, or does not exist).
  */
 export async function requestClose(sheetId: string): Promise<boolean> {
   const state = useBottomSheetStore.getState();
@@ -104,9 +151,13 @@ export async function requestClose(sheetId: string): Promise<boolean> {
 
   if (currentStatus === 'open' || currentStatus === 'opening') {
     state.startClosing(sheetId);
+    return true;
   }
 
-  return true;
+  // Nothing to close: hidden, already gone, or a status that cannot transition
+  // to closing. The interceptor did not block, but the sheet is not closing
+  // either — say so rather than reporting a close that never happened.
+  return false;
 }
 
 /**
@@ -134,14 +185,11 @@ export async function closeAllAnimated(
   const stagger = options?.stagger ?? DEFAULT_STAGGER_MS;
 
   const state = useBottomSheetStore.getState();
-  const groupSheetIds = state.stackOrder.filter(
-    (id) => state.sheetsById[id]?.groupId === groupId
-  );
 
   // Close from top to bottom (reverse order)
-  const reversed = [...groupSheetIds].reverse();
+  const reversed = [...(state.stackOrderByGroup[groupId] ?? [])].reverse();
 
-  for (const sheetId of reversed) {
+  for (const [index, sheetId] of reversed.entries()) {
     const currentState = useBottomSheetStore.getState();
     const sheet = currentState.sheetsById[sheetId];
 
@@ -157,7 +205,7 @@ export async function closeAllAnimated(
       break;
     }
 
-    if (stagger > 0 && reversed.indexOf(sheetId) < reversed.length - 1) {
+    if (stagger > 0 && index < reversed.length - 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, stagger));
     }
   }

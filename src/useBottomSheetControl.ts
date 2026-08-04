@@ -34,7 +34,13 @@ type OpenFunction<T extends BottomSheetPortalId> =
 
 export interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
   open: OpenFunction<T>;
-  close: () => void;
+  /**
+   * Closes the sheet.
+   *
+   * @returns `true` once the sheet is closing, `false` if an `onBeforeClose`
+   * interceptor blocked it or there was nothing to close.
+   */
+  close: () => Promise<boolean>;
   closeAll: (options?: CloseAllOptions) => Promise<void>;
   updateParams: (params: BottomSheetPortalParams<T>) => void;
   resetParams: () => void;
@@ -51,18 +57,10 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
   const open = (options?: OpenOptions<T>) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';
 
-    // Only create ref if it doesn't exist (keepMounted sheets already have one)
-    const existingRef = getSheetRef(id);
-    if (!existingRef) {
-      const ref = React.createRef<SheetAdapterRef>();
-      setSheetRef(id, ref);
-    }
-
-    storeOpen(
+    const result = storeOpen(
       {
         id,
         groupId,
-        content: null,
         usePortal: true,
         scaleBackground: options?.scaleBackground,
         backdrop: options?.backdrop,
@@ -70,11 +68,16 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
       },
       options?.mode
     );
+
+    // Registered only after the store accepts the sheet, so a rejected open
+    // leaves no orphan in the module-global ref map. Persistent (keepMounted)
+    // sheets already registered their own ref on mount — don't replace it.
+    if (result.opened && !getSheetRef(id)) {
+      setSheetRef(id, React.createRef<SheetAdapterRef>());
+    }
   };
 
-  const close = () => {
-    requestClose(id);
-  };
+  const close = () => requestClose(id);
 
   const closeAll = (options?: CloseAllOptions) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';
