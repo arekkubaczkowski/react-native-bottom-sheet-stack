@@ -69,7 +69,7 @@ open(<MySheet />, {
 | `groupId` | `string` | context or `'default'` | Group ID for the sheet |
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
-| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when you give them their own native backdrop/scrim (e.g. `SwmansionSheetAdapter`'s `scrimColor`, a custom gorhom `backdropComponent`), so you rarely set it by hand. |
+| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when you give them their own backdrop (e.g. a custom gorhom `backdropComponent`), so you rarely set it by hand. |
 
 ### Deprecated Aliases
 

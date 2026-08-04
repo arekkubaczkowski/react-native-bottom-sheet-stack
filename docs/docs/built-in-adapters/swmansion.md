@@ -12,6 +12,14 @@ Wraps [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansi
 npm install @swmansion/react-native-bottom-sheet react-native-safe-area-context
 ```
 
+:::caution Requires `@swmansion/react-native-bottom-sheet >= 0.16`
+0.16 moved all sheet geometry to native measurement (the JS-provided height cap
+is gone) and rewrote the position-follower path — the 120 Hz display link and
+spring prediction on iOS, per-frame spring emission on Android. The adapter's
+backdrop fade rides on that path, so on older versions it updates at half rate
+and lags the sheet.
+:::
+
 ## Usage
 
 ```tsx
@@ -39,9 +47,9 @@ Software Mansion's sheet is **fully controlled**: it exposes no imperative ref, 
 | Manager action / event | What the adapter does |
 | --- | --- |
 | `expand()` | Sets `index` to `expandedIndex` (defaults to the last detent) |
-| `close()` | Sets `index` back to `0` (collapsed) |
-| `onSettle(i)` | `i > 0` → reports **opened**; `i === 0` → reports **closed** |
-| `onIndexChange(0)` | User swiped down to dismiss → reports **dismiss** (re-snaps up when the sheet is non-dismissable) |
+| `close()` | Sets `index` back to the collapsed detent |
+| `onSettle(i)` | Settled on a zero-height detent → reports **closed**; anything else → reports **opened** |
+| `onIndexChange(i)` | User swiped down to a zero-height detent → reports **dismiss** (re-snaps up when the sheet is non-dismissable) |
 | `onPositionChange` | Drives the shared `animatedIndex` for a smooth backdrop fade |
 
 :::info Collapsed detent
@@ -50,10 +58,13 @@ The detent at index `0` must resolve to `0` (collapsed) so the manager can close
 
 ## Props
 
-Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansion-labs/react-native-bottom-sheet)'s `BottomSheet` (`detents`, `style`, `animateIn`, `scrimColor`, `disableScrollableNegotiation`, `onIndexChange`, `onSettle`, `onPositionChange`), **except** the props the manager owns:
+Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansion-labs/react-native-bottom-sheet)'s `BottomSheet` (`detents`, `style`, `extendUnderStatusBar`, `animateContentHeight`, `onIndexChange`, `onSettle`, `onPositionChange`), **except** the props the manager owns:
 
 - `index` — the adapter is the source of truth. Use `expandedIndex` (a prop added by the adapter, defaults to the last detent) to choose which detent the sheet opens to.
-- `modal` — the sheet always renders inline so it participates in the manager's z-index stack and shares the manager's `BottomSheetBackdrop`.
+- `animateIn` — the manager controls the open animation, so it is forced on.
+- `onPositionChange` / `wrapNativeView` — consumed by the adapter to drive the backdrop fade on the UI thread.
+
+`scrollableNegotiation` is forwarded too, but the native side only honors it from **0.17**; on 0.16 use the (deprecated) `disableScrollableNegotiation`.
 
 Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent`, `DetentValue`, `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types are exported from the subpath for convenience.
 
@@ -84,10 +95,13 @@ The native sheet is intentionally minimal. The adapter layers a few **opt-in** c
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle as a chrome layer over the `surface` and insets the content to clear it. Pass `true` for the default pill, an object to restyle it, or a React element for full control. Auto-hidden when dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. |
-| `fullHeight` | `boolean` | `false` | Expands the sheet to the full available height (`windowHeight − topInset`). swmansion detents are only `number` / `'content'`, so there's no built-in full-height value — this computes the pixel height for you, safe-area- and rotation-aware, with no `useWindowDimensions` / `useSafeAreaInsets` boilerplate. Ignored when explicit `detents` are passed. |
+| `fullHeight` | `boolean` | `false` | Expands the sheet to the full height available to it. swmansion detents are only `number` / `'content'`, and neither expresses "as tall as you can go" — this passes a detent taller than any screen, which native clamps to the height it actually measured. Stays below the status bar unless you also pass `extendUnderStatusBar`; combined with `detached`, it means the detached frame's height. Ignored when explicit `detents` are passed. |
+| `detached` | `boolean` | `false` | Floats the sheet free of the screen edges — the *detached* presentation from `@gorhom/bottom-sheet`. All four corners are rounded and the sheet rises from the inset frame. See [Detached sheets](#detached-sheets). |
+| `bottomInset` | `number` | _safe-area bottom_ | Gap below the sheet. Only meaningful with `detached`. Falls back to `16` where there is no bottom inset. |
+| `horizontalInset` | `number` | `16` | Gap on each side. Only meaningful with `detached`. |
 | `fillContent` | `boolean` | _auto_ | Stretches the content to fill the sheet (`flex: 1`), so a `flex: 1` scrollable expands and a bottom footer pins to the bottom instead of floating up under the content. Auto and rarely set by hand: `true` for fixed-height sheets (numeric detents or `fullHeight`), `false` for content-sized ones (which must size to their content). Pass a boolean to override. |
 | `keyboardBehavior` | `'none' \| 'inset'` | `'none'` | Keyboard avoidance — the native sheet has none. `'inset'` insets the content by the keyboard height (works for both content-sized and fixed-height sheets); `'none'` lets the content handle it. See [Keyboard avoidance](#keyboard-avoidance) for when to use which. Reads the keyboard height from `react-native-keyboard-controller`. |
-| `cornerRadius` | `number` | _surface default_ | Top corner radius, applied to the default surface **and** used to clip the content to those corners, so opaque content (e.g. a non-transparent header flush to the top) can't square off the rounded corners. Pass `0` for a flat top. With a custom `surface`, content clipping is off unless you set this to match your surface's radius (the adapter can't infer a custom surface's corners). |
+| `cornerRadius` | `number` | _surface default_ | Corner radius, applied to the default surface **and** used to clip the content to those corners (top two, or all four when `detached`), so opaque content (e.g. a non-transparent header flush to the top) can't square off the rounded corners. Pass `0` for a flat top. With a custom `surface`, content clipping is off unless you set this to match your surface's radius (the adapter can't infer a custom surface's corners). |
 
 ```tsx
 // Grab handle + full height + a flex:1 scrollable that binds to the sheet.
@@ -164,19 +178,38 @@ The sheet ignores the keyboard. Put a keyboard-aware scrollable inside that pads
 
 Pick exactly one. Combining `'inset'` with a keyboard-aware scrollable lifts the content twice.
 
-## Backdrop
+## Detached sheets
 
-By default the sheet uses the **stack manager's shared backdrop** (`BottomSheetBackdrop`) and the native scrim is disabled (`scrimColor` defaults to `'transparent'`). This is almost always what you want — the manager's backdrop is **stack-aware**: it interpolates opacity correctly across stacked sheets, sits at the right z-index, coordinates with the background scale animation, and participates in cascading tap-to-dismiss.
-
-You **can** opt into the native swmansion scrim by passing `scrimColor` / `scrimOpacities`, but it's **not recommended** — a per-sheet native scrim knows nothing about the rest of the stack. Reach for it only when you genuinely need the native one (e.g. a specific native blur/scrim behavior):
+`detached` lifts the sheet off the screen edges instead of anchoring it to the bottom, matching the *detached* presentation from `@gorhom/bottom-sheet`:
 
 ```tsx
-<SwmansionSheetAdapter scrimColor="rgba(0,0,0,0.5)">
+<SwmansionSheetAdapter detached handle detents={[0, 'content']}>
+  <View style={{ padding: 20 }}>{/* ... */}</View>
+</SwmansionSheetAdapter>
+
+// Override the insets.
+<SwmansionSheetAdapter detached bottomInset={48} horizontalInset={24}>
   {/* ... */}
 </SwmansionSheetAdapter>
 ```
 
-When you pass a scrim, the adapter **automatically disables the manager backdrop** for that sheet — so the two never stack into a double-dark overlay and you don't need to do anything else.
+Detaching works by giving the sheet a **smaller canvas**: the adapter wraps it in a frame inset by those values, and the native host fills that frame. The detent cap is measured from it, so `'content'` and `fullHeight` resolve against the detached height — no arithmetic on your side. All four corners are rounded (an anchored sheet keeps its bottom two square), and the content is clipped to match.
+
+The frame also clips, and that part is load-bearing rather than cosmetic: the native sheet container is a full-canvas view translated down to the current position, and it is explicitly *not* clipped to its host, so its surface hangs below by whatever the sheet has not expanded yet. Unclipped, that surface would paint straight over the bottom gap and the sheet would not read as detached at all.
+
+:::note Shadows on a custom `surface`
+Because the frame clips, a shadow cast by a custom `surface` is clipped with it. The native sheet itself draws no shadow, so the default surface is unaffected.
+:::
+
+Defaults are chosen so a bare `detached` looks right: `16` horizontally, and the bottom safe-area inset (at least `16`) vertically, so the sheet clears the home indicator.
+
+## Backdrop
+
+The sheet uses the **stack manager's shared backdrop** (`BottomSheetBackdrop`), faded from the sheet's live native position via `onPositionChange`. The manager's backdrop is **stack-aware**: it interpolates opacity correctly across stacked sheets, sits at the right z-index, coordinates with the background scale animation, and participates in cascading tap-to-dismiss.
+
+:::info There is no native-scrim option here
+swmansion's `scrimColor` / `scrimOpacities` only apply to **modal** sheets. The manager always renders inline inside its `QueueItem` layer so the sheet's z-index participates in the stack, and the native scrim is gated on `modal` on both platforms — so it would never paint. The adapter therefore does not accept those props. To render no backdrop at all, pass `backdrop: false` when opening the sheet.
+:::
 
 ## Android back button
 

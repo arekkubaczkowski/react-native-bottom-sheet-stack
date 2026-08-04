@@ -2,7 +2,6 @@ import React, {
   isValidElement,
   type ReactElement,
   type ReactNode,
-  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -10,7 +9,6 @@ import React, {
 import {
   type NativeSyntheticEvent,
   StyleSheet,
-  useWindowDimensions,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -25,10 +23,7 @@ import type {
 } from '@swmansion/react-native-bottom-sheet';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import {
-  useSetBackdrop,
-  useSheetPreventDismiss,
-} from '../../bottomSheet.store';
+import { useSheetPreventDismiss } from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useAdapterRef } from '../../useAdapterRef';
@@ -44,6 +39,24 @@ const { BottomSheet, programmatic } =
 
 export { programmatic } from '@swmansion/react-native-bottom-sheet';
 export type { Detent, DetentValue };
+
+/**
+ * How gestures starting inside a nested scrollable are negotiated with the
+ * sheet. Mirrors the native prop of the same name.
+ *
+ * Requires `@swmansion/react-native-bottom-sheet` **>= 0.17**. Declared here so
+ * the adapter can forward it on newer versions without pinning the peer to a
+ * prerelease; on 0.16 the native side ignores it.
+ */
+export type SwmansionScrollableNegotiationMode = 'none' | 'initial' | 'handoff';
+
+/** @see {@link SwmansionScrollableNegotiationMode} */
+export type SwmansionScrollableNegotiation =
+  | SwmansionScrollableNegotiationMode
+  | Readonly<{
+      expand: SwmansionScrollableNegotiationMode;
+      collapse: SwmansionScrollableNegotiationMode;
+    }>;
 
 /**
  * Style overrides for the adapter-rendered grab handle (the default pill).
@@ -69,17 +82,15 @@ export interface SwmansionHandleConfig {
  * - `index` — the adapter is the source of truth for the snap index because the
  *   manager drives open/close imperatively. Use {@link expandedIndex} to pick
  *   which detent the sheet expands to.
- * - `modal` — the sheet always renders inline inside the manager's `QueueItem`
- *   layer so its z-index participates in the stack and the manager's shared
- *   `BottomSheetBackdrop` provides the scrim.
  * - `animateIn` — the manager controls the open animation, so this is forced on.
  * - `onPositionChange` / `wrapNativeView` — the adapter consumes these to drive
  *   the backdrop fade on the UI thread (via a Reanimated worklet), so they are
  *   not forwarded.
  *
- * Every other native prop (`detents`, `style`, `disableScrollableNegotiation`)
- * is forwarded. The `onIndexChange` / `onSettle` callbacks are wrapped by the
- * adapter and your handlers are still invoked afterwards.
+ * Every other native prop (`detents`, `style`, `extendUnderStatusBar`,
+ * `animateContentHeight`) is forwarded. The `onIndexChange` / `onSettle`
+ * callbacks are wrapped by the adapter and your handlers are still invoked
+ * afterwards.
  *
  * **`onIndexChange`.** Wider than the native prop: the adapter also fires it for
  * the programmatic open it drives (at animation start), so you get an immediate
@@ -87,27 +98,23 @@ export interface SwmansionHandleConfig {
  * the previous index as a second argument — `(nextIndex, prevIndex)` — while the
  * first argument keeps the native meaning (the index being moved to).
  *
- * **Backdrop.** By default the manager renders its own shared, stack-aware
- * `BottomSheetBackdrop` and the native scrim is disabled (`scrimColor` defaults
- * to `'transparent'`). You *can* opt into the native swmansion scrim by passing
- * `scrimColor` / `scrimOpacities` — but it's **not recommended**: the manager
- * backdrop is aware of the whole stack (correct opacity across stacked sheets,
- * z-index layering, scale coordination, cascading tap-to-dismiss), which a
- * per-sheet native scrim is not. When you do pass a scrim, the adapter
- * automatically disables the manager backdrop for this sheet so the two never
- * stack into a double-dark overlay.
+ * **Backdrop.** The manager renders its own shared, stack-aware
+ * `BottomSheetBackdrop`, faded from the sheet's live native position. The native
+ * swmansion scrim is not an option here: it is gated on `modal` sheets, and the
+ * manager always renders inline inside its `QueueItem` layer so the sheet's
+ * z-index participates in the stack. Use `backdrop: false` on `open()` if you
+ * want no backdrop at all.
  *
  * On top of the native surface the adapter layers a set of **opt-in
  * conveniences** ({@link handle}, {@link fullHeight}, {@link fillContent},
- * {@link keyboardBehavior}, {@link cornerRadius}). Each defaults to off (or to
- * the native default), so a bare `<SwmansionSheetAdapter>` behaves like the raw
- * native sheet.
+ * {@link detached}, {@link keyboardBehavior}, {@link cornerRadius}). Each
+ * defaults to off (or to the native default), so a bare
+ * `<SwmansionSheetAdapter>` behaves like the raw native sheet.
  */
 export interface SwmansionSheetAdapterProps
   extends Omit<
     BottomSheetProps,
     | 'index'
-    | 'modal'
     | 'animateIn'
     | 'onPositionChange'
     | 'wrapNativeView'
@@ -137,15 +144,18 @@ export interface SwmansionSheetAdapterProps
    */
   handle?: boolean | SwmansionHandleConfig | ReactElement;
   /**
-   * Expands the sheet to the full available height — the window height minus the
-   * top safe-area inset.
+   * Expands the sheet to the full height available to it.
    *
    * Why this exists when `detents` already sets height: swmansion detents are
-   * only `number | 'content'`, so a full-height sheet needs a concrete pixel
-   * value (screen height minus the notch/status-bar inset). This prop computes
-   * it for you — safe-area- and rotation-aware — so you don't wire up
-   * `useWindowDimensions` / `useSafeAreaInsets` and the arithmetic yourself, and
-   * you express intent ("fill the screen") instead of a magic number.
+   * `number | 'content'`, and neither expresses "as tall as you can go" — a
+   * `'content'` detent sizes to the content, and a fixed number is a magic
+   * value that has to be recomputed per device. This passes a detent taller
+   * than any screen, which the native side clamps to the height it actually
+   * measured for the sheet, so you express intent instead of arithmetic.
+   *
+   * The cap keeps the sheet below the status bar unless you also pass
+   * `extendUnderStatusBar`. Combined with {@link detached}, "full height" means
+   * the detached frame's height — the insets are subtracted first.
    *
    * Ignored when explicit `detents` are passed — those win. Defaults to off.
    */
@@ -166,6 +176,34 @@ export interface SwmansionSheetAdapterProps
    */
   fillContent?: boolean;
   /**
+   * Floats the sheet free of the screen edges instead of anchoring it to the
+   * bottom — the "detached" presentation from `@gorhom/bottom-sheet`.
+   *
+   * The sheet's host is inset by {@link bottomInset} and
+   * {@link horizontalInset}, so the sheet rises from — and settles above — that
+   * frame, and all four corners are rounded rather than just the top two.
+   * Detent heights are measured against the inset frame, so `'content'` and
+   * {@link fullHeight} stay correct without any arithmetic on your side.
+   *
+   * Defaults to off. When on, the insets default to `16` horizontally and the
+   * bottom safe-area inset (at least `16`) vertically, so a bare `detached`
+   * clears the home indicator.
+   */
+  detached?: boolean;
+  /**
+   * Gap between the bottom of the sheet and the bottom of the screen, in px.
+   *
+   * Only meaningful with {@link detached}. Defaults to the bottom safe-area
+   * inset, or `16` where there is none.
+   */
+  bottomInset?: number;
+  /**
+   * Gap between the sheet and each side of the screen, in px.
+   *
+   * Only meaningful with {@link detached}. Defaults to `16`.
+   */
+  horizontalInset?: number;
+  /**
    * Keyboard avoidance for the sheet's content.
    *
    * - `'none'` (default) — the content owns the keyboard (use a keyboard-aware
@@ -179,12 +217,23 @@ export interface SwmansionSheetAdapterProps
    */
   keyboardBehavior?: 'none' | 'inset';
   /**
-   * Top corner radius (px), applied to the default surface and used to clip the
-   * content so opaque top content can't square off the corners. Pass `0` for a
-   * flat top. Defaults to the built-in surface radius; with a custom `surface`,
-   * clipping is off unless you set this to match its radius.
+   * Corner radius (px), applied to the default surface and used to clip the
+   * content so opaque top content can't square off the corners. Rounds the top
+   * two corners, or all four when {@link detached}. Pass `0` for flat corners.
+   * Defaults to the built-in surface radius; with a custom `surface`, clipping
+   * is off unless you set this to match its radius.
    */
   cornerRadius?: number;
+  /**
+   * Controls how gestures that start in nested scrollables interact with the
+   * sheet. A string applies to both directions; an object configures expansion
+   * and collapse independently.
+   *
+   * Forwarded as-is to the native sheet, which supports it from **0.17**. On
+   * 0.16 it is ignored — use the (deprecated) `disableScrollableNegotiation`
+   * there.
+   */
+  scrollableNegotiation?: SwmansionScrollableNegotiation;
   /**
    * Called when the sheet's snap index changes.
    *
@@ -217,11 +266,35 @@ const HANDLE_CHROME_GAP = 8;
 
 const CUSTOM_HANDLE_CONTENT_INSET = 32;
 
+const DEFAULT_DETACHED_INSET = 16;
+
+// Taller than any screen. Native clamps `points` detents to the height it
+// measured for the sheet (its bounds minus the status-bar overlap, unless
+// `extendUnderStatusBar`), so this resolves to exactly the available height —
+// on every device, in every orientation, and inside a detached frame.
+const FULL_HEIGHT_DETENT = 1_000_000;
+
 function resolveDetentValue(detent: Detent): DetentValue {
   if (typeof detent === 'object' && detent !== null) {
     return detent.value;
   }
   return detent;
+}
+
+/**
+ * Whether the detent at `index` is the collapsed one.
+ *
+ * The manager treats "settled on a zero-height detent" as closed. Reading the
+ * detent's value rather than assuming index `0` keeps this right for sheets
+ * whose collapsed detent isn't first, and for `expandedIndex` pointing at a
+ * middle detent.
+ */
+function isClosedDetent(detents: Detent[], index: number): boolean {
+  const detent = detents[index];
+  if (detent === undefined) {
+    return index <= 0;
+  }
+  return resolveDetentValue(detent) === 0;
 }
 
 function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
@@ -266,20 +339,23 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * imperative `SheetAdapterRef` contract:
  *
  * - `expand()` → moves `index` to {@link SwmansionSheetAdapterProps.expandedIndex}.
- * - `close()`  → moves `index` back to `0` (collapsed).
+ * - `close()`  → moves `index` back to the collapsed detent.
  * - `onSettle` reports completed animations → `handleOpened` / `handleClosed`.
- * - `onIndexChange` (user-driven) reaching `0` → `handleDismiss`; the adapter also
- *   emits `onIndexChange(openIndex, prevIndex)` for the programmatic open it
- *   drives, and forwards the previous index as the second argument on every call.
+ * - `onIndexChange` (user-driven) reaching a zero-height detent → `handleDismiss`;
+ *   the adapter also emits `onIndexChange(openIndex, prevIndex)` for the
+ *   programmatic open it drives, and forwards the previous index as the second
+ *   argument on every call.
  * - `onPositionChange` drives the shared `animatedIndex` straight from the native
  *   fractional detent `index`, so the backdrop fades with the sheet on open,
  *   close, and drag-to-dismiss — no JS-side position normalization.
  *
  * It also layers opt-in conveniences over the native sheet — a grab handle,
- * full-height/fill-content sizing, and keyboard avoidance — each off by default
- * so raw usage is unchanged. See {@link SwmansionSheetAdapterProps}.
+ * full-height/fill-content sizing, a detached (floating) presentation, and
+ * keyboard avoidance — each off by default so raw usage is unchanged. See
+ * {@link SwmansionSheetAdapterProps}.
  *
- * Requires the New Architecture and the peer dependencies:
+ * Requires the New Architecture, `@swmansion/react-native-bottom-sheet >= 0.16`,
+ * and the peer dependencies:
  * ```bash
  * npm install @swmansion/react-native-bottom-sheet react-native-safe-area-context
  * ```
@@ -293,16 +369,16 @@ export const SwmansionSheetAdapter = React.forwardRef<
       children,
       detents: detentsProp,
       expandedIndex,
-      // Disabled by default so the sheet's native scrim doesn't double up with
-      // the manager backdrop; consumers can opt in (see the props' Backdrop note).
-      scrimColor = 'transparent',
-      scrimOpacities,
       onIndexChange,
       onSettle,
+      style,
       surface,
       handle,
       fullHeight,
       fillContent,
+      detached,
+      bottomInset,
+      horizontalInset,
       keyboardBehavior = 'none',
       cornerRadius,
       ...props
@@ -313,25 +389,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const ref = useAdapterRef(forwardedRef);
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
-    const setBackdrop = useSetBackdrop();
-    const { height: windowHeight } = useWindowDimensions();
     const insets = useSafeAreaInsets();
 
-    // A native scrim means this sheet owns its backdrop — suppress the manager's
-    // shared one so the two don't stack. The manager backdrop starts invisible
-    // behind a short init delay, so toggling it off here causes no flash.
-    const usesNativeScrim =
-      scrimColor !== 'transparent' || scrimOpacities !== undefined;
-
-    useEffect(() => {
-      if (!usesNativeScrim) return;
-      setBackdrop(id, false);
-      return () => setBackdrop(id, true);
-    }, [id, usesNativeScrim, setBackdrop]);
-
     const detents =
-      detentsProp ??
-      (fullHeight ? [0, windowHeight - insets.top] : DEFAULT_DETENTS);
+      detentsProp ?? (fullHeight ? [0, FULL_HEIGHT_DETENT] : DEFAULT_DETENTS);
 
     const openIndex = expandedIndex ?? Math.max(0, detents.length - 1);
     const expandedDetentValue = resolveDetentValue(detents[openIndex] ?? 0);
@@ -342,22 +403,46 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const isContentSized = expandedDetentValue === 'content';
     const shouldFill = fillContent ?? !isContentSized;
 
+    // Detaching = giving the sheet a smaller canvas. The native host fills this
+    // wrapper, so the natively measured detent cap shrinks with it and
+    // 'content' / fullHeight stay correct with no arithmetic here.
+    //
+    // `overflow: 'hidden'` is load-bearing, not cosmetic: the native sheet
+    // container is a full-canvas view translated down to the current position
+    // (and `clipsToBounds` / `clipChildren` are both off), so its surface hangs
+    // below the host by exactly the un-expanded remainder. Without clipping it
+    // would paint straight over the bottom gap and the sheet would not read as
+    // detached at all. Trade-off: a custom `surface` casting a shadow gets that
+    // shadow clipped — the sheet itself draws none.
+    const resolvedBottomInset =
+      bottomInset ?? Math.max(insets.bottom, DEFAULT_DETACHED_INSET);
+    const resolvedHorizontalInset = horizontalInset ?? DEFAULT_DETACHED_INSET;
+    const detachedFrameStyle: ViewStyle | null = detached
+      ? {
+          bottom: resolvedBottomInset,
+          left: resolvedHorizontalInset,
+          right: resolvedHorizontalInset,
+          overflow: 'hidden',
+        }
+      : null;
+
     // Only clip content to a radius we actually know: the default surface's, or
     // one the consumer states for a custom surface via `cornerRadius`.
     const usingDefaultSurface = surface === undefined || surface === null;
     const surfaceRadius =
       cornerRadius ?? (usingDefaultSurface ? DEFAULT_SURFACE_RADIUS : 0);
+    // A floating sheet has no edge to sit flush against, so every corner is
+    // rounded; an anchored one keeps its bottom corners square.
+    const radiusStyle: ViewStyle = detached
+      ? { borderRadius: surfaceRadius }
+      : {
+          borderTopLeftRadius: surfaceRadius,
+          borderTopRightRadius: surfaceRadius,
+        };
 
     const baseSurface = surface ?? (
       <View
-        style={[
-          StyleSheet.absoluteFill,
-          stylesheet.surface,
-          {
-            borderTopLeftRadius: surfaceRadius,
-            borderTopRightRadius: surfaceRadius,
-          },
-        ]}
+        style={[StyleSheet.absoluteFill, stylesheet.surface, radiusStyle]}
       />
     );
 
@@ -415,7 +500,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     );
 
     const handleNativeSettle = (settledIndex: number) => {
-      if (settledIndex <= 0) {
+      if (isClosedDetent(detents, settledIndex)) {
         handleClosed();
       } else {
         handleOpened();
@@ -426,7 +511,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const handleNativeIndexChange = (nextIndex: number) => {
       const prevIndex = lastIndexRef.current;
       lastIndexRef.current = nextIndex;
-      if (nextIndex <= 0) {
+      if (isClosedDetent(detents, nextIndex)) {
         if (preventDismiss) {
           setIndex(openIndex);
         } else {
@@ -458,13 +543,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
       ? { paddingTop: handleResult.contentInset }
       : null;
     const clipStyle: ViewStyle | null =
-      surfaceRadius > 0
-        ? {
-            overflow: 'hidden',
-            borderTopLeftRadius: surfaceRadius,
-            borderTopRightRadius: surfaceRadius,
-          }
-        : null;
+      surfaceRadius > 0 ? { overflow: 'hidden', ...radiusStyle } : null;
     // Applies to every sheet size: a content-sized sheet re-measures taller, a
     // fixed-height one (carries `fillStyle`) shrinks its scroll area instead.
     const needsKeyboardInset = keyboardBehavior === 'inset';
@@ -484,15 +563,13 @@ export const SwmansionSheetAdapter = React.forwardRef<
       );
     }
 
-    return (
+    const sheet = (
       <BottomSheet
         {...props}
         detents={resolvedDetents}
-        scrimColor={scrimColor}
-        scrimOpacities={scrimOpacities}
+        style={style}
         // Managed by the adapter (not overridable):
         index={index}
-        modal={false}
         animateIn
         wrapNativeView={Animated.createAnimatedComponent}
         onIndexChange={handleNativeIndexChange}
@@ -502,6 +579,21 @@ export const SwmansionSheetAdapter = React.forwardRef<
       >
         {content}
       </BottomSheet>
+    );
+
+    if (!detachedFrameStyle) {
+      return sheet;
+    }
+
+    // `box-none` so taps in the gap around the floating sheet fall through to
+    // the manager's backdrop below, keeping tap-to-dismiss working.
+    return (
+      <View
+        pointerEvents="box-none"
+        style={[StyleSheet.absoluteFill, detachedFrameStyle]}
+      >
+        {sheet}
+      </View>
     );
   }
 );
