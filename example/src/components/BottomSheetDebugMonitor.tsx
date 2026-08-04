@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useBottomSheetStore } from 'react-native-bottom-sheet-stack';
+import { shallow } from 'zustand/shallow';
 import { __getAllAnimatedIndexes } from 'react-native-bottom-sheet-stack/testing';
 
 interface LogEntry {
@@ -122,9 +123,19 @@ function pollAnimatedIndexValues() {
 export function BottomSheetDebugMonitor() {
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { sheetsById, stackOrderByGroup } = useBottomSheetStore();
+  const sheetsById = useBottomSheetStore((state) => state.sheetsById, shallow);
   // Flattened for display only — the store keys the stack by group.
-  const stackOrder = Object.values(stackOrderByGroup).flat();
+  //
+  // Both selectors take `shallow`, and that is load-bearing here rather than
+  // decoration: the flatten allocates a fresh array on every call, so with the
+  // default reference check Zustand would treat every store write as a change
+  // and re-render this monitor constantly. Nothing in this file is memoized —
+  // the example app does not run React Compiler (the plugin lives in the root
+  // babel.config.js, which only covers src/).
+  const stackOrder = useBottomSheetStore(
+    (state) => Object.values(state.stackOrderByGroup).flat(),
+    shallow
+  );
 
   const pan = useRef(new Animated.ValueXY({ x: 20, y: 100 })).current;
 
