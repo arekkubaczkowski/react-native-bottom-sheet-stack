@@ -41,21 +41,22 @@ type OpenMode = 'push' | 'switch' | 'replace';
 
 ### BottomSheetState
 
-Full state object for a bottom sheet.
+The stable, public part of a sheet's state.
 
 ```tsx
 interface BottomSheetState {
   id: string;
   groupId: string;
   status: BottomSheetStatus;
-  content: ReactNode;
-  scaleBackground?: boolean;
-  usePortal?: boolean;
   params?: Record<string, unknown>;
+  scaleBackground?: boolean;
   keepMounted?: boolean;
-  preventDismiss?: boolean;
 }
 ```
+
+:::note Narrowed in 2.0
+`content`, `usePortal`, `portalSession` and `preventDismiss` were removed from this type. They are store plumbing — read `preventDismiss` from `useBottomSheetContext()` instead.
+:::
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -252,7 +253,7 @@ interface UseBottomSheetContextReturn<TParams> {
   id: string;
   params: TParams;
   preventDismiss: boolean;
-  close: () => void;
+  close: () => Promise<boolean>;
   forceClose: () => void;
 }
 ```
@@ -266,7 +267,12 @@ Return type of `useBottomSheetStatus` hook.
 ```tsx
 interface UseBottomSheetStatusReturn {
   status: BottomSheetStatus | null;
+  /** Fully open and interactive — not during the opening animation. */
   isOpen: boolean;
+  isOpening: boolean;
+  isClosing: boolean;
+  /** On screen in any form: opening, open, or closing. */
+  isVisible: boolean;
 }
 ```
 

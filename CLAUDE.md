@@ -107,14 +107,16 @@ A library-agnostic stack manager for bottom sheets and modals in React Native. P
 
 ### Core State Management
 
-#### `bottomSheet.store.ts` - Central Zustand Store
+#### `store/` - Central Zustand Store
 **Purpose**: Single source of truth for all sheet state and stack ordering.
+Split into `store.ts` (actions), `hooks.ts` (selectors), `helpers.ts` (pure
+stack operations) and `types.ts`. Import from `./store`.
 
 **State Structure**:
 ```typescript
 interface BottomSheetStoreState {
-  sheetsById: Record<string, BottomSheetState>;  // All sheets by ID
-  stackOrder: string[];                           // Visible sheet IDs in order
+  sheetsById: Record<string, BottomSheetState>;      // All sheets by ID
+  stackOrderByGroup: Record<string, string[]>;       // Visible IDs, per group
 }
 
 interface BottomSheetState {
@@ -129,8 +131,17 @@ interface BottomSheetState {
 }
 ```
 
+**CRITICAL — the stack is keyed by group.** There is no global `stackOrder`.
+Every stack operation takes a *single group's* array, which is what makes group
+isolation structural rather than a filter someone has to remember. Reaching for
+`Object.values(stackOrderByGroup).flat()` inside a store action or selector
+re-introduces the exact bug this shape exists to prevent (`switch`/`replace` in
+one group closing a sheet in another).
+
 **Key Actions**:
-- `open(sheet, mode)` - Opens sheet with navigation mode
+- `open(sheet, mode)` - Opens sheet with navigation mode. Returns `OpenResult`
+  (`{ opened: false, reason }` when the sheet is already active or the group is
+  mid-animation) — never silently drops the request.
 - `markOpen(id)` - Transitions 'opening' → 'open'
 - `startClosing(id)` - Initiates close animation
 - `finishClosing(id)` - Completes close (hides if keepMounted, removes otherwise)
@@ -294,7 +305,7 @@ Creates cascading scale effect for nested sheets.
 
 **Render Order**:
 1. Hidden persistent sheets (keepMounted=true, not in stack)
-2. Active sheets (in stackOrder)
+2. Active sheets (in its group's stack)
 
 This prevents React from unmounting/remounting during state transitions.
 
@@ -509,20 +520,20 @@ open();  // Reopens with previous state intact
 
 **Data Flow**:
 1. On component mount: `mount()` action creates sheet with `status: 'hidden'`
-2. Sheet exists in `sheetsById` but NOT in `stackOrder`
-3. On `open()`: Sheet added to `stackOrder`, status → 'opening'
-4. On close: Status → 'hidden', removed from `stackOrder` but KEPT in `sheetsById`
+2. Sheet exists in `sheetsById` but NOT in its group's stack
+3. On `open()`: Sheet added to its group's stack, status → 'opening'
+4. On close: Status → 'hidden', removed from its group's stack but KEPT in `sheetsById`
 5. Content stays mounted (just hidden), state preserved
 6. On component unmount: `unmount()` removes from store completely
 
 **Lifecycle Diagram**:
 ```
-Component Mount → store.mount() → status: 'hidden' (in sheetsById, not in stackOrder)
+Component Mount → store.mount() → status: 'hidden' (in sheetsById, not in its group's stack)
                                          │
                                    open() called
                                          │
                                          ▼
-                             status: 'opening' (added to stackOrder)
+                             status: 'opening' (added to its group's stack)
                                          │
                                    animation done
                                          │
@@ -533,7 +544,7 @@ Component Mount → store.mount() → status: 'hidden' (in sheetsById, not in st
                                          │
                                          ▼
                               status: 'closing' → 'hidden'
-                              (removed from stackOrder, kept in sheetsById)
+                              (removed from its group's stack, kept in sheetsById)
                               Content stays mounted! State preserved!
                                          │
                                    open() again
@@ -563,24 +574,24 @@ Component Mount → store.mount() → status: 'hidden' (in sheetsById, not in st
 INLINE MODE (useBottomSheetManager):
 ┌─────────────────────────────────────────────────────┐
 │ sheetsById: { 'abc123': { content: <JSX>, ... } }   │
-│ stackOrder: ['abc123']                              │
+│ stackOrderByGroup: { default: ['abc123'] }                              │
 └─────────────────────────────────────────────────────┘
 After close: Sheet DELETED from sheetsById
 
 PORTAL MODE (BottomSheetPortal):
 ┌─────────────────────────────────────────────────────┐
 │ sheetsById: { 'user-sheet': { usePortal: true } }   │
-│ stackOrder: ['user-sheet']                          │
+│ stackOrderByGroup: { default: ['user-sheet'] }                          │
 └─────────────────────────────────────────────────────┘
 After close: Sheet DELETED from sheetsById
 
 PERSISTENT MODE (BottomSheetPersistent):
 ┌──────────────────────────────────────────────────────────────────┐
 │ sheetsById: { 'scanner': { usePortal: true, keepMounted: true } }│
-│ stackOrder: ['scanner']                                          │
+│ stackOrderByGroup: { default: ['scanner'] }                                          │
 └──────────────────────────────────────────────────────────────────┘
 After close: Sheet KEPT in sheetsById with status: 'hidden'
-             Removed from stackOrder only
+             Removed from its group's stack only
 ```
 
 ---
@@ -668,8 +679,8 @@ Multiple `BottomSheetManagerProvider` instances can run independently:
 ```
 
 Each group:
-- Has its own stackOrder
-- Sheets filtered by groupId in coordinator
+- Has its own entry in `stackOrderByGroup`
+- Stack is keyed by group, so no filtering is needed anywhere
 - `clearGroup(groupId)` clears only that group
 
 ---
@@ -701,12 +712,12 @@ Each group:
 ## Testing Utilities
 
 ```typescript
-import { __resetSheetRefs, __resetAnimatedIndexes } from 'react-native-bottom-sheet-stack';
+import { resetBottomSheetRegistries } from 'react-native-bottom-sheet-stack/testing';
 
-beforeEach(() => {
-  __resetSheetRefs();
-  __resetAnimatedIndexes();
-});
+// Clears the store and every module-level registry (refs, animated values,
+// portal sessions, onBeforeClose). One call, so it cannot go stale as
+// registries are added.
+beforeEach(resetBottomSheetRegistries);
 ```
 
 ---
@@ -766,7 +777,7 @@ open({ mode: 'replace' });
 ```
 src/
 ├── index.tsx                    # Public exports (no 3rd-party adapter deps)
-├── bottomSheet.store.ts         # Zustand store (state + actions)
+├── store/                       # Zustand store (store/hooks/helpers/types)
 ├── bottomSheetCoordinator.ts    # Store ↔ adapter sync
 ├── refsMap.ts                   # Global sheet refs registry
 ├── animatedRegistry.ts          # Global animated values registry
@@ -794,7 +805,7 @@ src/
 ├── useBackHandler.ts            # Android back button handler
 ├── useScaleAnimation.ts         # Scale animation hooks
 ├── useSheetRenderData.ts        # Render order computation hook
-├── useEvent.ts                  # Stable callback utility
+├── useStableCallback.ts         # Stable callback utility (RFC useEvent)
 │
 └── adapters/                    # Each adapter is a separate subpath export
     ├── gorhom-sheet/            # → 'react-native-bottom-sheet-stack/gorhom'
@@ -890,7 +901,7 @@ import { ActionsSheetAdapter } from 'react-native-bottom-sheet-stack/actions-she
 import { SwmansionSheetAdapter } from 'react-native-bottom-sheet-stack/swmansion';
 ```
 
-**Backward compatibility**: `BottomSheetManaged` and `BottomSheetManagedProps` are available as deprecated re-exports from the gorhom subpath.
+**Deprecated aliases were removed in 2.0**: use `GorhomSheetAdapter` / `GorhomSheetAdapterProps`, `CustomModalAdapter`, `useBottomSheetContext`, `open`, `close` and `destroyAll` directly.
 
 **Example app (monorepo dev)**: RNBB's `babel-plugin-module-resolver` alias breaks subpath imports. The example's `babel.config.js` adds a separate module-resolver plugin with explicit subpath aliases that runs before RNBB's override. Consumer apps do NOT need this — Metro reads `exports` from package.json directly.
 

@@ -21,17 +21,17 @@ Hooks are divided into two categories based on where they can be used:
 Main hook for opening and managing bottom sheets imperatively.
 
 ```tsx
-const { open, close, closeAll, clear } = useBottomSheetManager();
+const { open, close, closeAll, destroyAll } = useBottomSheetManager();
 ```
 
 ### Returns
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `open` | `(content, options?) => string` | Opens a bottom sheet and returns its ID |
-| `close` | `(id: string) => void` | Closes a specific sheet by ID |
+| `open` | `(content, options?) => string \| null` | Opens a bottom sheet and returns its ID, or `null` if the store declined |
+| `close` | `(id: string) => Promise<boolean>` | Closes a specific sheet by ID. Resolves `false` if an interceptor blocked it |
 | `closeAll` | `(options?) => Promise<void>` | Closes all sheets with cascading animation |
-| `clear` | `() => void` | Removes all sheets immediately (no animation) |
+| `destroyAll` | `() => void` | Removes all sheets immediately — no animation, **bypasses `onBeforeClose`** |
 
 ### closeAll Options
 
@@ -71,12 +71,24 @@ open(<MySheet />, {
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
 | `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when you give them their own backdrop (e.g. a custom gorhom `backdropComponent`), so you rarely set it by hand. |
 
-### Deprecated Aliases
+`open()` returns the sheet's ID, or **`null`** when the store declined to open it — because the sheet is already on the stack, or another sheet in the group is still animating open. A dev-mode warning explains which.
 
-| Deprecated | Use Instead |
-|------------|-------------|
-| `openBottomSheet` | `open` |
-| `clearAll` | `clear` |
+```tsx
+const id = open(<MySheet />);
+if (id === null) {
+  // Not opened. Nothing to close, nothing to track.
+}
+```
+
+### `destroyAll()` vs `closeAll()`
+
+| | `closeAll()` | `destroyAll()` |
+|---|---|---|
+| Animation | staggered cascade | none |
+| `onBeforeClose` | respected | **bypassed** |
+| Returns | `Promise<void>` | `void` |
+
+`destroyAll()` is a teardown primitive — it drops every sheet in the group from the store immediately, without asking an interceptor that may be guarding unsaved work. Use `closeAll()` for anything user-facing.
 
 ---
 
@@ -113,15 +125,8 @@ console.log(params.userId); // type-safe: string
 | `id` | `string` | Current sheet's ID |
 | `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided |
 | `preventDismiss` | `boolean` | Whether dismissal is currently blocked for this sheet (set via `useOnBeforeClose`). Useful for UI that should reflect it — e.g. hiding a grab handle. |
-| `close` | `() => void` | Closes this sheet (respects `useOnBeforeClose`) |
+| `close` | `() => Promise<boolean>` | Closes this sheet (respects `useOnBeforeClose`). Resolves `true` once it is closing, `false` if an interceptor blocked it or there was nothing to close. |
 | `forceClose` | `() => void` | Closes this sheet immediately, bypassing any `useOnBeforeClose` interceptor |
-
-### Deprecated Aliases
-
-| Deprecated | Use Instead |
-|------------|-------------|
-| `useBottomSheetState` | `useBottomSheetContext` |
-| `closeBottomSheet` | `close` |
 
 ---
 
@@ -148,7 +153,7 @@ const { open, close, closeAll, updateParams, resetParams } = useBottomSheetContr
 | Property | Type | Description |
 |----------|------|-------------|
 | `open` | `(options?) => void` | Opens the sheet |
-| `close` | `() => void` | Closes the sheet (respects `useOnBeforeClose`) |
+| `close` | `() => Promise<boolean>` | Closes the sheet (respects `useOnBeforeClose`). Resolves `false` if an interceptor blocked it |
 | `closeAll` | `(options?) => Promise<void>` | Closes all sheets with cascading animation |
 | `updateParams` | `(params) => void` | Updates the sheet's params |
 | `resetParams` | `() => void` | Resets params to `undefined` |
@@ -175,6 +180,8 @@ open({
 | `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when given their own native backdrop/scrim, so you rarely set it by hand. |
 | `params` | `BottomSheetPortalParams<T>` | - | Type-safe params |
 
+`useBottomSheetManager().open()` also accepts `params` now, so inline sheets can read them from `useBottomSheetContext()` just like portal sheets.
+
 ---
 
 ## useBottomSheetStatus
@@ -200,14 +207,21 @@ const { status, isOpen } = useBottomSheetStatus(sheetId);
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `id` | `string` | The sheet ID to observe (portal ID or inline sheet ID) |
+| `id` | `BottomSheetPortalId \| (string & {})` | The sheet ID to observe. Registered portal IDs get completion; the random IDs from `open()` are accepted too |
 
 ### Returns
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `status` | `BottomSheetStatus \| null` | Current status or `null` if never opened |
-| `isOpen` | `boolean` | `true` if status is `'open'` or `'opening'` |
+| `isOpen` | `boolean` | Fully open and interactive — **not** during the opening animation |
+| `isOpening` | `boolean` | Animating in |
+| `isClosing` | `boolean` | Animating out |
+| `isVisible` | `boolean` | On screen in any form: opening, open, or closing |
+
+:::warning `isOpen` narrowed in 2.0
+It used to be `true` during the opening animation as well. If you were using it to mean "on screen", switch to `isVisible`.
+:::
 
 ### Status Values
 

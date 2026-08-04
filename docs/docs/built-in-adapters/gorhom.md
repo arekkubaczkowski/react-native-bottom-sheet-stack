@@ -2,9 +2,7 @@
 
 The default adapter. Wraps `@gorhom/bottom-sheet` to provide feature-rich bottom sheets with snap points, spring animations, and swipe gestures.
 
-:::tip
-`BottomSheetManaged` is available as a deprecated re-export from the same subpath for backward compatibility.
-:::
+:::tip:::
 
 ## Installation
 

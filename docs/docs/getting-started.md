@@ -24,7 +24,7 @@ Install only the dependencies for the adapter(s) you plan to use:
 # For GorhomSheetAdapter (default bottom sheet adapter)
 yarn add @gorhom/bottom-sheet react-native-gesture-handler
 
-# For ModalAdapter — no extra dependencies (uses React Native's built-in Modal)
+# For CustomModalAdapter — no extra dependencies
 
 # For ReactNativeModalAdapter
 yarn add react-native-modal

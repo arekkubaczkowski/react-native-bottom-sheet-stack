@@ -248,6 +248,23 @@ const onIndexChange = (i: number) => {
 
 This is exactly how [`SwmansionSheetAdapter`](/built-in-adapters/swmansion) bridges Software Mansion's native sheet. When the library also reports a continuous position (e.g. `onPositionChange`), interpolate it into `animatedIndex` (`[-1, 0]`) for a smooth backdrop fade.
 
+### Suppressing the manager backdrop
+
+If your adapter renders a backdrop of its own, suppress the manager's shared one so the two don't stack into a double-dark overlay:
+
+```tsx
+import { useSetBackdrop, useSheetPreventDismiss } from 'react-native-bottom-sheet-stack';
+
+const setBackdrop = useSetBackdrop();
+useEffect(() => {
+  if (!hasOwnBackdrop) return;
+  setBackdrop(id, false);
+  return () => setBackdrop(id, true);
+}, [id, hasOwnBackdrop, setBackdrop]);
+```
+
+`useSheetPreventDismiss(id)` reports whether a `useOnBeforeClose` interceptor is currently blocking dismissal, so you can disable your library's native swipe/tap gestures while it is.
+
 ### Libraries Without Separate Dismiss/Close Phases
 
 Some libraries fire a single `onClose` for both user dismissal and animation completion. In that case, call both:
