@@ -15,6 +15,14 @@ export function cleanupSheetRef(sheetId: string): void {
 }
 
 /**
+ * All registered refs. Lets tests assert that nothing leaked into this map.
+ * @internal
+ */
+export function __getAllSheetRefs(): Map<string, SheetRef> {
+  return sheetRefsMap;
+}
+
+/**
  * Reset all sheet refs. Useful for testing.
  * @internal
  */

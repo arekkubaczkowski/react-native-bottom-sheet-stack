@@ -1,5 +1,15 @@
 module.exports = {
   presets: ['module:react-native-builder-bob/babel-preset'],
+  env: {
+    // Jest transforms both our sources and the react-native runtime it pulls
+    // in. The builder-bob preset targets library output and does not parse the
+    // Flow syntax RN 0.81 ships in its own jest mocks, so tests use React
+    // Native's preset instead. Build output is unaffected: this branch is only
+    // active when NODE_ENV=test, which bob never sets.
+    test: {
+      presets: ['module:@react-native/babel-preset'],
+    },
+  },
   plugins: [
     [
       'babel-plugin-react-compiler',

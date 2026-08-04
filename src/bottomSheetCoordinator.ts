@@ -133,6 +133,8 @@ export async function requestClose(sheetId: string): Promise<CloseResult> {
         ) {
           result.then(resolve);
         }
+        // Anything else (void) means the interceptor is using the callback
+        // style: stay pending until onConfirm/onCancel fires.
       });
 
       if (!allowed) {
