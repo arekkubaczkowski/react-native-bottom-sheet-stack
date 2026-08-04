@@ -429,8 +429,49 @@ B1, B2, B4, B6, B7, B8, B9 — done.
 B3, B5, P1, P5, P7, P10, and the dead code in section 4 — done.
 
 **Stage 3 — cleanup (breaking, 2.0):**
-P2, P4, P6, P8, P9, W1–W8 — done.
+P2, P4, P6, P8, P9, W2, W3, W5, W6, W7, W8 — done.
+
+### Still open
+
+- **W1** (three naming conventions for context hooks) — not done.
+  `useMaybeBottomSheetContext`, `useBottomSheetRefContext` and
+  `useBottomSheetDefaultIndex` still disagree, and the manager hook still lives
+  in the provider file rather than the context file.
+- **W4** (discriminated union for the `open()` payload) — not done. The mode is
+  still encoded in the `usePortal` + `keepMounted` + `content` combination, of
+  which only three of eight are real.
+- **P3** is partly done: `useBottomSheetManager().open()` now accepts `params`,
+  but see the asymmetry below.
+
+### Introduced by this work
+
+- `useBottomSheetManager().open()` returns `string | null`, but
+  `useBottomSheetControl().open()` still returns `void` — the store hands it an
+  `OpenResult`, which it consumes internally and drops. The same rejection is
+  visible through one hook and invisible through the other.
+- `requestClose` (and therefore every `close()`) now returns `false` for four
+  distinct outcomes: the sheet was already closing, the interceptor returned
+  false, the interceptor threw, and there was nothing to close. Fixing B9 made
+  the value honest about "is it closing" at the cost of conflating why not.
+- `closeAllAnimated` still returns `Promise<void>`, so a cascade stopped by an
+  interceptor is indistinguishable from one that closed everything — even
+  though the docs say it can stop.
+
+### Not attempted
+
+`BottomSheetPortal` reads `getSheetRef(id)` during render — a module-global map
+consulted from render, which is not reactive. It works only because
+`portalSession` changes in the same store write that creates the ref. Fragile,
+but untangling it means reworking how portals learn about refs, which is a
+larger change than anything here.
+
+The native detent cap derives from `getLocationInWindow` / `convert(to: window)`,
+which account for transforms — so a sheet scaled by another above it (via
+`ScaleWrapper`) may recompute its cap mid-animation and twitch.
 
 None of this is covered by a test or verified on a device; the repo still has no
-test suite. The changes most worth exercising on hardware are B5 (the three
-adapters whose backdrop timing changed) and B7 (the coordinator's close path).
+test suite. That is the largest outstanding gap: this work changed the store's
+shape, the open/close contract and the animation timing of three adapters, and
+nothing guards any of it. The changes most worth exercising on hardware are B5
+(the three adapters whose backdrop timing changed) and B7 (the coordinator's
+close path).
