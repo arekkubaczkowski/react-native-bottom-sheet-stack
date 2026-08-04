@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { useOpen, useClearGroup, type OpenMode } from './store';
-import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import type { SheetAdapterRef } from './adapter.types';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
 import { setSheetRef } from './refsMap';
@@ -47,6 +47,7 @@ export const useBottomSheetManager = () => {
 
     const result = storeOpen(
       {
+        kind: 'inline',
         id,
         groupId,
         content: contentWithRef,

@@ -17,9 +17,23 @@ import { getNextPortalSession } from '../portalSessionRegistry';
 import type {
   BottomSheetState,
   BottomSheetStore,
+  OpenPayload,
   OpenRejectionReason,
   OpenResult,
 } from './types';
+
+/**
+ * Translates the public `kind` discriminant into the flags the store records.
+ *
+ * `kind` is what callers reason about; `usePortal` is what the renderer checks.
+ * Keeping the mapping in one place means no caller has to know the encoding.
+ */
+function toStoreFields(sheet: OpenPayload) {
+  const { kind, ...rest } = sheet;
+  return kind === 'inline'
+    ? { ...rest, usePortal: false }
+    : { ...rest, usePortal: true, content: undefined };
+}
 
 function warnRejectedOpen(id: string, reason: OpenRejectionReason) {
   if (!__DEV__) return;
@@ -68,8 +82,10 @@ export const useBottomSheetStore = create(
           mode
         );
 
+        const fields = toStoreFields(sheet);
+
         const shouldGetNewPortalSession =
-          sheet.usePortal && (!existingSheet || !existingSheet.keepMounted);
+          fields.usePortal && (!existingSheet || !existingSheet.keepMounted);
         const nextPortalSession = shouldGetNewPortalSession
           ? getNextPortalSession(sheet.id)
           : undefined;
@@ -88,7 +104,7 @@ export const useBottomSheetStore = create(
                 ? existingSheet.portalSession
                 : (nextPortalSession ?? existingSheet.portalSession),
             }
-          : { ...sheet, status: 'opening', portalSession: nextPortalSession };
+          : { ...fields, status: 'opening', portalSession: nextPortalSession };
 
         return {
           sheetsById: { ...updatedSheetsById, [sheet.id]: newSheet },
@@ -227,16 +243,19 @@ export const useBottomSheetStore = create(
 
         ensureAnimatedIndex(sheet.id);
 
-        // For portal-based persistent sheets, set initial portalSession
-        // This session will be reused across open/close cycles
-        const portalSession = sheet.usePortal
-          ? getNextPortalSession(sheet.id)
-          : undefined;
-
+        // A persistent sheet is portal-based by definition — it stays mounted
+        // where it was declared and teleports in. The session is allocated once
+        // and reused across every open/close cycle.
         return {
           sheetsById: {
             ...state.sheetsById,
-            [sheet.id]: { ...sheet, status: 'hidden', portalSession },
+            [sheet.id]: {
+              ...sheet,
+              status: 'hidden',
+              usePortal: true,
+              keepMounted: true,
+              portalSession: getNextPortalSession(sheet.id),
+            },
           },
         };
       }),

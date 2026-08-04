@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 import { useClearGroup } from './store';
 import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
-import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useBottomSheetManagerContext } from './BottomSheetManager.context';
 import { QueueItem } from './QueueItem';
 import { useSheetRenderData } from './useSheetRenderData';
 

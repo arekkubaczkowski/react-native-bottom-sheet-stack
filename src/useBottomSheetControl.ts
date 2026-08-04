@@ -2,7 +2,8 @@ import React from 'react';
 import type { SheetAdapterRef } from './adapter.types';
 
 import { useOpen, useUpdateParams, type OpenMode } from './store';
-import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
+import type { CloseAllResult, CloseResult } from './store';
+import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
 import type {
   BottomSheetPortalId,
@@ -29,19 +30,34 @@ type OpenOptions<T extends BottomSheetPortalId> = Omit<
 
 type OpenFunction<T extends BottomSheetPortalId> =
   HasParams<T> extends true
-    ? (options: OpenOptions<T>) => void
-    : (options?: OpenOptions<T>) => void;
+    ? (options: OpenOptions<T>) => boolean
+    : (options?: OpenOptions<T>) => boolean;
 
 export interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
+  /**
+   * Opens the sheet.
+   *
+   * @returns `false` when the store declined — the sheet is already on the
+   * stack, or another sheet in the group is still animating open. A `__DEV__`
+   * warning explains which. (`useBottomSheetManager().open()` reports the same
+   * rejection as `null` instead of an ID, since there the ID is the useful
+   * half of the answer; here you already know it.)
+   */
   open: OpenFunction<T>;
   /**
    * Closes the sheet.
    *
-   * @returns `true` once the sheet is closing, `false` if an `onBeforeClose`
-   * interceptor blocked it or there was nothing to close.
+   * @returns A `CloseResult` — `{ closed: true }`, or `{ closed: false, reason }`
+   * naming why not (`'blocked'`, `'interceptor-error'`, `'not-closable'`).
    */
-  close: () => Promise<boolean>;
-  closeAll: (options?: CloseAllOptions) => Promise<void>;
+  close: () => Promise<CloseResult>;
+  /**
+   * Closes every sheet in the group, topmost first.
+   *
+   * @returns A `CloseAllResult` — what closed, and which sheet stopped the
+   * cascade if an interceptor did.
+   */
+  closeAll: (options?: CloseAllOptions) => Promise<CloseAllResult>;
   updateParams: (params: BottomSheetPortalParams<T>) => void;
   resetParams: () => void;
 }
@@ -59,9 +75,9 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
 
     const result = storeOpen(
       {
+        kind: 'portal',
         id,
         groupId,
-        usePortal: true,
         scaleBackground: options?.scaleBackground,
         backdrop: options?.backdrop,
         params: options?.params as Record<string, unknown>,
@@ -75,6 +91,8 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
     if (result.opened && !getSheetRef(id)) {
       setSheetRef(id, React.createRef<SheetAdapterRef>());
     }
+
+    return result.opened;
   };
 
   const close = () => requestClose(id);

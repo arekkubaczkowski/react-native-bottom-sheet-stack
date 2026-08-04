@@ -1,5 +1,6 @@
 import type { SheetAdapterEvents } from './adapter.types';
 import { useBottomSheetStore } from './store';
+import type { CloseAllResult, CloseResult } from './store';
 import { getOnBeforeClose } from './onBeforeCloseRegistry';
 import { getSheetRef } from './refsMap';
 
@@ -94,18 +95,18 @@ export function initBottomSheetCoordinator(groupId: string) {
  * If an onBeforeClose callback is registered for the sheet and it returns
  * `false` (or resolves to `false`), the close is cancelled.
  *
- * @returns `true` if the sheet is now closing, `false` if the interceptor
- * blocked it — or if there was nothing to close (the sheet is already closing,
- * hidden, or does not exist).
+ * @returns A {@link CloseResult}. `closed: false` carries a reason, because
+ * "the interceptor declined" and "there was nothing to close" are different
+ * answers that callers routinely need to tell apart.
  */
-export async function requestClose(sheetId: string): Promise<boolean> {
+export async function requestClose(sheetId: string): Promise<CloseResult> {
   const state = useBottomSheetStore.getState();
   const currentStatus = state.sheetsById[sheetId]?.status;
 
   // Don't run interceptor if sheet is already closing
   // This prevents duplicate interceptor calls during close animations
   if (currentStatus === 'closing') {
-    return false;
+    return { closed: false, reason: 'not-closable' };
   }
 
   const interceptor = getOnBeforeClose(sheetId);
@@ -134,7 +135,7 @@ export async function requestClose(sheetId: string): Promise<boolean> {
       });
 
       if (!allowed) {
-        return false;
+        return { closed: false, reason: 'blocked' };
       }
     } catch (error) {
       // If the interceptor throws, cancel the close for safety
@@ -145,19 +146,19 @@ export async function requestClose(sheetId: string): Promise<boolean> {
           error
         );
       }
-      return false;
+      return { closed: false, reason: 'interceptor-error' };
     }
   }
 
   if (currentStatus === 'open' || currentStatus === 'opening') {
     state.startClosing(sheetId);
-    return true;
+    return { closed: true };
   }
 
   // Nothing to close: hidden, already gone, or a status that cannot transition
-  // to closing. The interceptor did not block, but the sheet is not closing
-  // either — say so rather than reporting a close that never happened.
-  return false;
+  // to closing. No interceptor had an opinion — which is why this is its own
+  // reason rather than being folded into `blocked`.
+  return { closed: false, reason: 'not-closable' };
 }
 
 /**
@@ -176,18 +177,21 @@ const DEFAULT_STAGGER_MS = 100;
  *
  * @param groupId - The manager group to close sheets in.
  * @param options.stagger - Delay in ms between each close (default: 100).
- * @returns A promise that resolves when the cascade finishes (or is stopped).
+ * @returns A {@link CloseAllResult} naming what closed and, if the cascade was
+ * stopped, which sheet stopped it. Without this a blocked cascade is
+ * indistinguishable from one that closed everything.
  */
 export async function closeAllAnimated(
   groupId: string,
   options?: { stagger?: number }
-): Promise<void> {
+): Promise<CloseAllResult> {
   const stagger = options?.stagger ?? DEFAULT_STAGGER_MS;
 
   const state = useBottomSheetStore.getState();
 
   // Close from top to bottom (reverse order)
   const reversed = [...(state.stackOrderByGroup[groupId] ?? [])].reverse();
+  const closed: string[] = [];
 
   for (const [index, sheetId] of reversed.entries()) {
     const currentState = useBottomSheetStore.getState();
@@ -198,17 +202,26 @@ export async function closeAllAnimated(
       continue;
     }
 
-    const closed = await requestClose(sheetId);
+    const result = await requestClose(sheetId);
 
-    if (!closed) {
-      // Interceptor blocked — stop the cascade
-      break;
+    if (!result.closed) {
+      if (result.reason === 'not-closable') {
+        // Nothing to close here (it settled or vanished mid-cascade); that is
+        // not a refusal, so keep going rather than stranding the sheets below.
+        continue;
+      }
+      // An interceptor declined — stop and report where.
+      return { closedAll: false, closed, stoppedAt: sheetId };
     }
+
+    closed.push(sheetId);
 
     if (stagger > 0 && index < reversed.length - 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, stagger));
     }
   }
+
+  return { closedAll: true, closed };
 }
 
 /**

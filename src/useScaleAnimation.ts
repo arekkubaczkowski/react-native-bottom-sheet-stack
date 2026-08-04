@@ -8,7 +8,7 @@ import {
   type WithTimingConfig,
 } from 'react-native-reanimated';
 import { useBottomSheetStore } from './store';
-import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useBottomSheetManagerContext } from './BottomSheetManager.context';
 
 export type ScaleAnimationConfig =
   | { type: 'timing'; config?: WithTimingConfig }

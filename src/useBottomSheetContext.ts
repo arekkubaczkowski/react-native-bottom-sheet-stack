@@ -4,6 +4,7 @@ import {
   useSheetPreventDismiss,
   useStartClosing,
 } from './store';
+import type { CloseResult } from './store';
 import { requestClose } from './bottomSheetCoordinator';
 import type {
   BottomSheetPortalId,
@@ -29,10 +30,10 @@ export interface UseBottomSheetContextReturn<TParams> {
   /**
    * Closes the sheet.
    *
-   * @returns `true` once the sheet is closing, `false` if an `onBeforeClose`
-   * interceptor blocked it or there was nothing to close.
+   * @returns A `CloseResult` — `{ closed: true }`, or `{ closed: false, reason }`
+   * naming why not (`'blocked'`, `'interceptor-error'`, `'not-closable'`).
    */
-  close: () => Promise<boolean>;
+  close: () => Promise<CloseResult>;
   /**
    * Close the sheet, bypassing any onBeforeClose interceptor.
    * Useful for force-closing from within onBeforeClose confirmation flows.

@@ -29,8 +29,8 @@ const { open, close, closeAll, destroyAll } = useBottomSheetManager();
 | Property | Type | Description |
 |----------|------|-------------|
 | `open` | `(content, options?) => string \| null` | Opens a bottom sheet and returns its ID, or `null` if the store declined |
-| `close` | `(id: string) => Promise<boolean>` | Closes a specific sheet by ID. Resolves `false` if an interceptor blocked it |
-| `closeAll` | `(options?) => Promise<void>` | Closes all sheets with cascading animation |
+| `close` | `(id: string) => Promise<CloseResult>` | Closes a specific sheet by ID |
+| `closeAll` | `(options?) => Promise<CloseAllResult>` | Closes all sheets with cascading animation |
 | `destroyAll` | `() => void` | Removes all sheets immediately — no animation, **bypasses `onBeforeClose`** |
 
 ### closeAll Options
@@ -86,9 +86,32 @@ if (id === null) {
 |---|---|---|
 | Animation | staggered cascade | none |
 | `onBeforeClose` | respected | **bypassed** |
-| Returns | `Promise<void>` | `void` |
+| Returns | `Promise<CloseAllResult>` | `void` |
 
 `destroyAll()` is a teardown primitive — it drops every sheet in the group from the store immediately, without asking an interceptor that may be guarding unsaved work. Use `closeAll()` for anything user-facing.
+
+### Close results
+
+Every `close()` resolves to a `CloseResult`, and `closeAll()` to a `CloseAllResult`. Both carry more than a boolean, because "the user declined" and "there was nothing to close" are different answers:
+
+```tsx
+const result = await close(id);
+if (!result.closed) {
+  switch (result.reason) {
+    case 'blocked':            // an onBeforeClose interceptor said no
+    case 'interceptor-error':  // the interceptor threw; cancelled for safety
+    case 'not-closable':       // already closing, hidden, or unknown sheet
+  }
+}
+
+const cascade = await closeAll();
+if (!cascade.closedAll) {
+  // cascade.stoppedAt — the sheet whose interceptor stopped it.
+  // cascade.closed    — the ones that did close, topmost first.
+}
+```
+
+A sheet with nothing to close no longer stops a cascade — only a refusal does.
 
 ---
 
@@ -125,7 +148,7 @@ console.log(params.userId); // type-safe: string
 | `id` | `string` | Current sheet's ID |
 | `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided |
 | `preventDismiss` | `boolean` | Whether dismissal is currently blocked for this sheet (set via `useOnBeforeClose`). Useful for UI that should reflect it — e.g. hiding a grab handle. |
-| `close` | `() => Promise<boolean>` | Closes this sheet (respects `useOnBeforeClose`). Resolves `true` once it is closing, `false` if an interceptor blocked it or there was nothing to close. |
+| `close` | `() => Promise<CloseResult>` | Closes this sheet (respects `useOnBeforeClose`). See [Close results](#close-results). |
 | `forceClose` | `() => void` | Closes this sheet immediately, bypassing any `useOnBeforeClose` interceptor |
 
 ---
@@ -152,9 +175,9 @@ const { open, close, closeAll, updateParams, resetParams } = useBottomSheetContr
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `open` | `(options?) => void` | Opens the sheet |
-| `close` | `() => Promise<boolean>` | Closes the sheet (respects `useOnBeforeClose`). Resolves `false` if an interceptor blocked it |
-| `closeAll` | `(options?) => Promise<void>` | Closes all sheets with cascading animation |
+| `open` | `(options?) => boolean` | Opens the sheet. `false` if the store declined |
+| `close` | `() => Promise<CloseResult>` | Closes the sheet (respects `useOnBeforeClose`) |
+| `closeAll` | `(options?) => Promise<CloseAllResult>` | Closes all sheets with cascading animation |
 | `updateParams` | `(params) => void` | Updates the sheet's params |
 | `resetParams` | `() => void` | Resets params to `undefined` |
 

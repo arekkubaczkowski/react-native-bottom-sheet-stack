@@ -253,7 +253,7 @@ interface UseBottomSheetContextReturn<TParams> {
   id: string;
   params: TParams;
   preventDismiss: boolean;
-  close: () => Promise<boolean>;
+  close: () => Promise<CloseResult>;
   forceClose: () => void;
 }
 ```

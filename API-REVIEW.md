@@ -431,31 +431,26 @@ B3, B5, P1, P5, P7, P10, and the dead code in section 4 — done.
 **Stage 3 — cleanup (breaking, 2.0):**
 P2, P4, P6, P8, P9, W2, W3, W5, W6, W7, W8 — done.
 
-### Still open
+### Closed in a follow-up
 
-- **W1** (three naming conventions for context hooks) — not done.
-  `useMaybeBottomSheetContext`, `useBottomSheetRefContext` and
-  `useBottomSheetDefaultIndex` still disagree, and the manager hook still lives
-  in the provider file rather than the context file.
-- **W4** (discriminated union for the `open()` payload) — not done. The mode is
-  still encoded in the `usePortal` + `keepMounted` + `content` combination, of
-  which only three of eight are real.
-- **P3** is partly done: `useBottomSheetManager().open()` now accepts `params`,
-  but see the asymmetry below.
-
-### Introduced by this work
-
-- `useBottomSheetManager().open()` returns `string | null`, but
-  `useBottomSheetControl().open()` still returns `void` — the store hands it an
-  `OpenResult`, which it consumes internally and drops. The same rejection is
-  visible through one hook and invisible through the other.
-- `requestClose` (and therefore every `close()`) now returns `false` for four
-  distinct outcomes: the sheet was already closing, the interceptor returned
-  false, the interceptor threw, and there was nothing to close. Fixing B9 made
-  the value honest about "is it closing" at the cost of conflating why not.
-- `closeAllAnimated` still returns `Promise<void>`, so a cascade stopped by an
-  interceptor is indistinguishable from one that closed everything — even
-  though the docs say it can stop.
+- **W1** — one rule now: a `useMaybe*` hook may return `null`/`undefined` and
+  leaves handling that to the caller; a plain `use*` hook either throws or
+  resolves to a documented default. `useBottomSheetRefContext` became
+  `useMaybeBottomSheetRef`, and the manager hooks moved from the provider file
+  to `BottomSheetManager.context.tsx` where the context itself lives.
+- **W4** — `open()` takes a discriminated `OpenPayload` (`kind: 'inline'` with
+  content, or `kind: 'portal'` without), and `mount()` takes `MountPayload`.
+  `content: null` as a "not inline" signal is gone, and the store maps `kind`
+  onto its internal flags in one place.
+- `useBottomSheetControl().open()` now returns `boolean`. It and
+  `useBottomSheetManager().open()` both report rejection, each in the currency
+  that is useful there — an ID or a yes/no.
+- `close()` returns a `CloseResult` carrying a reason (`'blocked'`,
+  `'interceptor-error'`, `'not-closable'`) instead of a boolean that meant four
+  different things.
+- `closeAll()` returns a `CloseAllResult` naming what closed and which sheet
+  stopped the cascade. It also no longer treats a sheet that had nothing to
+  close as a refusal — that used to strand every sheet below it.
 
 ### Not attempted
 

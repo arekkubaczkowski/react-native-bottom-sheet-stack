@@ -11,7 +11,7 @@ import {
   useUnmount,
 } from './store';
 import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
-import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import { BottomSheetRefContext } from './BottomSheetRef.context';
 import type { BottomSheetPortalId } from './portal.types';
 import { setSheetRef } from './refsMap';
@@ -35,7 +35,7 @@ export function BottomSheetPersistent({
   const groupId = bottomSheetManagerContext?.groupId || 'default';
 
   const mountSheet = useStableCallback(() => {
-    mount({ id, groupId, content: null, usePortal: true, keepMounted: true });
+    mount({ id, groupId });
   });
 
   useEffect(() => {

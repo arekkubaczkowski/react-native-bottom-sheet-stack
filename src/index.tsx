@@ -64,6 +64,9 @@ export type {
   OpenMode,
   OpenResult,
   OpenRejectionReason,
+  CloseResult,
+  CloseRejectionReason,
+  CloseAllResult,
   PublicBottomSheetState as BottomSheetState,
 } from './store';
 export type {

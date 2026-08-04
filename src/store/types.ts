@@ -46,7 +46,40 @@ export type PublicBottomSheetState = Pick<
   'id' | 'groupId' | 'status' | 'params' | 'scaleBackground' | 'keepMounted'
 >;
 
-export type TriggerState = Omit<BottomSheetState, 'status'>;
+/** Fields every open payload carries, regardless of how the sheet renders. */
+interface OpenPayloadBase {
+  id: string;
+  groupId: string;
+  scaleBackground?: boolean;
+  backdrop?: boolean;
+  params?: Record<string, unknown>;
+}
+
+/**
+ * What `open()` accepts, as a discriminated union of the modes the library
+ * actually documents.
+ *
+ * The alternative — a single bag with optional `content` / `usePortal` /
+ * `keepMounted` — can express eight combinations of which only three are real,
+ * and forces callers to pass `content: null` just to signal "not inline".
+ *
+ * `persistent` is not a variant here: a persistent sheet is registered with
+ * `mount()` and re-opened as `portal`, keeping the `keepMounted` flag its
+ * store record already carries.
+ */
+export type OpenPayload =
+  | (OpenPayloadBase & {
+      /** Content supplied at call time; unmounted on close. */
+      kind: 'inline';
+      content: ReactNode;
+    })
+  | (OpenPayloadBase & {
+      /** Content declared elsewhere and teleported in, preserving context. */
+      kind: 'portal';
+    });
+
+/** What `mount()` accepts — a persistent sheet, pre-registered as hidden. */
+export type MountPayload = OpenPayloadBase;
 
 /** Why an `open()` call did not put the sheet on the stack. */
 export type OpenRejectionReason =
@@ -63,6 +96,41 @@ export type OpenResult =
   | { opened: true; id: string }
   | { opened: false; id: string; reason: OpenRejectionReason };
 
+/** Why a close did not happen. */
+export type CloseRejectionReason =
+  /** An `onBeforeClose` interceptor declined. */
+  | 'blocked'
+  /** The interceptor threw; the close is cancelled for safety. */
+  | 'interceptor-error'
+  /**
+   * There was nothing to close: the sheet is already closing, is hidden, or
+   * the store has no record of it. Distinct from `blocked` — no interceptor
+   * had an opinion.
+   */
+  | 'not-closable';
+
+/**
+ * Outcome of a close. Carries a reason rather than a bare boolean, because
+ * "the user declined" and "there was nothing to close" are different answers
+ * and callers routinely need to tell them apart.
+ */
+export type CloseResult =
+  | { closed: true }
+  | { closed: false; reason: CloseRejectionReason };
+
+/** Outcome of a cascading close. */
+export interface CloseAllResult {
+  /** Whether every sheet in the group closed. */
+  closedAll: boolean;
+  /** IDs that closed, topmost first. */
+  closed: string[];
+  /**
+   * The sheet whose interceptor stopped the cascade, if one did. Sheets below
+   * it were left open.
+   */
+  stoppedAt?: string;
+}
+
 export interface BottomSheetStoreState {
   sheetsById: Record<string, BottomSheetState>;
   /**
@@ -76,7 +144,7 @@ export interface BottomSheetStoreState {
 }
 
 export interface BottomSheetStoreActions {
-  open(sheet: TriggerState, mode?: OpenMode): OpenResult;
+  open(sheet: OpenPayload, mode?: OpenMode): OpenResult;
   markOpen(id: string): void;
   startClosing(id: string): void;
   finishClosing(id: string): void;
@@ -85,7 +153,7 @@ export interface BottomSheetStoreActions {
   setBackdrop(id: string, backdrop: boolean): void;
   clearGroup(groupId: string): void;
   clearAll(): void;
-  mount(sheet: TriggerState): void;
+  mount(sheet: MountPayload): void;
   unmount(id: string): void;
 }
 
