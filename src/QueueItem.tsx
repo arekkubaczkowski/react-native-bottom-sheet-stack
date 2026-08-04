@@ -12,7 +12,7 @@ import {
   useSheetKeepMounted,
   useSheetPortalSession,
   useSheetUsePortal,
-} from './bottomSheet.store';
+} from './store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { removeOnBeforeClose } from './onBeforeCloseRegistry';
 import { cleanupSheetRef } from './refsMap';

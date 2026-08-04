@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { useClearGroup } from './bottomSheet.store';
+import { useClearGroup } from './store';
 import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
 import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
 import { QueueItem } from './QueueItem';

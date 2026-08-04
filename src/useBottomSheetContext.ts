@@ -3,7 +3,7 @@ import {
   useSheetParams,
   useSheetPreventDismiss,
   useStartClosing,
-} from './bottomSheet.store';
+} from './store';
 import { requestClose } from './bottomSheetCoordinator';
 import type {
   BottomSheetPortalId,
@@ -38,8 +38,6 @@ export interface UseBottomSheetContextReturn<TParams> {
    * Useful for force-closing from within onBeforeClose confirmation flows.
    */
   forceClose: () => void;
-  /** @deprecated Use `close` instead */
-  closeBottomSheet: () => void;
 }
 
 /** Without generic - params typed as unknown */
@@ -74,11 +72,5 @@ export function useBottomSheetContext<
     preventDismiss,
     close,
     forceClose,
-    closeBottomSheet: close,
   };
 }
-
-/**
- * @deprecated Use `useBottomSheetContext` instead
- */
-export const useBottomSheetState = useBottomSheetContext;

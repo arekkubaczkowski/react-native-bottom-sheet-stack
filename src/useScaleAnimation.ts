@@ -7,7 +7,7 @@ import {
   type WithSpringConfig,
   type WithTimingConfig,
 } from 'react-native-reanimated';
-import { useBottomSheetStore } from './bottomSheet.store';
+import { useBottomSheetStore } from './store';
 import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
 
 export type ScaleAnimationConfig =

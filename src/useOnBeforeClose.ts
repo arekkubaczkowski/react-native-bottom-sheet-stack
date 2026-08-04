@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
-import { useSetPreventDismiss } from './bottomSheet.store';
+import { useSetPreventDismiss } from './store';
 import type { OnBeforeCloseCallback } from './onBeforeCloseRegistry';
 import { removeOnBeforeClose, setOnBeforeClose } from './onBeforeCloseRegistry';
 import { useStableCallback } from './useStableCallback';

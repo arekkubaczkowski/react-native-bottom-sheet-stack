@@ -1,7 +1,7 @@
 import React from 'react';
 import type { SheetAdapterRef } from './adapter.types';
 
-import { useOpen, useUpdateParams, type OpenMode } from './bottomSheet.store';
+import { useOpen, useUpdateParams, type OpenMode } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
 import type {

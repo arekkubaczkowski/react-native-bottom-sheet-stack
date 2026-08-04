@@ -1,7 +1,4 @@
-import {
-  useBottomSheetStore,
-  type BottomSheetState,
-} from './bottomSheet.store';
+import { useBottomSheetStore, type BottomSheetState } from './store';
 import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
 
 export interface SheetRenderItem {

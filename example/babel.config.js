@@ -38,6 +38,7 @@ module.exports = function (api) {
                 root,
                 'src/adapters/swmansion'
               ),
+              [`${pkg.name}/testing`]: path.resolve(root, 'src/testing'),
             },
           },
           'subpath-aliases',

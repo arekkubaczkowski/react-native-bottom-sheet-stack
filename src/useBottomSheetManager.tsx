@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useOpen, useClearGroup, type OpenMode } from './bottomSheet.store';
+import { useOpen, useClearGroup, type OpenMode } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import type { SheetAdapterRef } from './adapter.types';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
@@ -83,7 +83,15 @@ export const useBottomSheetManager = () => {
     return closeAllAnimated(groupId, options);
   };
 
-  const clear = () => {
+  /**
+   * Removes every sheet in the group from the store immediately.
+   *
+   * This is a teardown primitive, not a way to close sheets: there is no exit
+   * animation and **`onBeforeClose` interceptors do not run**, so a sheet
+   * guarding unsaved work is discarded without asking. Use {@link closeAll} for
+   * anything user-facing.
+   */
+  const destroyAll = () => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';
     storeClearGroup(groupId);
   };
@@ -92,10 +100,6 @@ export const useBottomSheetManager = () => {
     open: openBottomSheet,
     close,
     closeAll,
-    clear,
-    /** @deprecated Use `open` instead */
-    openBottomSheet,
-    /** @deprecated Use `clear` instead */
-    clearAll: clear,
+    destroyAll,
   };
 };

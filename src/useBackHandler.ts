@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 
-import { useIsTopmostAndOpen } from './bottomSheet.store';
+import { useIsTopmostAndOpen } from './store';
 
 /**
  * Manages Android hardware back button for a sheet.

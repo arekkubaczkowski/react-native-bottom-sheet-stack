@@ -27,7 +27,7 @@ import type {
 
 import type { SheetAdapterRef } from '../../adapter.types';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
-import { useSheetPreventDismiss } from '../../bottomSheet.store';
+import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';

@@ -9,7 +9,7 @@ import {
   useSheetExists,
   useSheetPortalSession,
   useUnmount,
-} from './bottomSheet.store';
+} from './store';
 import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
 import { BottomSheetRefContext } from './BottomSheetRef.context';

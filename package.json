@@ -13,6 +13,11 @@
       "react-native": "./lib/module/index.js",
       "default": "./lib/commonjs/index.js"
     },
+    "./testing": {
+      "types": "./lib/typescript/src/testing.d.ts",
+      "react-native": "./lib/module/testing.js",
+      "default": "./lib/commonjs/testing.js"
+    },
     "./gorhom": {
       "types": "./lib/typescript/src/adapters/gorhom-sheet/index.d.ts",
       "react-native": "./lib/module/adapters/gorhom-sheet/index.js",
@@ -90,8 +95,10 @@
     "prettier": "^3.0.3",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-actions-sheet": "^10.1.2",
     "react-native-builder-bob": "^0.40.6",
     "react-native-gesture-handler": "^2.30.0",
+    "react-native-modal": "^14.0.0-rc.1",
     "react-native-reanimated": "^4.2.1",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-teleport": "^1.1.7",

@@ -1,5 +1,5 @@
 import type { SheetAdapterEvents } from './adapter.types';
-import { useBottomSheetStore } from './bottomSheet.store';
+import { useBottomSheetStore } from './store';
 import { getOnBeforeClose } from './onBeforeCloseRegistry';
 import { getSheetRef } from './refsMap';
 

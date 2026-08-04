@@ -11,10 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import {
-  useBottomSheetStore,
-  __getAllAnimatedIndexes,
-} from 'react-native-bottom-sheet-stack';
+import { useBottomSheetStore } from 'react-native-bottom-sheet-stack';
+import { __getAllAnimatedIndexes } from 'react-native-bottom-sheet-stack/testing';
 
 interface LogEntry {
   timestamp: number;
