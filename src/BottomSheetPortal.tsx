@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native';
 import { Portal } from 'react-native-teleport';
 
 import { BottomSheetContext } from './BottomSheet.context';
-import { useSheetPortalSession } from './bottomSheet.store';
+import { useSheetPortalSession } from './store';
 import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
 import { BottomSheetRefContext } from './BottomSheetRef.context';
 import type { BottomSheetPortalId } from './portal.types';

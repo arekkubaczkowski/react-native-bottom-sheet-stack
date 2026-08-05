@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useState } from 'react';
 import {
   useAnimatedStyle,
   useDerivedValue,
@@ -7,8 +7,8 @@ import {
   type WithSpringConfig,
   type WithTimingConfig,
 } from 'react-native-reanimated';
-import { useBottomSheetStore } from './bottomSheet.store';
-import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useBottomSheetStore } from './store';
+import { useBottomSheetManagerContext } from './BottomSheetManager.context';
 
 export type ScaleAnimationConfig =
   | { type: 'timing'; config?: WithTimingConfig }
@@ -37,52 +37,48 @@ const DEFAULT_CONFIG = {
   animation: DEFAULT_ANIMATION,
 } satisfies Required<ScaleConfig>;
 
+/**
+ * Whether the app background should be scaled: 0 or 1, decided by the
+ * bottom-most live sheet in the group. Binary because the background scales
+ * once no matter how deep the stack goes.
+ */
 function useBackgroundScaleDepth(groupId: string): number {
-  const depth = useBottomSheetStore((state) => {
-    const { stackOrder, sheetsById } = state;
+  return useBottomSheetStore((state) => {
+    const groupStack = state.stackOrderByGroup[groupId] ?? [];
 
-    for (let i = 0; i < stackOrder.length; i++) {
-      const id = stackOrder[i]!;
-      const sheet = sheetsById[id];
-      if (
-        sheet &&
-        sheet.groupId === groupId &&
-        sheet.status !== 'closing' &&
-        sheet.status !== 'hidden'
-      ) {
+    for (const id of groupStack) {
+      const sheet = state.sheetsById[id];
+      if (sheet && sheet.status !== 'closing' && sheet.status !== 'hidden') {
         return sheet.scaleBackground ? 1 : 0;
       }
     }
     return 0;
   });
-  return depth;
 }
 
-function useSheetScaleDepth(
-  groupId: string,
-  sheetId: string | undefined
-): number {
-  const prevDepthRef = useRef(0);
+/**
+ * How many scaling sheets sit above `sheetId` in its own group.
+ *
+ * Returns `null` from the selector once the sheet leaves the stack, and the
+ * caller holds the last known depth — a sheet mid-exit must keep its scale
+ * instead of snapping back to 0 while it animates out.
+ *
+ * The hold lives in an effect rather than in the selector: a Zustand selector
+ * runs on every store change (twice per render under StrictMode), so writing to
+ * a ref inside it would make the result depend on how often it ran.
+ */
+function useSheetScaleDepth(groupId: string, sheetId: string): number {
+  const liveDepth = useBottomSheetStore((state) => {
+    const groupStack = state.stackOrderByGroup[groupId] ?? [];
+    const sheetIndex = groupStack.indexOf(sheetId);
 
-  const result = useBottomSheetStore((state) => {
-    if (!sheetId) {
-      return 0;
-    }
-
-    const { stackOrder, sheetsById } = state;
-    const sheetIndex = stackOrder.indexOf(sheetId);
-
-    if (sheetIndex === -1) {
-      return prevDepthRef.current;
-    }
+    if (sheetIndex === -1) return null;
 
     let depth = 0;
-    for (let i = sheetIndex + 1; i < stackOrder.length; i++) {
-      const id = stackOrder[i]!;
-      const sheet = sheetsById[id];
+    for (let i = sheetIndex + 1; i < groupStack.length; i++) {
+      const sheet = state.sheetsById[groupStack[i]!];
       if (
         sheet &&
-        sheet.groupId === groupId &&
         sheet.scaleBackground &&
         sheet.status !== 'closing' &&
         sheet.status !== 'hidden'
@@ -91,10 +87,18 @@ function useSheetScaleDepth(
       }
     }
 
-    prevDepthRef.current = depth;
     return depth;
   });
-  return result;
+
+  const [heldDepth, setHeldDepth] = useState(0);
+
+  useEffect(() => {
+    if (liveDepth !== null) {
+      setHeldDepth(liveDepth);
+    }
+  }, [liveDepth]);
+
+  return liveDepth ?? heldDepth;
 }
 
 function useScaleAnimatedStyleInternal(scaleDepth: number) {

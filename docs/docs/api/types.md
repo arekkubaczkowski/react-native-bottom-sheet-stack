@@ -41,38 +41,110 @@ type OpenMode = 'push' | 'switch' | 'replace';
 
 ### BottomSheetState
 
-Full state object for a bottom sheet.
+The stable, public part of a sheet's state.
 
 ```tsx
 interface BottomSheetState {
   id: string;
   groupId: string;
   status: BottomSheetStatus;
-  content: ReactNode;
-  scaleBackground?: boolean;
-  usePortal?: boolean;
   params?: Record<string, unknown>;
+  scaleBackground?: boolean;
   keepMounted?: boolean;
-  preventDismiss?: boolean;
 }
 ```
+
+:::note Narrowed in 2.0
+`content`, `usePortal`, `portalSession` and `preventDismiss` were removed from this type. They are store plumbing — read `preventDismiss` from `useBottomSheetContext()` instead.
+:::
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `keepMounted` | `boolean` | When `true`, sheet stays in store after close (persistent mode) |
-| `preventDismiss` | `boolean` | When `true`, adapters block native dismiss gestures. Set by `useOnBeforeClose`. |
 
 ---
 
-### BottomSheetRef
+## Result Types
 
-Backward-compatible alias for `SheetAdapterRef`. Ref type for all adapters.
+Both `open()` and `close()` report why they did nothing, rather than failing
+silently. See [Close results](/api/hooks#close-results) for how to consume them.
+
+### OpenResult
+
+Outcome of an `open()` call on the store.
 
 ```tsx
-import type { BottomSheetRef } from 'react-native-bottom-sheet-stack';
-
-const sheetRef = useRef<BottomSheetRef>(null);
+type OpenResult =
+  | { opened: true; id: string }
+  | { opened: false; id: string; reason: OpenRejectionReason };
 ```
+
+The public hooks project this down to the currency that is useful at each call
+site: `useBottomSheetManager().open()` returns `string | null` (the ID, or
+`null`), and `useBottomSheetControl().open()` returns `boolean`.
+
+---
+
+### OpenRejectionReason
+
+Why an `open()` call did not put the sheet on the stack. Each also logs a
+`__DEV__` warning explaining which.
+
+```tsx
+type OpenRejectionReason = 'already-active' | 'group-busy' | 'group-mismatch';
+```
+
+| Reason | Meaning |
+|--------|---------|
+| `already-active` | The sheet is already on the stack. Re-opening an active sheet is a no-op — close it first, or use `updateParams()` |
+| `group-busy` | Another sheet in the same group is still animating open. Wait for it to settle (`useBottomSheetStatus`) |
+| `group-mismatch` | The sheet is registered to a different manager group than the one opening it. A sheet belongs to the group that mounted it |
+
+---
+
+### CloseResult
+
+Outcome of a close. Returned by `close()` on `useBottomSheetManager`,
+`useBottomSheetControl` and `useBottomSheetContext`.
+
+```tsx
+type CloseResult =
+  | { closed: true }
+  | { closed: false; reason: CloseRejectionReason };
+```
+
+---
+
+### CloseRejectionReason
+
+```tsx
+type CloseRejectionReason = 'blocked' | 'interceptor-error' | 'not-closable';
+```
+
+| Reason | Meaning |
+|--------|---------|
+| `blocked` | A [`useOnBeforeClose`](/close-interception) interceptor declined |
+| `interceptor-error` | The interceptor threw; the close is cancelled for safety |
+| `not-closable` | There was nothing to close — already closing, hidden, or unknown sheet. Distinct from `blocked`: no interceptor had an opinion |
+
+---
+
+### CloseAllResult
+
+Outcome of a cascading `closeAll()`.
+
+```tsx
+interface CloseAllResult {
+  /** Whether every sheet in the group closed. */
+  closedAll: boolean;
+  /** IDs that closed, topmost first. */
+  closed: string[];
+  /** The sheet whose interceptor stopped the cascade, if one did. */
+  stoppedAt?: string;
+}
+```
+
+A sheet with nothing to close does not stop the cascade — only a refusal does.
 
 ---
 
@@ -223,6 +295,13 @@ type Params = BottomSheetPortalParams<'settings-sheet'>;
 // Result: undefined
 ```
 
+:::note `undefined` is always in the union
+Even for a sheet with required params, the resolved type is `T | undefined` —
+`resetParams()` can clear params on an open sheet, so a sheet reading its own
+params can always find them missing. Under `strict`, read them optionally:
+`params?.userId`.
+:::
+
 ---
 
 ## Hook Return Types
@@ -233,9 +312,10 @@ Return type of `useBottomSheetControl` hook.
 
 ```tsx
 interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
+  /** `false` when the store declined — see OpenRejectionReason. */
   open: OpenFunction<T>;
-  close: () => void;
-  closeAll: (options?: CloseAllOptions) => Promise<void>;
+  close: () => Promise<CloseResult>;
+  closeAll: (options?: CloseAllOptions) => Promise<CloseAllResult>;
   updateParams: (params: BottomSheetPortalParams<T>) => void;
   resetParams: () => void;
 }
@@ -252,7 +332,7 @@ interface UseBottomSheetContextReturn<TParams> {
   id: string;
   params: TParams;
   preventDismiss: boolean;
-  close: () => void;
+  close: () => Promise<CloseResult>;
   forceClose: () => void;
 }
 ```
@@ -266,7 +346,12 @@ Return type of `useBottomSheetStatus` hook.
 ```tsx
 interface UseBottomSheetStatusReturn {
   status: BottomSheetStatus | null;
+  /** Fully open and interactive — not during the opening animation. */
   isOpen: boolean;
+  isOpening: boolean;
+  isClosing: boolean;
+  /** On screen in any form: opening, open, or closing. */
+  isVisible: boolean;
 }
 ```
 

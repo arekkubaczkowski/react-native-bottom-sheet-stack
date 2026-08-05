@@ -12,10 +12,6 @@ export function getNextPortalSession(sheetId: string): number {
   return next;
 }
 
-export function getCurrentPortalSession(sheetId: string): number | undefined {
-  return portalSessionRegistry.get(sheetId);
-}
-
 /**
  * Reset all portal sessions. Useful for testing.
  * @internal

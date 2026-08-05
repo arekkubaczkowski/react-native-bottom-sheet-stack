@@ -58,15 +58,13 @@ The detent at index `0` must resolve to `0` (collapsed) so the manager can close
 
 ## Props
 
-Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansion-labs/react-native-bottom-sheet)'s `BottomSheet` (`detents`, `style`, `extendUnderStatusBar`, `animateContentHeight`, `onIndexChange`, `onSettle`, `onPositionChange`), **except** the props the manager owns:
+Accepts the full prop surface of [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansion-labs/react-native-bottom-sheet)'s `BottomSheet` (`detents`, `style`, `surface`, `extendUnderStatusBar`, `animateContentHeight`, `disableScrollableNegotiation`, `onIndexChange`, `onSettle`), **except** the props the manager owns:
 
 - `index` — the adapter is the source of truth. Use `expandedIndex` (a prop added by the adapter, defaults to the last detent) to choose which detent the sheet opens to.
 - `animateIn` — the manager controls the open animation, so it is forced on.
 - `onPositionChange` / `wrapNativeView` — consumed by the adapter to drive the backdrop fade on the UI thread.
 
-`scrollableNegotiation` is forwarded too, but the native side only honors it from **0.17**; on 0.16 use the (deprecated) `disableScrollableNegotiation`.
-
-Your `onIndexChange` / `onSettle` / `onPositionChange` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent`, `DetentValue`, `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types are exported from the subpath for convenience.
+Your `onIndexChange` / `onSettle` handlers are still invoked after the adapter's own logic. The `programmatic()` helper plus the `Detent`, `DetentValue`, `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types are exported from the subpath for convenience.
 
 :::info `onIndexChange` is wider than the native prop
 The adapter's `onIndexChange` differs from the native one in two ways:
@@ -94,10 +92,11 @@ The native sheet is intentionally minimal. The adapter layers a few **opt-in** c
 
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
+| `expandedIndex` | `number` | _last detent_ | Index into `detents` the sheet expands to when opened. Replaces the native `index`, which the adapter owns. The detent at index `0` must still resolve to `0`, since that is what the manager snaps back to when closing. |
 | `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle as a chrome layer over the `surface` and insets the content to clear it. Pass `true` for the default pill, an object to restyle it, or a React element for full control. Auto-hidden when dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. |
 | `fullHeight` | `boolean` | `false` | Expands the sheet to the full height available to it. swmansion detents are only `number` / `'content'`, and neither expresses "as tall as you can go" — this passes a detent taller than any screen, which native clamps to the height it actually measured. Stays below the status bar unless you also pass `extendUnderStatusBar`; combined with `detached`, it means the detached frame's height. Ignored when explicit `detents` are passed. |
 | `detached` | `boolean` | `false` | Floats the sheet free of the screen edges — the *detached* presentation from `@gorhom/bottom-sheet`. All four corners are rounded and the sheet rises from the inset frame. See [Detached sheets](#detached-sheets). |
-| `bottomInset` | `number` | _safe-area bottom_ | Gap below the sheet. Only meaningful with `detached`. Falls back to `16` where there is no bottom inset. |
+| `bottomInset` | `number` | _safe-area bottom, at least `16`_ | Gap below the sheet. Only meaningful with `detached`. |
 | `horizontalInset` | `number` | `16` | Gap on each side. Only meaningful with `detached`. |
 | `fillContent` | `boolean` | _auto_ | Stretches the content to fill the sheet (`flex: 1`), so a `flex: 1` scrollable expands and a bottom footer pins to the bottom instead of floating up under the content. Auto and rarely set by hand: `true` for fixed-height sheets (numeric detents or `fullHeight`), `false` for content-sized ones (which must size to their content). Pass a boolean to override. |
 | `keyboardBehavior` | `'none' \| 'inset'` | `'none'` | Keyboard avoidance — the native sheet has none. `'inset'` insets the content by the keyboard height (works for both content-sized and fixed-height sheets); `'none'` lets the content handle it. See [Keyboard avoidance](#keyboard-avoidance) for when to use which. Reads the keyboard height from `react-native-keyboard-controller`. |
@@ -195,7 +194,7 @@ Pick exactly one. Combining `'inset'` with a keyboard-aware scrollable lifts the
 
 Detaching works by giving the sheet a **smaller canvas**: the adapter wraps it in a frame inset by those values, and the native host fills that frame. The detent cap is measured from it, so `'content'` and `fullHeight` resolve against the detached height — no arithmetic on your side. All four corners are rounded (an anchored sheet keeps its bottom two square), and the content is clipped to match.
 
-The frame also clips, and that part is load-bearing rather than cosmetic: the native sheet container is a full-canvas view translated down to the current position, and it is explicitly *not* clipped to its host, so its surface hangs below by whatever the sheet has not expanded yet. Unclipped, that surface would paint straight over the bottom gap and the sheet would not read as detached at all.
+The frame also clips, and that part is load-bearing rather than cosmetic: the native sheet container is a full-canvas view translated down to the current position, and it is explicitly *not* clipped to its host, so its surface hangs below by whatever the sheet has not expanded yet. Unclipped, that surface would paint straight over the bottom gap and the sheet would not read as detached at all. The same overhang is why the frame — not the surface — carries the bottom corner radii: the surface's own bottom edge sits outside the frame entirely.
 
 :::note Shadows on a custom `surface`
 Because the frame clips, a shadow cast by a custom `surface` is clipped with it. The native sheet itself draws no shadow, so the default surface is unaffected.
@@ -213,7 +212,7 @@ swmansion's `scrimColor` / `scrimOpacities` only apply to **modal** sheets. The 
 
 ## Android back button
 
-This adapter registers a hardware-back handler automatically (via the internal `useBackHandler`): pressing Android back dismisses the top, fully-open sheet — the same contract the other adapters honor. You don't need to wire anything up yourself.
+This adapter registers a hardware-back handler automatically (via `useBackHandler`): pressing Android back dismisses the top, fully-open sheet — the same contract the other adapters honor. You don't need to wire anything up yourself.
 
 ## When to Use
 

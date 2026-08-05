@@ -11,10 +11,9 @@ import {
   Alert,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import {
-  useBottomSheetStore,
-  __getAllAnimatedIndexes,
-} from 'react-native-bottom-sheet-stack';
+import { useBottomSheetStore } from 'react-native-bottom-sheet-stack';
+import { shallow } from 'zustand/shallow';
+import { __getAllAnimatedIndexes } from 'react-native-bottom-sheet-stack/testing';
 
 interface LogEntry {
   timestamp: number;
@@ -124,7 +123,19 @@ function pollAnimatedIndexValues() {
 export function BottomSheetDebugMonitor() {
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { sheetsById, stackOrder } = useBottomSheetStore();
+  const sheetsById = useBottomSheetStore((state) => state.sheetsById, shallow);
+  // Flattened for display only — the store keys the stack by group.
+  //
+  // Both selectors take `shallow`, and that is load-bearing here rather than
+  // decoration: the flatten allocates a fresh array on every call, so with the
+  // default reference check Zustand would treat every store write as a change
+  // and re-render this monitor constantly. Nothing in this file is memoized —
+  // the example app does not run React Compiler (the plugin lives in the root
+  // babel.config.js, which only covers src/).
+  const stackOrder = useBottomSheetStore(
+    (state) => Object.values(state.stackOrderByGroup).flat(),
+    shallow
+  );
 
   const pan = useRef(new Animated.ValueXY({ x: 20, y: 100 })).current;
 
@@ -158,7 +169,7 @@ export function BottomSheetDebugMonitor() {
     const unsubscribe = useBottomSheetStore.subscribe(
       (state) => ({
         sheetsById: state.sheetsById,
-        stackOrder: state.stackOrder,
+        stackOrderByGroup: state.stackOrderByGroup,
       }),
       (current, previous) => {
         // Detect new sheets
@@ -192,15 +203,19 @@ export function BottomSheetDebugMonitor() {
           }
         });
 
-        // Detect stack changes
+        // Detect stack changes, per group
         if (
-          JSON.stringify(current.stackOrder) !==
-          JSON.stringify(previous.stackOrder)
+          JSON.stringify(current.stackOrderByGroup) !==
+          JSON.stringify(previous.stackOrderByGroup)
         ) {
-          addDebugLog(
-            'status',
-            'stack',
-            `Stack: [${current.stackOrder.join(', ')}]`
+          Object.entries(current.stackOrderByGroup).forEach(
+            ([groupId, stack]) => {
+              addDebugLog(
+                'status',
+                'stack',
+                `Stack[${groupId}]: [${stack.join(', ')}]`
+              );
+            }
           );
         }
       }

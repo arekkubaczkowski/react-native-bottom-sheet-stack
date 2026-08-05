@@ -1,20 +1,22 @@
 import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 
-import { useBottomSheetStore } from './bottomSheet.store';
+import { useIsTopmostAndOpen } from './store';
+import { useStableCallback } from './useStableCallback';
 
 /**
  * Manages Android hardware back button for a sheet.
  *
- * The listener is only active when the sheet is fully open
- * AND is the topmost sheet in the stack.
+ * The listener is only active when the sheet is fully open AND is the topmost
+ * sheet **of its own group** — a sheet in another group never suppresses it.
  */
 export function useBackHandler(id: string, onBackPress: () => void): void {
-  const isTopAndOpen = useBottomSheetStore((state) => {
-    const { stackOrder, sheetsById } = state;
-    const sheet = sheetsById[id];
-    return sheet?.status === 'open' && stackOrder[stackOrder.length - 1] === id;
-  });
+  const isTopAndOpen = useIsTopmostAndOpen(id);
+  // Adapters build their handler from `createSheetEventHandlers(id)` during
+  // render, so it is a new function every time. Stabilising it keeps the native
+  // listener subscribed for as long as the sheet is on top, instead of being
+  // torn down and re-added on every render.
+  const stableOnBackPress = useStableCallback(onBackPress);
 
   useEffect(() => {
     if (!isTopAndOpen) {
@@ -23,10 +25,10 @@ export function useBackHandler(id: string, onBackPress: () => void): void {
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
-        onBackPress();
+        stableOnBackPress();
         return true;
       }
     );
     return () => subscription.remove();
-  }, [isTopAndOpen, onBackPress]);
+  }, [isTopAndOpen, stableOnBackPress]);
 }

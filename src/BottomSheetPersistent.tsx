@@ -9,13 +9,13 @@ import {
   useSheetExists,
   useSheetPortalSession,
   useUnmount,
-} from './bottomSheet.store';
+} from './store';
 import { BottomSheetDefaultIndexContext } from './BottomSheetDefaultIndex.context';
-import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import { BottomSheetRefContext } from './BottomSheetRef.context';
 import type { BottomSheetPortalId } from './portal.types';
 import { setSheetRef } from './refsMap';
-import { useEvent } from './useEvent';
+import { useStableCallback } from './useStableCallback';
 
 interface BottomSheetPersistentProps {
   id: BottomSheetPortalId;
@@ -34,8 +34,8 @@ export function BottomSheetPersistent({
   const sheetRef = useRef<SheetAdapterRef>(null);
   const groupId = bottomSheetManagerContext?.groupId || 'default';
 
-  const mountSheet = useEvent(() => {
-    mount({ id, groupId, content: null, usePortal: true, keepMounted: true });
+  const mountSheet = useStableCallback(() => {
+    mount({ id, groupId });
   });
 
   useEffect(() => {

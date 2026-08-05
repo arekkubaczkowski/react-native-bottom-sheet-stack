@@ -4,7 +4,10 @@ sidebar_position: 2
 
 # Hooks
 
-Hooks are divided into two categories based on where they can be used:
+Hooks fall into two groups: the ones you use to drive sheets from your app, and
+the ones an [adapter](/custom-adapters) uses to wire a UI library into the stack.
+
+### App hooks
 
 | Hook | Where to use | Purpose |
 |------|--------------|---------|
@@ -14,6 +17,19 @@ Hooks are divided into two categories based on where they can be used:
 | `useBottomSheetContext` | **Inside sheet only** | Access current sheet's state and params |
 | `useOnBeforeClose` | **Inside sheet only** | Intercept close and optionally prevent it |
 
+### Adapter hooks
+
+Exported for [custom adapter authors](/custom-adapters) — every shipped adapter
+is built from these. You do not need them to use the library.
+
+| Hook | Where to use | Purpose |
+|------|--------------|---------|
+| `useAdapterRef` | **Inside adapter only** | Resolve the right ref for inline/portal/persistent mode |
+| `useAnimatedIndex` | **Inside adapter only** | The sheet's `animatedIndex` shared value, driving backdrop and scale |
+| `useBackHandler` | **Inside adapter only** | Android back button, scoped to the topmost open sheet **of its own group** |
+| `useSetBackdrop` | Anywhere | Returns `setBackdrop(id, boolean)` — suppress the manager's shared backdrop for a sheet that renders its own |
+| `useSheetPreventDismiss` | Anywhere | `useSheetPreventDismiss(id)` — whether an interceptor is currently blocking dismissal, so the adapter can disable native gestures |
+
 ---
 
 ## useBottomSheetManager
@@ -21,17 +37,17 @@ Hooks are divided into two categories based on where they can be used:
 Main hook for opening and managing bottom sheets imperatively.
 
 ```tsx
-const { open, close, closeAll, clear } = useBottomSheetManager();
+const { open, close, closeAll, destroyAll } = useBottomSheetManager();
 ```
 
 ### Returns
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `open` | `(content, options?) => string` | Opens a bottom sheet and returns its ID |
-| `close` | `(id: string) => void` | Closes a specific sheet by ID |
-| `closeAll` | `(options?) => Promise<void>` | Closes all sheets with cascading animation |
-| `clear` | `() => void` | Removes all sheets immediately (no animation) |
+| `open` | `(content, options?) => string \| null` | Opens a bottom sheet and returns its ID, or `null` if the store declined |
+| `close` | `(id: string) => Promise<CloseResult>` | Closes a specific sheet by ID |
+| `closeAll` | `(options?) => Promise<CloseAllResult>` | Closes all sheets with cascading animation |
+| `destroyAll` | `() => void` | Removes all sheets immediately — no animation, **bypasses `onBeforeClose`** |
 
 ### closeAll Options
 
@@ -56,10 +72,11 @@ await closeAll({ stagger: 0 });
 
 ```tsx
 open(<MySheet />, {
-  id: 'my-sheet-id',      // Custom ID (optional)
-  groupId: 'my-group',    // Custom group (optional)
-  mode: 'push',           // 'push' | 'switch' | 'replace'
-  scaleBackground: true,  // Enable scale animation
+  id: 'my-sheet-id',        // Custom ID (optional)
+  groupId: 'my-group',      // Custom group (optional)
+  mode: 'push',             // 'push' | 'switch' | 'replace'
+  scaleBackground: true,    // Enable scale animation
+  params: { userId: '1' },  // Readable via useBottomSheetContext()
 });
 ```
 
@@ -69,14 +86,50 @@ open(<MySheet />, {
 | `groupId` | `string` | context or `'default'` | Group ID for the sheet |
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
-| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when you give them their own backdrop (e.g. a custom gorhom `backdropComponent`), so you rarely set it by hand. |
+| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. `GorhomSheetAdapter` sets this itself when you pass it a custom `backdropComponent`; the other shipped adapters use the manager's backdrop and never touch it. |
+| `params` | `Record<string, unknown>` | - | Params for the sheet, readable inside it via `useBottomSheetContext()`. Untyped here — the typed variant lives on `useBottomSheetControl` |
 
-### Deprecated Aliases
+`open()` returns the sheet's ID, or **`null`** when the store declined to open it — because the sheet is already on the stack, or another sheet in the group is still animating open. A dev-mode warning explains which.
 
-| Deprecated | Use Instead |
-|------------|-------------|
-| `openBottomSheet` | `open` |
-| `clearAll` | `clear` |
+```tsx
+const id = open(<MySheet />);
+if (id === null) {
+  // Not opened. Nothing to close, nothing to track.
+}
+```
+
+### `destroyAll()` vs `closeAll()`
+
+| | `closeAll()` | `destroyAll()` |
+|---|---|---|
+| Animation | staggered cascade | none |
+| `onBeforeClose` | respected | **bypassed** |
+| Returns | `Promise<CloseAllResult>` | `void` |
+
+`destroyAll()` is a teardown primitive — it drops every sheet in the group from the store immediately, without asking an interceptor that may be guarding unsaved work. Use `closeAll()` for anything user-facing.
+
+### Close results
+
+Every `close()` resolves to a `CloseResult`, and `closeAll()` to a `CloseAllResult`. Both carry more than a boolean, because "the user declined" and "there was nothing to close" are different answers:
+
+```tsx
+const result = await close(id);
+if (!result.closed) {
+  switch (result.reason) {
+    case 'blocked':            // an onBeforeClose interceptor said no
+    case 'interceptor-error':  // the interceptor threw; cancelled for safety
+    case 'not-closable':       // already closing, hidden, or unknown sheet
+  }
+}
+
+const cascade = await closeAll();
+if (!cascade.closedAll) {
+  // cascade.stoppedAt — the sheet whose interceptor stopped it.
+  // cascade.closed    — the ones that did close, topmost first.
+}
+```
+
+A sheet with nothing to close no longer stops a cascade — only a refusal does.
 
 ---
 
@@ -103,8 +156,15 @@ Pass the portal sheet ID as a generic to get typed params:
 ```tsx
 // If registry defines: 'user-sheet': { userId: string }
 const { params } = useBottomSheetContext<'user-sheet'>();
-console.log(params.userId); // type-safe: string
+console.log(params?.userId); // type-safe: string | undefined
 ```
+
+:::note Always optional
+`BottomSheetPortalParams<T>` resolves to `{ userId: string } | undefined`, even
+when the registry marks the params as required. `resetParams()` can clear them
+while the sheet is open, so the sheet must handle their absence — under `strict`,
+`params.userId` is a type error. Read them with `params?.userId`.
+:::
 
 ### Returns
 
@@ -113,15 +173,8 @@ console.log(params.userId); // type-safe: string
 | `id` | `string` | Current sheet's ID |
 | `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided |
 | `preventDismiss` | `boolean` | Whether dismissal is currently blocked for this sheet (set via `useOnBeforeClose`). Useful for UI that should reflect it — e.g. hiding a grab handle. |
-| `close` | `() => void` | Closes this sheet (respects `useOnBeforeClose`) |
+| `close` | `() => Promise<CloseResult>` | Closes this sheet (respects `useOnBeforeClose`). See [Close results](#close-results). |
 | `forceClose` | `() => void` | Closes this sheet immediately, bypassing any `useOnBeforeClose` interceptor |
-
-### Deprecated Aliases
-
-| Deprecated | Use Instead |
-|------------|-------------|
-| `useBottomSheetState` | `useBottomSheetContext` |
-| `closeBottomSheet` | `close` |
 
 ---
 
@@ -147,9 +200,9 @@ const { open, close, closeAll, updateParams, resetParams } = useBottomSheetContr
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `open` | `(options?) => void` | Opens the sheet |
-| `close` | `() => void` | Closes the sheet (respects `useOnBeforeClose`) |
-| `closeAll` | `(options?) => Promise<void>` | Closes all sheets with cascading animation |
+| `open` | `(options?) => boolean` | Opens the sheet. `false` if the store declined |
+| `close` | `() => Promise<CloseResult>` | Closes the sheet (respects `useOnBeforeClose`) |
+| `closeAll` | `(options?) => Promise<CloseAllResult>` | Closes all sheets with cascading animation |
 | `updateParams` | `(params) => void` | Updates the sheet's params |
 | `resetParams` | `() => void` | Resets params to `undefined` |
 
@@ -172,8 +225,10 @@ open({
 |--------|------|---------|-------------|
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
-| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when given their own native backdrop/scrim, so you rarely set it by hand. |
+| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. `GorhomSheetAdapter` sets this itself when you pass it a custom `backdropComponent`; the other shipped adapters use the manager's backdrop and never touch it. |
 | `params` | `BottomSheetPortalParams<T>` | - | Type-safe params |
+
+`useBottomSheetManager().open()` also accepts `params` now, so inline sheets can read them from `useBottomSheetContext()` just like portal sheets.
 
 ---
 
@@ -191,23 +246,36 @@ const { status, isOpen } = useBottomSheetStatus('my-sheet');
 
 // Inline sheet (using ID from open())
 const { open } = useBottomSheetManager();
-const sheetId = open(<MySheet />);
-// ...
-const { status, isOpen } = useBottomSheetStatus(sheetId);
+const [sheetId, setSheetId] = useState<string | null>(null);
+
+const handleOpen = () => {
+  // open() returns `string | null` — null means the store declined
+  setSheetId(open(<MySheet />));
+};
+
+// The hook needs a string, so fall back to an ID that matches nothing
+const { status, isOpen } = useBottomSheetStatus(sheetId ?? '');
 ```
 
 ### Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `id` | `string` | The sheet ID to observe (portal ID or inline sheet ID) |
+| `id` | `BottomSheetPortalId \| (string & {})` | The sheet ID to observe. Registered portal IDs get completion; the random IDs from `open()` are accepted too |
 
 ### Returns
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `status` | `BottomSheetStatus \| null` | Current status or `null` if never opened |
-| `isOpen` | `boolean` | `true` if status is `'open'` or `'opening'` |
+| `isOpen` | `boolean` | Fully open and interactive — **not** during the opening animation |
+| `isOpening` | `boolean` | Animating in |
+| `isClosing` | `boolean` | Animating out |
+| `isVisible` | `boolean` | On screen in any form: opening, open, or closing |
+
+:::warning `isOpen` narrowed in 2.0
+It used to be `true` during the opening animation as well. If you were using it to mean "on screen", switch to `isVisible`.
+:::
 
 ### Status Values
 
@@ -305,3 +373,35 @@ When active, the hook:
 Use `forceClose()` from `useBottomSheetContext` to bypass the interceptor entirely.
 
 See [Close Interception](/close-interception) for detailed guide and examples.
+
+---
+
+## Testing
+
+Test helpers ship on the `react-native-bottom-sheet-stack/testing` subpath, so
+they stay out of your production bundle.
+
+```tsx
+import { resetBottomSheetRegistries } from 'react-native-bottom-sheet-stack/testing';
+
+beforeEach(resetBottomSheetRegistries);
+```
+
+### resetBottomSheetRegistries
+
+Clears the store **and** every module-level registry the library keeps: sheet
+refs, animated index values, portal sessions and `onBeforeClose` interceptors.
+
+Those registries are module state, so they outlive React. Without this, a test
+that opens a sheet leaves its ref and animated value behind for the next test,
+which then sees a sheet it never opened. Prefer this one call over resetting
+registries by hand — it cannot go out of date as registries are added.
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `resetBottomSheetRegistries` | `() => void` | Clears the store and all registries |
+
+:::warning Tests only
+Nothing on this subpath is meant for application code. It clears state without
+running animations or `onBeforeClose` interceptors.
+:::

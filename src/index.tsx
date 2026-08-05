@@ -14,12 +14,16 @@ export {
 // Adapter types
 export type {
   SheetAdapterRef,
-  SheetAdapterRef as BottomSheetRef,
   SheetAdapterEvents,
   SheetRef,
 } from './adapter.types';
 
-// Adapter utilities (for custom adapter authors)
+// ---------------------------------------------------------------------------
+// Adapter utilities
+//
+// Everything a custom adapter needs to reach parity with the built-in ones —
+// whatever the shipped adapters use, a third-party one can use too.
+// ---------------------------------------------------------------------------
 export {
   createSheetEventHandlers,
   requestClose,
@@ -28,20 +32,23 @@ export {
 export { useAdapterRef } from './useAdapterRef';
 export { useAnimatedIndex } from './useAnimatedIndex';
 export { useBackHandler } from './useBackHandler';
-export { getAnimatedIndex, setAnimatedIndexValue } from './animatedRegistry';
+/**
+ * `useSetBackdrop` suppresses the manager's shared backdrop for a sheet — for
+ * adapters that render their own and would otherwise stack two.
+ * `useSheetPreventDismiss` reports whether an `onBeforeClose` interceptor is
+ * blocking dismissal, so the adapter can disable its native gestures.
+ */
+export { useSetBackdrop, useSheetPreventDismiss } from './store';
 
 // Hooks
-export {
-  useBottomSheetManager,
-  type CloseAllOptions,
-} from './useBottomSheetManager';
+export { useBottomSheetManager } from './useBottomSheetManager';
+export type { CloseAllOptions } from './useBottomSheetManager';
 export {
   useBottomSheetControl,
   type UseBottomSheetControlReturn,
 } from './useBottomSheetControl';
 export {
   useBottomSheetContext,
-  useBottomSheetState,
   type UseBottomSheetContextReturn,
 } from './useBottomSheetContext';
 export {
@@ -55,25 +62,33 @@ export type { ScaleConfig, ScaleAnimationConfig } from './useScaleAnimation';
 export type {
   BottomSheetStatus,
   OpenMode,
-  BottomSheetState,
-} from './bottomSheet.store';
+  OpenResult,
+  OpenRejectionReason,
+  CloseResult,
+  CloseRejectionReason,
+  CloseAllResult,
+  PublicBottomSheetState as BottomSheetState,
+} from './store';
 export type {
   BottomSheetPortalRegistry,
   BottomSheetPortalId,
   BottomSheetPortalParams,
 } from './portal.types';
 
-export { useBottomSheetStore } from './bottomSheet.store';
-
 // onBeforeClose registry
 export type { OnBeforeCloseCallback } from './onBeforeCloseRegistry';
 export { setOnBeforeClose, removeOnBeforeClose } from './onBeforeCloseRegistry';
 
-// Testing utilities (internal use)
-export { __resetSheetRefs } from './refsMap';
-export {
-  __resetAnimatedIndexes,
-  __getAllAnimatedIndexes,
-} from './animatedRegistry';
-export { __resetPortalSessions } from './portalSessionRegistry';
-export { __resetOnBeforeClose } from './onBeforeCloseRegistry';
+/**
+ * Direct access to the Zustand store.
+ *
+ * @internal Not covered by semver. The state shape and the action set are
+ * implementation details — `stackOrderByGroup`, `content`, `portalSession` and
+ * the lifecycle actions (`markOpen`, `finishClosing`, `mount`, `unmount`) exist
+ * to serve the coordinator and can change without a major bump. Prefer
+ * `useBottomSheetStatus`, `useBottomSheetContext` and `useBottomSheetControl`.
+ */
+export { useBottomSheetStore } from './store';
+
+// Test helpers live on the `/testing` subpath, so they stay out of the
+// production bundle. See src/testing.ts.

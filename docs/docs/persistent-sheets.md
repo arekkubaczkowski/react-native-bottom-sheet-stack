@@ -48,6 +48,12 @@ function HomeScreen() {
 }
 ```
 
+:::note
+`open()` takes no `params` here because this ID is not registered in
+`BottomSheetPortalRegistry`. Once you register it with a params object, `params`
+becomes **required** — see [Type Safety](#type-safety) below.
+:::
+
 ## State Preservation
 
 Internal component state is preserved between open/close cycles:
@@ -139,6 +145,26 @@ declare module 'react-native-bottom-sheet-stack' {
 ```
 
 Now `useBottomSheetControl('scanner')` has typed `open()` and `params`.
+
+:::warning Registering params makes them required
+An object entry in the registry means every `open()` for that ID **must** pass
+`params`. With the declaration above, the simple call from
+[Basic Usage](#basic-usage) no longer typechecks:
+
+```tsx
+scanner.open({ scaleBackground: true });
+// ❌ Property 'params' is missing
+
+scanner.open({ scaleBackground: true, params: { source: 'home' } });
+// ✅
+```
+
+If you want the params to stay optional, register the ID as `true` instead and
+read `params` untyped.
+:::
+
+Inside the sheet, params are always `T | undefined` — `resetParams()` can clear
+them while the sheet is open — so read them with `params?.title`, as above.
 
 ## Placement
 

@@ -8,10 +8,7 @@ import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import {
-  useSetBackdrop,
-  useSheetPreventDismiss,
-} from '../../bottomSheet.store';
+import { useSetBackdrop, useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useAdapterRef } from '../../useAdapterRef';

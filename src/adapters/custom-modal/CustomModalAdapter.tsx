@@ -3,6 +3,7 @@ import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -45,15 +46,19 @@ export const CustomModalAdapter = React.forwardRef<
       expand: () => {
         setRendered(true);
         setOpen(true);
-        animatedIndex.set(0);
       },
-      close: () => {
-        setOpen(false);
-        animatedIndex.set(-1);
-      },
+      close: () => setOpen(false),
     }),
-    [animatedIndex]
+    []
   );
+
+  // Drive animatedIndex off the same `progress` that animates the modal, so
+  // the manager's backdrop fades in step with it. Setting it discretely in
+  // expand/close (as this once did) snapped the backdrop to full opacity on
+  // the first frame while the modal itself took ANIMATION_DURATION to arrive.
+  useDerivedValue(() => {
+    animatedIndex.set(progress.value - 1);
+  });
 
   const onAnimationEnd = (value: boolean) => {
     'worklet';

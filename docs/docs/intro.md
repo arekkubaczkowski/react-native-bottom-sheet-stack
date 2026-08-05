@@ -22,7 +22,7 @@ A **library-agnostic** stack manager for bottom sheets and modals in React Nativ
 - **Close Interception** — [`useOnBeforeClose`](/close-interception) to confirm or prevent sheet dismissal
 - **Cascading Close** — `closeAll()` with staggered animation, respecting interceptors
 - **Mixed Stacking** — Bottom sheets and modals coexist in the same stack
-- **4 Adapters** — GorhomSheet, Modal, react-native-modal, ActionsSheet
+- **5 Adapters** — GorhomSheet, Swmansion (Fabric), CustomModal, react-native-modal, ActionsSheet
 - **Group Support** — Isolated stacks for different parts of your app
 
 ## Quick Example

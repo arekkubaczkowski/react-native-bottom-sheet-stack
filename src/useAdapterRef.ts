@@ -1,7 +1,7 @@
 import type { ForwardedRef } from 'react';
 
 import type { SheetAdapterRef, SheetRef } from './adapter.types';
-import { useBottomSheetRefContext } from './BottomSheetRef.context';
+import { useMaybeBottomSheetRef } from './BottomSheetRef.context';
 
 /**
  * Returns the correct ref for a custom adapter.
@@ -23,6 +23,6 @@ import { useBottomSheetRefContext } from './BottomSheetRef.context';
 export function useAdapterRef(
   forwardedRef: ForwardedRef<SheetAdapterRef>
 ): SheetRef | ForwardedRef<SheetAdapterRef> {
-  const contextRef = useBottomSheetRefContext();
+  const contextRef = useMaybeBottomSheetRef();
   return contextRef ?? forwardedRef;
 }

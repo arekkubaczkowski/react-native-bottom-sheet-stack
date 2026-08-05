@@ -30,17 +30,43 @@ interface SheetAdapterEvents {
 }
 ```
 
+It should also:
+
+3. **Drive `animatedIndex` alongside your own animation**, so the manager's
+   backdrop fades in step with the sheet rather than snapping — see
+   [Animated Index](#animated-index)
+4. **Respect `preventDismiss`** — read it with `useSheetPreventDismiss(id)` and
+   disable your library's native dismiss gestures while it is `true`, so a
+   [`useOnBeforeClose`](/close-interception) interceptor always gets to run
+   before the sheet goes away. Every shipped adapter except `CustomModalAdapter`
+   (which has no dismiss gesture of its own) does this.
+5. **Handle the Android back button** with `useBackHandler(id, handleDismiss)`
+   unless your library already has its own back handling to route into
+   `handleDismiss()`. The hook is scoped to the topmost open sheet **of its own
+   group**, which a hand-rolled `BackHandler` listener is not.
+
+```tsx
+import { useBackHandler, useSheetPreventDismiss } from 'react-native-bottom-sheet-stack';
+
+const preventDismiss = useSheetPreventDismiss(id);
+useBackHandler(id, handleDismiss);
+
+<MyLibrarySheet swipeToDismissEnabled={!preventDismiss} />
+```
+
 ## Step-by-Step Guide
 
 ### 1. Create the Adapter Component
 
 ```tsx
 import React, { useImperativeHandle } from 'react';
+import { withTiming } from 'react-native-reanimated';
 import type { SheetAdapterRef } from 'react-native-bottom-sheet-stack';
 import {
   createSheetEventHandlers,
   useAdapterRef,
   useAnimatedIndex,
+  useBackHandler,
   useBottomSheetContext,
 } from 'react-native-bottom-sheet-stack';
 
@@ -74,9 +100,13 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
       },
     }), []);
 
-    // 5. Wire up callbacks
+    // 5. Wire up callbacks. Animate animatedIndex with the same timing as your
+    //    own show/hide animation so the manager's backdrop fades in step.
+    const onShowStart = () => {
+      animatedIndex.set(withTiming(0, { duration: 300 }));
+    };
+
     const onShown = () => {
-      animatedIndex.set(0);
       handleOpened();
     };
 
@@ -84,17 +114,25 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
       handleDismiss();
     };
 
+    const onHideStart = () => {
+      animatedIndex.set(withTiming(-1, { duration: 300 }));
+    };
+
     const onHidden = () => {
-      animatedIndex.set(-1);
       handleClosed();
     };
 
-    // 6. Render your library's component
+    // 6. Android back button, scoped to the topmost open sheet in this group
+    useBackHandler(id, handleDismiss);
+
+    // 7. Render your library's component
     return (
       <MyLibrarySheet
         ref={myLibraryRef}
+        onShowStart={onShowStart}
         onShow={onShown}
         onDismiss={onUserDismiss}
+        onHideStart={onHideStart}
         onHide={onHidden}
         {...props}
       >
@@ -164,34 +202,85 @@ const animatedIndex = useAnimatedIndex();
 
 No need to pass the sheet `id` — the hook reads it from context automatically.
 
-#### Binary strategy (CustomModalAdapter, ReactNativeModalAdapter, ActionsSheetAdapter)
+:::danger Never set it discretely
+`animatedIndex.set(0)` on expand and `animatedIndex.set(-1)` on close is the
+obvious thing to write, and it is wrong. The backdrop reads the value on the
+sheet's very first frame, so a discrete set puts it at **full opacity
+immediately** — a whole animation ahead of the sheet it is meant to be backing.
+The three adapters that once did this (`CustomModalAdapter`,
+`ReactNativeModalAdapter`, `ActionsSheetAdapter`) were all changed away from it
+for exactly that reason.
 
-Set to `0` when the sheet becomes visible, `-1` when hidden. The backdrop snaps between transparent and opaque. Simple and works for any library.
+Reserve the discrete set for libraries that expose no timing information at all
+— no duration, no progress value, no position callback. There, a snap is the
+only option.
+:::
+
+#### Continuous — the library reports position (GorhomSheetAdapter, SwmansionSheetAdapter)
+
+Best case. If the library writes an animated value itself, hand it the shared
+value directly and it stays correct through swipe gestures too:
 
 ```tsx
 const animatedIndex = useAnimatedIndex();
 
-useImperativeHandle(ref, () => ({
-  expand: () => {
-    animatedIndex.set(0);   // backdrop fully opaque
-    // ... show your overlay
-  },
-  close: () => {
-    animatedIndex.set(-1);  // backdrop fully transparent
-    // ... hide your overlay
-  },
-}), [animatedIndex]);
+// gorhom writes to the shared value during gestures:
+<BottomSheet animatedIndex={animatedIndex} />
 ```
 
-#### Continuous/dynamic strategy (GorhomSheetAdapter)
-
-Pass the shared value directly to the underlying library as a prop. The library updates it continuously during swipe gestures (intermediate values between `-1` and `0`), so the backdrop smoothly interpolates during user interaction.
+If it reports position through a callback instead, map that into `[-1, 0]`.
+`SwmansionSheetAdapter` does this from the native sheet's `onPositionChange`:
 
 ```tsx
-const animatedIndex = useAnimatedIndex();
+// useEvent here is Reanimated's native-event hook, not the useEvent RFC
+import { useEvent } from 'react-native-reanimated';
 
-// The library writes to the shared value during gestures:
-<BottomSheet animatedIndex={animatedIndex} />
+const onPositionChange = useEvent((event) => {
+  'worklet';
+  animatedIndex.set(event.index - 1);
+}, ['onPositionChange']);
+```
+
+#### Alongside your own animation
+
+If you drive the animation yourself, derive `animatedIndex` from the same
+progress value — one animation, so they cannot drift.
+`CustomModalAdapter` does this:
+
+```tsx
+const progress = useSharedValue(0); // 0 = hidden, 1 = shown
+
+useDerivedValue(() => {
+  animatedIndex.set(progress.value - 1);
+});
+```
+
+#### Alongside the library's animation
+
+If the library animates but only tells you *when* it starts and *how long* it
+takes, run the same animation on `animatedIndex`. Both remaining adapters do
+this, each using the library's own configuration so the curves match:
+
+```tsx
+// ReactNativeModalAdapter — the modal's own timings
+expand: () => {
+  setIsVisible(true);
+  animatedIndex.set(withTiming(0, { duration: animationInTiming }));
+},
+close: () => {
+  setIsVisible(false);
+  animatedIndex.set(withTiming(-1, { duration: animationOutTiming }));
+},
+```
+
+```tsx
+// ActionsSheetAdapter — the sheet's own spring configs.
+// onOpen/onClose fire when the sheet *starts* moving, which is what makes
+// this work: the fade runs alongside the sheet's animation, not after it.
+const onOpen = () => {
+  animatedIndex.set(withSpring(0, openAnimationConfig));
+  handleOpened();
+};
 ```
 
 ### Adapter Ref
@@ -237,16 +326,42 @@ useImperativeHandle(ref, () => ({
 }), [openIndex]);
 
 // Settle = animation finished → opened/closed
-const onSettle = (i: number) =>
-  i > 0 ? (animatedIndex.set(0), handleOpened()) : (animatedIndex.set(-1), handleClosed());
+const onSettle = (i: number) => (i > 0 ? handleOpened() : handleClosed());
 
 // Index change = user-driven snap → reaching collapsed means dismiss
 const onIndexChange = (i: number) => {
   if (i <= 0) handleDismiss();
 };
+
+// Position change = continuous native position → drives the backdrop fade
+const onPositionChange = (event) => {
+  'worklet';
+  animatedIndex.set(event.index - 1);
+};
 ```
 
-This is exactly how [`SwmansionSheetAdapter`](/built-in-adapters/swmansion) bridges Software Mansion's native sheet. When the library also reports a continuous position (e.g. `onPositionChange`), interpolate it into `animatedIndex` (`[-1, 0]`) for a smooth backdrop fade.
+This is the shape [`SwmansionSheetAdapter`](/built-in-adapters/swmansion) uses to
+bridge Software Mansion's native sheet. Note that `animatedIndex` is driven
+**only** from the continuous `onPositionChange` — never from `onSettle`, which
+reports the end of an animation and would therefore snap the backdrop to its
+final value one animation late.
+
+### Suppressing the manager backdrop
+
+If your adapter renders a backdrop of its own, suppress the manager's shared one so the two don't stack into a double-dark overlay:
+
+```tsx
+import { useSetBackdrop, useSheetPreventDismiss } from 'react-native-bottom-sheet-stack';
+
+const setBackdrop = useSetBackdrop();
+useEffect(() => {
+  if (!hasOwnBackdrop) return;
+  setBackdrop(id, false);
+  return () => setBackdrop(id, true);
+}, [id, hasOwnBackdrop, setBackdrop]);
+```
+
+`useSheetPreventDismiss(id)` reports whether a `useOnBeforeClose` interceptor is currently blocking dismissal, so you can disable your library's native swipe/tap gestures while it is.
 
 ### Libraries Without Separate Dismiss/Close Phases
 
@@ -273,10 +388,11 @@ const ThirdPartySheet = require('third-party-sheet').default;
 A complete, minimal adapter — a slide-up modal using `react-native-reanimated`:
 
 ```tsx
-import React, { useEffect, useImperativeHandle, useState } from 'react';
-import { BackHandler, Pressable, StyleSheet } from 'react-native';
+import React, { useImperativeHandle, useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withSpring,
   withTiming,
@@ -287,7 +403,9 @@ import {
   createSheetEventHandlers,
   useAdapterRef,
   useAnimatedIndex,
+  useBackHandler,
   useBottomSheetContext,
+  useSheetPreventDismiss,
 } from 'react-native-bottom-sheet-stack';
 
 interface SlideUpModalProps {
@@ -299,6 +417,7 @@ export const SlideUpModal = React.forwardRef<SheetAdapterRef, SlideUpModalProps>
     const { id } = useBottomSheetContext();
     const ref = useAdapterRef(forwardedRef);
     const animatedIndex = useAnimatedIndex();
+    const preventDismiss = useSheetPreventDismiss(id);
 
     const [visible, setVisible] = useState(false);
     const progress = useSharedValue(0);
@@ -306,16 +425,20 @@ export const SlideUpModal = React.forwardRef<SheetAdapterRef, SlideUpModalProps>
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
 
+    // One animation drives both the sheet and the manager's backdrop, so the
+    // fade cannot run ahead of the sheet.
+    useDerivedValue(() => {
+      animatedIndex.set(progress.value - 1);
+    });
+
     useImperativeHandle(ref, () => ({
       expand: () => {
         setVisible(true);
-        animatedIndex.set(0);
         progress.value = withSpring(1, { damping: 20, stiffness: 300 }, (finished) => {
           if (finished) runOnJS(handleOpened)();
         });
       },
       close: () => {
-        animatedIndex.set(-1);
         progress.value = withTiming(0, { duration: 250 }, (finished) => {
           if (finished) {
             runOnJS(setVisible)(false);
@@ -323,17 +446,12 @@ export const SlideUpModal = React.forwardRef<SheetAdapterRef, SlideUpModalProps>
           }
         });
       },
-    }), [progress, animatedIndex]);
+    }), [progress]);
 
-    // Android back button
-    useEffect(() => {
-      if (!visible) return;
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        handleDismiss();
-        return true;
-      });
-      return () => sub.remove();
-    }, [visible, handleDismiss]);
+    // Android back button — only fires while this sheet is the topmost open
+    // one in its own group. A raw BackHandler listener would also fire for
+    // sheets buried under others.
+    useBackHandler(id, handleDismiss);
 
     const sheetStyle = useAnimatedStyle(() => ({
       transform: [{ translateY: (1 - progress.value) * 600 }],
@@ -341,8 +459,13 @@ export const SlideUpModal = React.forwardRef<SheetAdapterRef, SlideUpModalProps>
 
     if (!visible) return null;
 
+    // Tapping the surface dismisses — unless an onBeforeClose interceptor is
+    // blocking, in which case the gesture must be inert.
     return (
-      <Pressable style={styles.backdrop} onPress={handleDismiss}>
+      <Pressable
+        style={styles.backdrop}
+        onPress={preventDismiss ? undefined : handleDismiss}
+      >
         <Animated.View style={[styles.sheet, sheetStyle]}>
           <Pressable>{children}</Pressable>
         </Animated.View>

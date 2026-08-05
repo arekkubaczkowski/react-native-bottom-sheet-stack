@@ -162,16 +162,62 @@ Result: [SheetA, SheetB] remain open
 
 This seamless integration with `closeAll()` is why the callback pattern is recommended over the boolean return pattern.
 
+## Observing a blocked close
+
+Blocking is not silent — every close path reports what happened, so the caller
+can tell "the user declined" from "there was nothing to close":
+
+```tsx
+const { close, closeAll } = useBottomSheetControl('editor');
+
+const result = await close();
+if (!result.closed) {
+  switch (result.reason) {
+    case 'blocked':           // the interceptor declined
+    case 'interceptor-error': // the interceptor threw; cancelled for safety
+    case 'not-closable':      // already closing, hidden, or unknown sheet
+  }
+}
+
+const cascade = await closeAll();
+if (!cascade.closedAll) {
+  cascade.stoppedAt; // the sheet whose interceptor stopped the cascade
+  cascade.closed;    // the ones that did close, topmost first
+}
+```
+
+`close()` on `useBottomSheetManager`, `useBottomSheetControl` and
+`useBottomSheetContext` all resolve to a
+[`CloseResult`](/api/types#closeresult); `closeAll()` resolves to a
+[`CloseAllResult`](/api/types#closeallresult).
+
+A sheet that had nothing to close does **not** stop a cascade — only a refusal
+does. See [Close results](/api/hooks#close-results).
+
 ## Adapter Support
 
-For `useOnBeforeClose` to fully work, the adapter must respect the `preventDismiss` prop. All built-in adapters support this:
+For `useOnBeforeClose` to fully work, the adapter has to notice `preventDismiss`
+and disable the dismiss paths its library handles natively — otherwise the
+library closes the sheet without ever asking the interceptor.
 
-| Adapter | preventDismiss support |
-|---------|----------------------|
-| `GorhomSheetAdapter` | `enablePanDownToClose={false}` when active |
-| `CustomModalAdapter` | Disables backdrop press |
-| `ReactNativeModalAdapter` | Disables swipe and backdrop press |
-| `ActionsSheetAdapter` | `closable={false}` when active |
-| `SwmansionSheetAdapter` | Re-snaps up when the user swipes to the collapsed detent |
+| Adapter | What it does while dismissal is blocked |
+|---------|------------------------------------------|
+| `GorhomSheetAdapter` | Forces `enablePanDownToClose={false}` |
+| `ReactNativeModalAdapter` | Clears `swipeDirection` and `onSwipeComplete`, so swipe-to-dismiss is inert. Back button still routes through the interceptor |
+| `ActionsSheetAdapter` | Sets `gestureEnabled={false}`. Back button and backdrop tap stay enabled — they route through `onBeforeClose` into the interceptor, which is what produces the prompt |
+| `SwmansionSheetAdapter` | Rewrites detent `0` to `programmatic()` so the user cannot swipe to it, re-snaps up if the sheet reaches the collapsed detent anyway, and hides the grab handle |
+| `CustomModalAdapter` | **Nothing** — see below |
 
-If you're building a [custom adapter](/custom-adapters), read the `preventDismiss` value from the store and disable native dismiss gestures accordingly.
+:::warning `CustomModalAdapter` does not block gestures
+It never reads `preventDismiss`. It renders no backdrop of its own and has no
+swipe gesture, so its only user-driven dismiss path is the Android back button —
+which goes through `handleDismiss()` and therefore still runs the interceptor.
+Programmatic `close()` is intercepted as normal. But if you wrap it in your own
+tap-to-dismiss surface, that surface must check `preventDismiss` itself.
+:::
+
+If you're building a [custom adapter](/custom-adapters), read the flag with the
+exported `useSheetPreventDismiss(id)` hook and disable your library's native
+dismiss gestures while it is `true`. Inside a sheet, the same value is on
+`useBottomSheetContext().preventDismiss` — useful for UI that should reflect it,
+such as hiding a grab handle.

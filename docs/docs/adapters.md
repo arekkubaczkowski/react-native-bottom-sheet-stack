@@ -1,5 +1,5 @@
 ---
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 # Library-Agnostic Architecture
@@ -15,7 +15,7 @@ The stack manager controls **when** sheets open and close. Adapters control **ho
 │           Stack Manager (core)                │
 │  ┌─────────────────────────────────────────┐  │
 │  │  Zustand Store                          │  │
-│  │  - stackOrder, sheetsById               │  │
+│  │  - sheetsById, stackOrderByGroup        │  │
 │  │  - push / switch / replace              │  │
 │  │  - scale animations, portals            │  │
 │  └─────────────┬───────────────────────────┘  │
@@ -108,13 +108,3 @@ Third-party adapters are shipped as separate [subpath exports](https://nodejs.or
 ### Custom
 
 You can [build your own adapter](/custom-adapters) for any overlay library.
-
-## Backward Compatibility
-
-`BottomSheetManaged` is available as a deprecated re-export from the gorhom subpath:
-
-```tsx
-// These are equivalent:
-import { GorhomSheetAdapter } from 'react-native-bottom-sheet-stack/gorhom';
-import { BottomSheetManaged } from 'react-native-bottom-sheet-stack/gorhom';
-```

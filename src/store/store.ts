@@ -3,50 +3,118 @@ import { createWithEqualityFn as create } from 'zustand/traditional';
 
 import {
   applyModeToTopSheet,
+  detachFromGroup,
+  getGroupStack,
   getSheetBelowId,
   getTopSheetId,
   isActivatableKeepMounted,
   isHidden,
   removeFromStack,
   updateSheet,
+  withGroupStack,
 } from './helpers';
 import { ensureAnimatedIndex, resetAnimatedIndex } from '../animatedRegistry';
 import { getNextPortalSession } from '../portalSessionRegistry';
-import type { BottomSheetState, BottomSheetStore } from './types';
+import type {
+  BottomSheetState,
+  BottomSheetStore,
+  BottomSheetStoreState,
+  OpenPayload,
+  OpenRejectionReason,
+  OpenResult,
+} from './types';
+
+/**
+ * Translates the public `kind` discriminant into the flags the store records.
+ *
+ * `kind` is what callers reason about; `usePortal` is what the renderer checks.
+ * Keeping the mapping in one place means no caller has to know the encoding.
+ */
+function toStoreFields(sheet: OpenPayload) {
+  const { kind, ...rest } = sheet;
+  return kind === 'inline'
+    ? { ...rest, usePortal: false }
+    : { ...rest, usePortal: true, content: undefined };
+}
+
+function warnRejectedOpen(id: string, reason: OpenRejectionReason) {
+  if (!__DEV__) return;
+
+  const explanations: Record<OpenRejectionReason, string> = {
+    'already-active': `Sheet "${id}" is already on the stack. Re-opening an active sheet is a no-op by design; close it first, or use updateParams() to change its content.`,
+    'group-busy': `Sheet "${id}" was not opened because another sheet in the same group is still animating open. Wait for it to settle (useBottomSheetStatus) before opening the next one.`,
+    'group-mismatch': `Sheet "${id}" is registered to a different manager group than the one opening it. A sheet belongs to the group that mounted it; declare a separate sheet in the other group instead.`,
+  };
+
+  console.warn(`[BottomSheet] open() ignored. ${explanations[reason]}`);
+}
+
+/**
+ * Guard-then-patch used by every "change one field on an existing sheet"
+ * action: a write for an id the store no longer knows must leave the state
+ * object untouched, so subscribers are not woken by a no-op.
+ */
+function patchSheet(
+  state: BottomSheetStoreState,
+  id: string,
+  update: Partial<BottomSheetState>
+): Partial<BottomSheetStoreState> {
+  if (!state.sheetsById[id]) return state;
+  return { sheetsById: updateSheet(state.sheetsById, id, update) };
+}
 
 export const useBottomSheetStore = create(
-  subscribeWithSelector<BottomSheetStore>((set) => ({
+  subscribeWithSelector<BottomSheetStore>((set, get) => ({
     sheetsById: {},
-    stackOrder: [],
+    stackOrderByGroup: {},
 
-    open: (sheet, mode = 'push') =>
-      set((state) => {
-        const existingSheet = state.sheetsById[sheet.id];
+    open: (sheet, mode = 'push'): OpenResult => {
+      const state = get();
+      const existingSheet = state.sheetsById[sheet.id];
 
-        if (existingSheet && !isActivatableKeepMounted(existingSheet)) {
-          return state;
-        }
+      // Guards run before the write so the caller can be told what happened —
+      // a silently dropped open is indistinguishable from a broken one.
+      if (existingSheet && !isActivatableKeepMounted(existingSheet)) {
+        warnRejectedOpen(sheet.id, 'already-active');
+        return { opened: false, id: sheet.id, reason: 'already-active' };
+      }
 
-        const hasOpeningInGroup = Object.values(state.sheetsById).some(
-          (s) => s.groupId === sheet.groupId && s.status === 'opening'
-        );
-        if (hasOpeningInGroup) {
-          return state;
-        }
+      if (existingSheet && existingSheet.groupId !== sheet.groupId) {
+        warnRejectedOpen(sheet.id, 'group-mismatch');
+        return { opened: false, id: sheet.id, reason: 'group-mismatch' };
+      }
 
-        const updatedSheetsById = applyModeToTopSheet(
-          state.sheetsById,
-          state.stackOrder,
-          mode
-        );
+      const hasOpeningInGroup = Object.values(state.sheetsById).some(
+        (s) => s.groupId === sheet.groupId && s.status === 'opening'
+      );
+      if (hasOpeningInGroup) {
+        warnRejectedOpen(sheet.id, 'group-busy');
+        return { opened: false, id: sheet.id, reason: 'group-busy' };
+      }
 
-        const shouldGetNewPortalSession =
-          sheet.usePortal && (!existingSheet || !existingSheet.keepMounted);
-        const nextPortalSession = shouldGetNewPortalSession
+      const fields = toStoreFields(sheet);
+
+      // Past the guards an existing record is always a persistent sheet, and
+      // its session was allocated once at mount() — only a fresh portal sheet
+      // needs one.
+      const portalSession =
+        fields.usePortal && !existingSheet
           ? getNextPortalSession(sheet.id)
           : undefined;
 
-        resetAnimatedIndex(sheet.id);
+      resetAnimatedIndex(sheet.id);
+
+      set((current) => {
+        const groupStack = getGroupStack(
+          current.stackOrderByGroup,
+          sheet.groupId
+        );
+
+        const updatedSheetsById = applyModeToTopSheet(
+          current.sheetsById,
+          groupStack,
+          mode
+        );
 
         const newSheet: BottomSheetState = existingSheet
           ? {
@@ -56,25 +124,25 @@ export const useBottomSheetStore = create(
                 sheet.scaleBackground ?? existingSheet.scaleBackground,
               backdrop: sheet.backdrop ?? existingSheet.backdrop,
               params: sheet.params ?? existingSheet.params,
-              portalSession: existingSheet.keepMounted
-                ? existingSheet.portalSession
-                : (nextPortalSession ?? existingSheet.portalSession),
             }
-          : { ...sheet, status: 'opening', portalSession: nextPortalSession };
+          : { ...fields, status: 'opening', portalSession };
 
         return {
           sheetsById: { ...updatedSheetsById, [sheet.id]: newSheet },
-          stackOrder: [...state.stackOrder, sheet.id],
+          stackOrderByGroup: withGroupStack(
+            current.stackOrderByGroup,
+            sheet.groupId,
+            // Re-appended rather than pushed: a sheet parked as `hidden` by
+            // `switch` is still on the stack, and pushing would duplicate it.
+            [...removeFromStack(groupStack, sheet.id), sheet.id]
+          ),
         };
-      }),
+      });
 
-    markOpen: (id) =>
-      set((state) => {
-        if (!state.sheetsById[id]) return state;
-        return {
-          sheetsById: updateSheet(state.sheetsById, id, { status: 'open' }),
-        };
-      }),
+      return { opened: true, id: sheet.id };
+    },
+
+    markOpen: (id) => set((state) => patchSheet(state, id, { status: 'open' })),
 
     startClosing: (id) =>
       set((state) => {
@@ -85,11 +153,20 @@ export const useBottomSheetStore = create(
           status: 'closing',
         });
 
-        const belowId = getSheetBelowId(state.stackOrder, id);
-        if (belowId && isHidden(updatedSheetsById[belowId])) {
-          updatedSheetsById = updateSheet(updatedSheetsById, belowId, {
-            status: 'opening',
-          });
+        // Only the top of the group uncovers anything. Restoring from further
+        // down would animate a switched-away sheet back in *underneath* the
+        // current top, and leave the group wedged on the `opening` guard.
+        const groupStack = getGroupStack(
+          state.stackOrderByGroup,
+          sheet.groupId
+        );
+        if (getTopSheetId(groupStack) === id) {
+          const belowId = getSheetBelowId(groupStack, id);
+          if (belowId && isHidden(updatedSheetsById[belowId])) {
+            updatedSheetsById = updateSheet(updatedSheetsById, belowId, {
+              status: 'opening',
+            });
+          }
         }
 
         return { sheetsById: updatedSheetsById };
@@ -110,44 +187,22 @@ export const useBottomSheetStore = create(
           delete updatedSheetsById[id];
         }
 
-        const newStackOrder = removeFromStack(state.stackOrder, id);
-        const topId = getTopSheetId(newStackOrder);
-
-        if (topId && isHidden(updatedSheetsById[topId])) {
-          updatedSheetsById = updateSheet(updatedSheetsById, topId, {
-            status: 'opening',
-          });
-        }
-
-        return {
-          sheetsById: updatedSheetsById,
-          stackOrder: newStackOrder,
-        };
+        return detachFromGroup(
+          updatedSheetsById,
+          state.stackOrderByGroup,
+          sheet.groupId,
+          id
+        );
       }),
 
     updateParams: (id, params) =>
-      set((state) => {
-        if (!state.sheetsById[id]) return state;
-        return { sheetsById: updateSheet(state.sheetsById, id, { params }) };
-      }),
+      set((state) => patchSheet(state, id, { params })),
 
     setPreventDismiss: (id, prevent) =>
-      set((state) => {
-        if (!state.sheetsById[id]) return state;
-        return {
-          sheetsById: updateSheet(state.sheetsById, id, {
-            preventDismiss: prevent,
-          }),
-        };
-      }),
+      set((state) => patchSheet(state, id, { preventDismiss: prevent })),
 
     setBackdrop: (id, backdrop) =>
-      set((state) => {
-        if (!state.sheetsById[id]) return state;
-        return {
-          sheetsById: updateSheet(state.sheetsById, id, { backdrop }),
-        };
-      }),
+      set((state) => patchSheet(state, id, { backdrop })),
 
     clearGroup: (groupId) =>
       set((state) => {
@@ -164,11 +219,15 @@ export const useBottomSheetStore = create(
 
         return {
           sheetsById: updatedSheetsById,
-          stackOrder: state.stackOrder.filter((id) => !idsToRemove.has(id)),
+          stackOrderByGroup: withGroupStack(
+            state.stackOrderByGroup,
+            groupId,
+            []
+          ),
         };
       }),
 
-    clearAll: () => set({ sheetsById: {}, stackOrder: [] }),
+    clearAll: () => set({ sheetsById: {}, stackOrderByGroup: {} }),
 
     mount: (sheet) =>
       set((state) => {
@@ -176,31 +235,37 @@ export const useBottomSheetStore = create(
 
         ensureAnimatedIndex(sheet.id);
 
-        // For portal-based persistent sheets, set initial portalSession
-        // This session will be reused across open/close cycles
-        const portalSession = sheet.usePortal
-          ? getNextPortalSession(sheet.id)
-          : undefined;
-
+        // A persistent sheet is portal-based by definition — it stays mounted
+        // where it was declared and teleports in. The session is allocated once
+        // and reused across every open/close cycle.
         return {
           sheetsById: {
             ...state.sheetsById,
-            [sheet.id]: { ...sheet, status: 'hidden', portalSession },
+            [sheet.id]: {
+              ...sheet,
+              status: 'hidden',
+              usePortal: true,
+              keepMounted: true,
+              portalSession: getNextPortalSession(sheet.id),
+            },
           },
         };
       }),
 
     unmount: (id) =>
       set((state) => {
-        if (!state.sheetsById[id]) return state;
+        const sheet = state.sheetsById[id];
+        if (!sheet) return state;
 
         const updatedSheetsById = { ...state.sheetsById };
         delete updatedSheetsById[id];
 
-        return {
-          sheetsById: updatedSheetsById,
-          stackOrder: removeFromStack(state.stackOrder, id),
-        };
+        return detachFromGroup(
+          updatedSheetsById,
+          state.stackOrderByGroup,
+          sheet.groupId,
+          id
+        );
       }),
   }))
 );

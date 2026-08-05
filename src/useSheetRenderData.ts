@@ -1,8 +1,5 @@
-import {
-  useBottomSheetStore,
-  type BottomSheetState,
-} from './bottomSheet.store';
-import { useBottomSheetManagerContext } from './BottomSheetManager.provider';
+import { useBottomSheetStore, type BottomSheetState } from './store';
+import { useBottomSheetManagerContext } from './BottomSheetManager.context';
 
 export interface SheetRenderItem {
   id: string;
@@ -11,8 +8,11 @@ export interface SheetRenderItem {
 }
 
 /**
- * Deep comparison for SheetRenderItem arrays.
- * Returns true if arrays have same items with same values.
+ * Equality comparator for the selector below.
+ *
+ * The selector builds a fresh array on every store write, so reference equality
+ * never holds and the host would re-render (remounting nothing, but re-running
+ * every `QueueItem`) on state changes that do not affect what is rendered.
  */
 function sheetRenderDataEqual(
   a: SheetRenderItem[],
@@ -42,8 +42,8 @@ function sheetRenderDataEqual(
  * unmounting/remounting when a sheet transitions between states.
  *
  * Render order:
- * 1. Hidden persistent sheets (keepMounted=true, not in stack)
- * 2. Active sheets (in stackOrder)
+ * 1. Hidden persistent sheets (keepMounted=true, not in the group's stack)
+ * 2. Active sheets (in the group's stack)
  */
 export function useSheetRenderData(): SheetRenderItem[] {
   const { groupId } = useBottomSheetManagerContext();
@@ -57,10 +57,13 @@ export function useSheetRenderData(): SheetRenderItem[] {
 }
 
 function getHiddenPersistentSheets(
-  state: { sheetsById: Record<string, BottomSheetState>; stackOrder: string[] },
+  state: {
+    sheetsById: Record<string, BottomSheetState>;
+    stackOrderByGroup: Record<string, string[]>;
+  },
   groupId: string
 ): SheetRenderItem[] {
-  const inStack = new Set(state.stackOrder);
+  const inStack = new Set(state.stackOrderByGroup[groupId] ?? []);
 
   return Object.values(state.sheetsById)
     .filter((sheet) => isHiddenPersistent(sheet, groupId, inStack))
@@ -85,14 +88,17 @@ function isHiddenPersistent(
 }
 
 function getActiveSheets(
-  state: { sheetsById: Record<string, BottomSheetState>; stackOrder: string[] },
+  state: {
+    sheetsById: Record<string, BottomSheetState>;
+    stackOrderByGroup: Record<string, string[]>;
+  },
   groupId: string
 ): SheetRenderItem[] {
-  return state.stackOrder
-    .filter((id) => state.sheetsById[id]?.groupId === groupId)
-    .map((id, index) => ({
-      id,
-      stackIndex: index,
-      isActive: true,
-    }));
+  // The stack is stored per group, so the index is already the sheet's depth
+  // within its own group — which is what the z-index layering wants.
+  return (state.stackOrderByGroup[groupId] ?? []).map((id, index) => ({
+    id,
+    stackIndex: index,
+    isActive: true,
+  }));
 }

@@ -1,70 +1,52 @@
 import { shallow } from 'zustand/shallow';
+import { getGroupStack } from './helpers';
 import { useBottomSheetStore } from './store';
 
 // State hooks
-
-export const useSheet = (id: string) =>
-  useBottomSheetStore((state) => state.sheetsById[id], shallow);
+//
+// Selectors returning a primitive are compared by reference — passing `shallow`
+// there only adds a call. Only the ones returning objects need it.
 
 export const useSheetStatus = (id: string) =>
-  useBottomSheetStore((state) => state.sheetsById[id]?.status, shallow);
+  useBottomSheetStore((state) => state.sheetsById[id]?.status);
 
 export const useSheetParams = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.params, shallow);
 
 export const useSheetContent = (id: string) =>
-  useBottomSheetStore((state) => state.sheetsById[id]?.content, shallow);
+  useBottomSheetStore((state) => state.sheetsById[id]?.content);
 
 export const useSheetUsePortal = (id: string) =>
-  useBottomSheetStore((state) => state.sheetsById[id]?.usePortal, shallow);
+  useBottomSheetStore((state) => state.sheetsById[id]?.usePortal);
 
 export const useSheetKeepMounted = (id: string) =>
-  useBottomSheetStore((state) => state.sheetsById[id]?.keepMounted, shallow);
+  useBottomSheetStore((state) => state.sheetsById[id]?.keepMounted);
 
 export const useSheetBackdrop = (id: string) =>
-  useBottomSheetStore((state) => state.sheetsById[id]?.backdrop, shallow);
+  useBottomSheetStore((state) => state.sheetsById[id]?.backdrop);
 
 export const useSheetPortalSession = (id: string) =>
-  useBottomSheetStore((state) => state.sheetsById[id]?.portalSession, shallow);
+  useBottomSheetStore((state) => state.sheetsById[id]?.portalSession);
+
 export const useSheetPreventDismiss = (id: string) =>
-  useBottomSheetStore(
-    (state) => state.sheetsById[id]?.preventDismiss ?? false,
-    shallow
-  );
+  useBottomSheetStore((state) => state.sheetsById[id]?.preventDismiss ?? false);
 
 export const useSheetExists = (id: string) =>
-  useBottomSheetStore((state) => !!state.sheetsById[id], shallow);
+  useBottomSheetStore((state) => !!state.sheetsById[id]);
 
-export const useIsSheetOpen = (id: string) =>
+/**
+ * Whether `id` is the topmost sheet of its own group and fully open.
+ *
+ * Resolves the group from the sheet itself, so a sheet is never treated as
+ * "not on top" just because a different group has sheets of its own.
+ */
+export const useIsTopmostAndOpen = (id: string) =>
   useBottomSheetStore((state) => {
-    const status = state.sheetsById[id]?.status;
-    return status === 'open' || status === 'opening';
-  }, shallow);
-
-export const useHasScaleBackgroundAbove = (id: string) =>
-  useBottomSheetStore((state) => {
-    const { stackOrder, sheetsById } = state;
-    const sheetIndex = stackOrder.indexOf(id);
-
-    if (sheetIndex === -1) {
-      return false;
-    }
-
-    // Check if any sheet above this one has scaleBackground
-    for (let i = sheetIndex + 1; i < stackOrder.length; i++) {
-      const aboveId = stackOrder[i]!;
-      const aboveSheet = sheetsById[aboveId];
-      if (
-        aboveSheet &&
-        aboveSheet.scaleBackground &&
-        aboveSheet.status !== 'closing' &&
-        aboveSheet.status !== 'hidden'
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }, shallow);
+    const sheet = state.sheetsById[id];
+    if (!sheet || sheet.status !== 'open') return false;
+    const groupStack = getGroupStack(state.stackOrderByGroup, sheet.groupId);
+    return groupStack[groupStack.length - 1] === id;
+  });
 
 // Action hooks
 

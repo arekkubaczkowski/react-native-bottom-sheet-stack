@@ -13,8 +13,17 @@ yarn add react-native-bottom-sheet-stack
 ### Core Peer Dependencies
 
 ```bash
-yarn add react-native-reanimated react-native-safe-area-context react-native-teleport zustand
+yarn add react-native-reanimated react-native-safe-area-context react-native-teleport react-native-worklets zustand
 ```
+
+`react-native-worklets` is not optional — it backs Reanimated 4 and is imported
+directly by the core adapters to hop from a worklet back to the JS thread.
+
+:::warning Reanimated 4 required
+The peer range is `react-native-reanimated >= 4.0.0`. Reanimated 3 is not
+supported: the worklet runtime moved into the separate `react-native-worklets`
+package in v4, and the library imports it directly.
+:::
 
 ### Adapter-Specific Dependencies
 
@@ -24,7 +33,7 @@ Install only the dependencies for the adapter(s) you plan to use:
 # For GorhomSheetAdapter (default bottom sheet adapter)
 yarn add @gorhom/bottom-sheet react-native-gesture-handler
 
-# For ModalAdapter — no extra dependencies (uses React Native's built-in Modal)
+# For CustomModalAdapter — no extra dependencies
 
 # For ReactNativeModalAdapter
 yarn add react-native-modal
@@ -123,3 +132,18 @@ function MyComponent() {
   return <Button title="Open Sheet" onPress={handleOpen} />;
 }
 ```
+
+## Testing
+
+The library keeps module-level registries (sheet refs, animated values, portal
+sessions) that outlive React, so tests need to reset them between cases. Import
+the helper from the `/testing` subpath, which stays out of your production
+bundle:
+
+```tsx
+import { resetBottomSheetRegistries } from 'react-native-bottom-sheet-stack/testing';
+
+beforeEach(resetBottomSheetRegistries);
+```
+
+See [`resetBottomSheetRegistries`](/api/hooks#testing) for details.

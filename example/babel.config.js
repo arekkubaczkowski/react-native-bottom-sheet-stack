@@ -38,10 +38,17 @@ module.exports = function (api) {
                 root,
                 'src/adapters/swmansion'
               ),
+              [`${pkg.name}/testing`]: path.resolve(root, 'src/testing'),
             },
           },
           'subpath-aliases',
         ],
+        // The example consumes the library from `src/`, so without this the
+        // code under test runs unmemoized — nothing like the compiled `lib/`
+        // a consumer installs, and any render profiling here measures a build
+        // that ships to nobody. No panicThreshold: the library's own build
+        // enforces that, and the example must not fail to bundle over it.
+        ['babel-plugin-react-compiler', { target: '19' }],
         'react-native-reanimated/plugin',
       ],
     },

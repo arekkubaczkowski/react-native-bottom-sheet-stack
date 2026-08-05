@@ -6,7 +6,7 @@ import {
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { forwardRef, useCallback, useMemo, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { BottomSheetManaged } from '../../../src/adapters/gorhom-sheet';
+import { GorhomSheetAdapter } from '../../../src/adapters/gorhom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, sharedStyles } from '../styles/theme';
@@ -82,7 +82,7 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
 
     if (snapPoints) {
       return (
-        <BottomSheetManaged
+        <GorhomSheetAdapter
           snapPoints={snapPoints}
           enableDynamicSizing={false}
           topInset={top}
@@ -97,12 +97,12 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
               children
             )}
           </Content>
-        </BottomSheetManaged>
+        </GorhomSheetAdapter>
       );
     }
 
     return (
-      <BottomSheetManaged
+      <GorhomSheetAdapter
         enableDynamicSizing={enableDynamicSizing}
         ref={ref}
         handleComponent={renderHandle}
@@ -111,7 +111,7 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
         <Content style={scrollable ? undefined : contentStyle}>
           {scrollable ? <View style={contentStyle}>{children}</View> : children}
         </Content>
-      </BottomSheetManaged>
+      </GorhomSheetAdapter>
     );
   }
 );

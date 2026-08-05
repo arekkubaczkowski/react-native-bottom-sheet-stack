@@ -9,10 +9,9 @@ import { BottomSheetContext } from './BottomSheet.context';
 import {
   useSheetBackdrop,
   useSheetContent,
-  useSheetKeepMounted,
   useSheetPortalSession,
   useSheetUsePortal,
-} from './bottomSheet.store';
+} from './store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
 import { removeOnBeforeClose } from './onBeforeCloseRegistry';
 import { cleanupSheetRef } from './refsMap';
@@ -31,7 +30,6 @@ export const QueueItem = memo(function QueueItem({
 }: QueueItemProps) {
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
-  const keepMounted = useSheetKeepMounted(id);
   const portalSession = useSheetPortalSession(id);
   const backdrop = useSheetBackdrop(id);
 
@@ -45,8 +43,11 @@ export const QueueItem = memo(function QueueItem({
       cleanupAnimatedIndex(id);
       removeOnBeforeClose(id);
     };
-  }, [id, keepMounted]);
+  }, [id]);
 
+  // High enough that sheets outrank anything the host app stacks — z-index is
+  // only comparable within a stacking context, and the manager's layer sits
+  // alongside app content that is free to use its own values.
   const baseZIndex = 100_000_000;
 
   const backdropZIndex = baseZIndex + stackIndex * 2;

@@ -73,7 +73,8 @@ Adapters with 3rd-party dependencies are shipped as separate subpath exports:
 | `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | [SwmansionSheetAdapter](/built-in-adapters/swmansion) |
 
 :::tip
-`BottomSheetManaged` is available as a deprecated re-export from `react-native-bottom-sheet-stack/gorhom` for backward compatibility.
+Each sheet in the stack picks its own adapter — bottom sheets and modals can be
+mixed freely in one stack.
 :::
 
 See [Library-Agnostic Architecture](/adapters) for how adapters work, or [Building Custom Adapters](/custom-adapters) to create your own.

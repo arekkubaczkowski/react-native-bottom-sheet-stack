@@ -143,11 +143,11 @@ const UserSheet = forwardRef((props, ref) => {
 
 function UserList() {
   const { open, updateParams, resetParams } = useBottomSheetControl('user-sheet');
-  const { isOpen } = useBottomSheetStatus('user-sheet');
+  const { isVisible } = useBottomSheetStatus('user-sheet');
 
   const showUser = (userId: string) => {
-    if (isOpen) {
-      // Sheet already open - just update the params
+    if (isVisible) {
+      // Sheet already on screen - just update the params
       updateParams({ userId });
     } else {
       // Open with initial params
@@ -173,3 +173,12 @@ function UserList() {
   );
 }
 ```
+
+:::warning Branch on `isVisible`, not `isOpen`
+`isOpen` is `true` only once the sheet is **fully** open. A second tap while it
+is still animating in would take the `else` branch, and `open()` would reject
+the call as `'already-active'` — the params would silently not update.
+`isVisible` covers `opening`, `open` and `closing`, which is what "already on
+screen, just update it" means. See
+[`useBottomSheetStatus`](/api/hooks#usebottomsheetstatus).
+:::
