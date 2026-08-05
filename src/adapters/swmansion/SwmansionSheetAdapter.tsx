@@ -23,9 +23,9 @@ import type {
 } from '@swmansion/react-native-bottom-sheet';
 
 import type { SheetAdapterRef } from '../../adapter.types';
+import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useSheetPreventDismiss } from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
-import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
@@ -87,7 +87,11 @@ export interface SwmansionHandleConfig {
  *   the backdrop fade on the UI thread (via a Reanimated worklet), so they are
  *   not forwarded.
  *
- * Every other native prop (`detents`, `style`, `extendUnderStatusBar`,
+ * - `extendUnderStatusBar` — still accepted, but the adapter implements it by
+ *   offsetting the sheet host rather than by letting the native side subtract
+ *   the status-bar overlap, so a scaled ancestor cannot shift the sheet.
+ *
+ * Every other native prop (`detents`, `style`, `surface`,
  * `animateContentHeight`) is forwarded. The `onIndexChange` / `onSettle`
  * callbacks are wrapped by the adapter and your handlers are still invoked
  * afterwards.
@@ -381,6 +385,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
       horizontalInset,
       keyboardBehavior = 'none',
       cornerRadius,
+      extendUnderStatusBar = false,
       ...props
     },
     forwardedRef
@@ -390,6 +395,16 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
     const insets = useSafeAreaInsets();
+
+    // The native detent cap is always measured as the sheet host's full height,
+    // never as "height minus the status-bar overlap". That subtraction is
+    // derived from where the host sits in the window, so an ancestor transform —
+    // the background-scale effect applies one to every sheet below the top —
+    // changes it mid-animation and the sheet re-anchors under the user.
+    //
+    // Keeping the status bar clear is instead a matter of where the host starts,
+    // which no transform can affect.
+    const topOffset = extendUnderStatusBar ? 0 : insets.top;
 
     const detents =
       detentsProp ?? (fullHeight ? [0, FULL_HEIGHT_DETENT] : DEFAULT_DETENTS);
@@ -419,6 +434,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const resolvedHorizontalInset = horizontalInset ?? DEFAULT_DETACHED_INSET;
     const detachedFrameStyle: ViewStyle | null = detached
       ? {
+          top: topOffset,
           bottom: resolvedBottomInset,
           left: resolvedHorizontalInset,
           right: resolvedHorizontalInset,
@@ -566,8 +582,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const sheet = (
       <BottomSheet
         {...props}
+        extendUnderStatusBar
         detents={resolvedDetents}
-        style={style}
+        style={[detached ? null : { top: topOffset }, style]}
         // Managed by the adapter (not overridable):
         index={index}
         animateIn
