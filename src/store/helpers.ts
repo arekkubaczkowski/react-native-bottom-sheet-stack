@@ -1,4 +1,9 @@
-import type { BottomSheetState, BottomSheetStatus, OpenMode } from './types';
+import type {
+  BottomSheetState,
+  BottomSheetStatus,
+  BottomSheetStoreState,
+  OpenMode,
+} from './types';
 
 /**
  * Status to force onto the previous top sheet when a new one opens.
@@ -75,6 +80,39 @@ export function getGroupStack(
   groupId: string
 ): string[] {
   return stackOrderByGroup[groupId] ?? [];
+}
+
+/**
+ * Takes `id` off its group's stack and brings the sheet it was covering back.
+ *
+ * A sheet parked as `hidden` by `switch` is still on the stack, so whatever
+ * removes the sheet above it — a finished close or an unmount — has to send it
+ * to `opening`, or the group is left with a top sheet that renders as active
+ * while actually being closed.
+ */
+export function detachFromGroup(
+  sheetsById: Record<string, BottomSheetState>,
+  stackOrderByGroup: Record<string, string[]>,
+  groupId: string,
+  id: string
+): BottomSheetStoreState {
+  const newGroupStack = removeFromStack(
+    getGroupStack(stackOrderByGroup, groupId),
+    id
+  );
+  const topId = getTopSheetId(newGroupStack);
+
+  return {
+    sheetsById:
+      topId && isHidden(sheetsById[topId])
+        ? updateSheet(sheetsById, topId, { status: 'opening' })
+        : sheetsById,
+    stackOrderByGroup: withGroupStack(
+      stackOrderByGroup,
+      groupId,
+      newGroupStack
+    ),
+  };
 }
 
 /**

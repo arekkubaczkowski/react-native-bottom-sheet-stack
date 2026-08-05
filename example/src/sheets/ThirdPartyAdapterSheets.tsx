@@ -458,8 +458,9 @@ export function SwmansionSheetDemoContent() {
  * Detached (floating) presentation — the sheet is lifted off the screen edges
  * instead of anchored to the bottom, with all four corners rounded.
  *
- * The insets default to 16pt horizontally and the bottom safe-area inset, so a
- * bare `detached` already clears the home indicator; both are overridable.
+ * The insets default to 16pt horizontally and the bottom safe-area inset (at
+ * least 16pt), so a bare `detached` already clears the home indicator; both are
+ * overridable.
  */
 const DetachedSwmansionSheet = ({ ref }: { ref?: React.Ref<unknown> }) => {
   const { close } = useBottomSheetContext();

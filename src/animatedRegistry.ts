@@ -2,8 +2,12 @@ import { makeMutable, type SharedValue } from 'react-native-reanimated';
 
 /**
  * Registry for shared animated values per sheet.
- * AnimatedIndex is created eagerly in store actions (open/mount)
- * before any component renders, ensuring it's always available.
+ *
+ * Keyed by sheet ID rather than held in the store: shared values are not
+ * serializable state, and both the store actions and the rendering hooks need
+ * to reach the same value for a sheet. Either side may be first to ask for it,
+ * so entries are created on demand — a sheet that has been cleaned up has no
+ * entry, and callers handle its absence.
  */
 const animatedIndexRegistry = new Map<string, SharedValue<number>>();
 
@@ -37,16 +41,6 @@ export function getAnimatedIndex(
   sheetId: string
 ): SharedValue<number> | undefined {
   return animatedIndexRegistry.get(sheetId);
-}
-
-/**
- * Set the animated index value for a sheet.
- */
-export function setAnimatedIndexValue(sheetId: string, value: number): void {
-  const animatedIndex = animatedIndexRegistry.get(sheetId);
-  if (animatedIndex) {
-    animatedIndex.value = value;
-  }
 }
 
 export function cleanupAnimatedIndex(sheetId: string): void {

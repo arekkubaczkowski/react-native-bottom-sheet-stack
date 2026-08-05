@@ -21,9 +21,10 @@ export interface BottomSheetState {
   params?: Record<string, unknown>;
   keepMounted?: boolean;
   /**
-   * Incremented each time a portal-based sheet is opened.
-   * Used to create unique Portal/PortalHost names to work around
-   * react-native-teleport connection issues after replace flows.
+   * Allocated per portal connection: once at `mount()` for a persistent sheet,
+   * and on every open for a non-persistent portal sheet. Used to create unique
+   * Portal/PortalHost names to work around react-native-teleport connection
+   * issues after replace flows.
    */
   portalSession?: number;
   /**
@@ -86,7 +87,12 @@ export type OpenRejectionReason =
   /** The sheet is already on the stack — re-opening an open sheet is a no-op. */
   | 'already-active'
   /** Another sheet in the same group is still animating open. */
-  | 'group-busy';
+  | 'group-busy'
+  /**
+   * The sheet is registered to a different group than the one opening it. A
+   * sheet belongs to the group that mounted it; moving it is not supported.
+   */
+  | 'group-mismatch';
 
 /**
  * Outcome of an `open()` call. `opened: false` means the store deliberately

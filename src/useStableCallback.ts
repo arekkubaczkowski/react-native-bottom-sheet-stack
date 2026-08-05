@@ -19,6 +19,8 @@ export const useStableCallback = <T extends CallbackType>(callback: T) => {
     callbackRef.current = callback;
   });
 
+  // The one sanctioned `useCallback` in the codebase: identity *is* the feature
+  // here, not an optimisation the compiler could reproduce.
   return useCallback((...args: Parameters<T>): ReturnType<T> => {
     return callbackRef.current(...args);
   }, []);

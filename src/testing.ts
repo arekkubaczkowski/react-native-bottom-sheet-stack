@@ -15,7 +15,7 @@ import {
 } from './animatedRegistry';
 import { __resetOnBeforeClose } from './onBeforeCloseRegistry';
 import { __resetPortalSessions } from './portalSessionRegistry';
-import { __resetSheetRefs } from './refsMap';
+import { __getAllSheetRefs, __resetSheetRefs } from './refsMap';
 import { useBottomSheetStore } from './store';
 
 /**
@@ -34,10 +34,11 @@ export function resetBottomSheetRegistries(): void {
   __resetOnBeforeClose();
 }
 
-export {
-  __resetSheetRefs,
-  __resetAnimatedIndexes,
-  __getAllAnimatedIndexes,
-  __resetPortalSessions,
-  __resetOnBeforeClose,
-};
+/**
+ * Inspectors for the registries a test is most likely to assert on — chiefly
+ * "did this sheet leave a ref (or a shared value) behind after it closed?".
+ *
+ * Read-only views of the live maps; reset through
+ * {@link resetBottomSheetRegistries} rather than mutating them.
+ */
+export { __getAllSheetRefs, __getAllAnimatedIndexes };

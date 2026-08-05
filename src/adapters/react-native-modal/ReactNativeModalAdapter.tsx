@@ -12,10 +12,6 @@ import { useBottomSheetContext } from '../../useBottomSheetContext';
 
 // Lazy require so the main bundle never loads the library unless this adapter
 // is imported (it's an optional peer dependency).
-//
-// Typed against `Partial<ModalProps>`: the library declares most of ModalProps
-// as required and supplies them through `defaultProps`, so at a call site every
-// one of them is genuinely optional.
 const RNModal = require('react-native-modal').default as React.ComponentType<
   Partial<ModalProps> & { children?: React.ReactNode }
 >;

@@ -8,8 +8,11 @@ export interface SheetRenderItem {
 }
 
 /**
- * Deep comparison for SheetRenderItem arrays.
- * Returns true if arrays have same items with same values.
+ * Equality comparator for the selector below.
+ *
+ * The selector builds a fresh array on every store write, so reference equality
+ * never holds and the host would re-render (remounting nothing, but re-running
+ * every `QueueItem`) on state changes that do not affect what is rendered.
  */
 function sheetRenderDataEqual(
   a: SheetRenderItem[],
@@ -39,8 +42,8 @@ function sheetRenderDataEqual(
  * unmounting/remounting when a sheet transitions between states.
  *
  * Render order:
- * 1. Hidden persistent sheets (keepMounted=true, not in stack)
- * 2. Active sheets (in stackOrder)
+ * 1. Hidden persistent sheets (keepMounted=true, not in the group's stack)
+ * 2. Active sheets (in the group's stack)
  */
 export function useSheetRenderData(): SheetRenderItem[] {
   const { groupId } = useBottomSheetManagerContext();
@@ -91,8 +94,8 @@ function getActiveSheets(
   },
   groupId: string
 ): SheetRenderItem[] {
-  // Already scoped to the group, so no filtering is needed — and stackIndex is
-  // now per-group, which is what the z-index layering wants.
+  // The stack is stored per group, so the index is already the sheet's depth
+  // within its own group — which is what the z-index layering wants.
   return (state.stackOrderByGroup[groupId] ?? []).map((id, index) => ({
     id,
     stackIndex: index,

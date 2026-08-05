@@ -15,25 +15,8 @@ import { useStableCallback } from './useStableCallback';
  * 2. Intercepts all programmatic close paths (backdrop tap, back button,
  *    `close()`, `closeAll()`) and calls the callback first.
  *
- * The interceptor receives `onConfirm` and `onCancel` callbacks. Call these
- * when the user makes a decision. This works seamlessly with `Alert.alert`:
- *
- * ```tsx
- * useOnBeforeClose(({ onConfirm, onCancel }) => {
- *   if (dirty) {
- *     Alert.alert('Discard changes?', '', [
- *       { text: 'Cancel', onPress: onCancel },
- *       { text: 'Discard', onPress: onConfirm },
- *     ]);
- *   } else {
- *     onConfirm(); // Allow close immediately
- *   }
- * });
- * ```
- *
- * For backward compatibility, you can still return `boolean` or `Promise<boolean>`:
- * - Return `false` (or resolve to `false`) to prevent closing
- * - Return `true` (or resolve to `true`) to allow closing
+ * The interceptor receives `onConfirm` and `onCancel` and resolves whenever one
+ * of them is called, so an asynchronous prompt needs no plumbing of its own.
  *
  * Use `forceClose()` from `useBottomSheetContext` to bypass the interceptor entirely.
  *
@@ -57,14 +40,14 @@ import { useStableCallback } from './useStableCallback';
  * }
  * ```
  *
- * @example Boolean return (backward compatible)
+ * @example Boolean return — an alternative for decisions that need no prompt.
+ * Returning `boolean` or `Promise<boolean>` works in place of the callbacks:
+ * `false` blocks the close, `true` allows it.
  * ```tsx
  * function MySheet() {
  *   const [dirty, setDirty] = useState(false);
  *
- *   useOnBeforeClose(() => {
- *     return !dirty; // false blocks, true allows
- *   });
+ *   useOnBeforeClose(() => !dirty);
  * }
  * ```
  */

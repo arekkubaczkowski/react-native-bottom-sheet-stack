@@ -27,13 +27,21 @@ const ActionSheet = require('react-native-actions-sheet')
  * props the stack manager owns:
  *
  * - `isModal` — forced off; the manager handles the overlay lifecycle.
+ * - `defaultOverlayOpacity` — forced to 0; the library paints its own overlay
+ *   whenever `backgroundInteractionEnabled` is falsy, which would stack on top
+ *   of the manager's shared `BottomSheetBackdrop` as a double-dark layer.
  * - `onOpen` / `onClose` / `onBeforeClose` — consumed by the adapter to report
  *   lifecycle back to the manager.
  */
 export interface ActionsSheetAdapterProps
   extends Omit<
     ActionSheetProps,
-    'isModal' | 'onOpen' | 'onClose' | 'onBeforeClose' | 'children'
+    | 'isModal'
+    | 'defaultOverlayOpacity'
+    | 'onOpen'
+    | 'onClose'
+    | 'onBeforeClose'
+    | 'children'
   > {
   children: React.ReactNode;
 }
@@ -96,16 +104,23 @@ export const ActionsSheetAdapter = React.forwardRef<
     return (
       <ActionSheet
         // Adapter defaults (overridable via spread)
+        //
+        // Only the gesture is blocked by preventDismiss. Back and backdrop stay
+        // enabled so they still route through onBeforeClose → the manager's
+        // interceptor, which is what gets the user their confirmation prompt;
+        // disabling them natively would make the sheet silently undismissable.
         gestureEnabled={!preventDismiss}
-        closeOnTouchBackdrop={!preventDismiss}
-        closeOnPressBack={!preventDismiss}
         keyboardHandlerEnabled
         openAnimationConfig={openAnimationConfig}
         closeAnimationConfig={closeAnimationConfig}
         {...sheetProps}
         // Managed by adapter (not overridable)
         ref={actionSheetRef}
+        // defaultOverlayOpacity={0}: the library renders its own overlay
+        // regardless of isModal, and the manager's BottomSheetBackdrop already
+        // provides the one the stack layers.
         isModal={false}
+        defaultOverlayOpacity={0}
         onOpen={onOpen}
         onClose={onClose}
         onBeforeClose={handleDismiss}

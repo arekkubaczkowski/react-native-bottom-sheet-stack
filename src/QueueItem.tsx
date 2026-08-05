@@ -1,4 +1,4 @@
-import { memo, useEffect, type PropsWithChildren } from 'react';
+import { useEffect, type PropsWithChildren } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
@@ -9,7 +9,6 @@ import { BottomSheetContext } from './BottomSheet.context';
 import {
   useSheetBackdrop,
   useSheetContent,
-  useSheetKeepMounted,
   useSheetPortalSession,
   useSheetUsePortal,
 } from './store';
@@ -24,14 +23,9 @@ interface QueueItemProps {
   isActive: boolean;
 }
 
-export const QueueItem = memo(function QueueItem({
-  id,
-  stackIndex,
-  isActive,
-}: QueueItemProps) {
+export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
-  const keepMounted = useSheetKeepMounted(id);
   const portalSession = useSheetPortalSession(id);
   const backdrop = useSheetBackdrop(id);
 
@@ -45,8 +39,11 @@ export const QueueItem = memo(function QueueItem({
       cleanupAnimatedIndex(id);
       removeOnBeforeClose(id);
     };
-  }, [id, keepMounted]);
+  }, [id]);
 
+  // High enough that sheets outrank anything the host app stacks — z-index is
+  // only comparable within a stacking context, and the manager's layer sits
+  // alongside app content that is free to use its own values.
   const baseZIndex = 100_000_000;
 
   const backdropZIndex = baseZIndex + stackIndex * 2;
@@ -81,7 +78,7 @@ export const QueueItem = memo(function QueueItem({
       </ScaleWrapper>
     </>
   );
-});
+}
 
 const ScaleWrapper = ({
   id,

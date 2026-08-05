@@ -21,3 +21,11 @@ export function cleanupSheetRef(sheetId: string): void {
 export function __resetSheetRefs(): void {
   sheetRefsMap.clear();
 }
+
+/**
+ * Get all sheet refs for debugging.
+ * @internal
+ */
+export function __getAllSheetRefs(): Map<string, SheetRef> {
+  return sheetRefsMap;
+}

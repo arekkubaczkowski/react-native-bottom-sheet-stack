@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   useAnimatedStyle,
   useDerivedValue,
@@ -67,13 +67,8 @@ function useBackgroundScaleDepth(groupId: string): number {
  * runs on every store change (twice per render under StrictMode), so writing to
  * a ref inside it would make the result depend on how often it ran.
  */
-function useSheetScaleDepth(
-  groupId: string,
-  sheetId: string | undefined
-): number {
+function useSheetScaleDepth(groupId: string, sheetId: string): number {
   const liveDepth = useBottomSheetStore((state) => {
-    if (!sheetId) return 0;
-
     const groupStack = state.stackOrderByGroup[groupId] ?? [];
     const sheetIndex = groupStack.indexOf(sheetId);
 
@@ -96,11 +91,9 @@ function useSheetScaleDepth(
   });
 
   const [heldDepth, setHeldDepth] = useState(0);
-  const heldDepthRef = useRef(0);
 
   useEffect(() => {
-    if (liveDepth !== null && liveDepth !== heldDepthRef.current) {
-      heldDepthRef.current = liveDepth;
+    if (liveDepth !== null) {
       setHeldDepth(liveDepth);
     }
   }, [liveDepth]);

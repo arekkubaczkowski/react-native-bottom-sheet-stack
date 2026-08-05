@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useOpen, useClearGroup, type OpenMode } from './store';
+import type { CloseResult } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import type { SheetAdapterRef } from './adapter.types';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
@@ -74,10 +75,10 @@ export const useBottomSheetManager = () => {
   /**
    * Closes a sheet.
    *
-   * @returns `true` once the sheet is closing, `false` if an `onBeforeClose`
-   * interceptor blocked it or there was nothing to close.
+   * @returns A `CloseResult` — `{ closed: true }`, or `{ closed: false, reason }`
+   * naming why not (`'blocked'`, `'interceptor-error'`, `'not-closable'`).
    */
-  const close = (id: string) => requestClose(id);
+  const close = (id: string): Promise<CloseResult> => requestClose(id);
 
   const closeAll = (options?: CloseAllOptions) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';

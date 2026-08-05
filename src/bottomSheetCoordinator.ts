@@ -10,7 +10,7 @@ import { getSheetRef } from './refsMap';
  * The store can reach a terminal status before the adapter has mounted — a
  * portal sheet has to teleport its content into the `PortalHost` first. A
  * single attempt would be a silent no-op, leaving the sheet stuck in that
- * status forever (and, for 'closing', blocking every later open in the group).
+ * status forever (and, for 'opening', blocking every later open in the group).
  */
 const REF_CALL_MAX_FRAMES = 10;
 
@@ -43,10 +43,13 @@ function driveSheetRef(
         console.warn(
           `[BottomSheet] Sheet "${id}" reached status "${expectedStatus}" but its ` +
             'adapter never registered a ref, so the transition could not be driven. ' +
-            'The sheet will be stuck in this status. Make sure the adapter forwards ' +
-            'its ref (see useAdapterRef).'
+            'The sheet has been forced to a closed state so the rest of its group ' +
+            'keeps working. Make sure the adapter forwards its ref (see useAdapterRef).'
         );
       }
+      // Without a terminal status an 'opening' sheet blocks every later open in
+      // its group, with no way back short of destroyAll().
+      useBottomSheetStore.getState().finishClosing(id);
       return;
     }
 
@@ -100,12 +103,11 @@ export function initBottomSheetCoordinator(groupId: string) {
  * answers that callers routinely need to tell apart.
  */
 export async function requestClose(sheetId: string): Promise<CloseResult> {
-  const state = useBottomSheetStore.getState();
-  const currentStatus = state.sheetsById[sheetId]?.status;
+  const initialStatus =
+    useBottomSheetStore.getState().sheetsById[sheetId]?.status;
 
-  // Don't run interceptor if sheet is already closing
   // This prevents duplicate interceptor calls during close animations
-  if (currentStatus === 'closing') {
+  if (initialStatus === 'closing') {
     return { closed: false, reason: 'not-closable' };
   }
 
@@ -119,18 +121,17 @@ export async function requestClose(sheetId: string): Promise<CloseResult> {
           onCancel: () => resolve(false),
         });
 
-        if (result) {
-          if (typeof result === 'boolean') {
-            resolve(result);
-          } else if (
-            result &&
-            typeof result === 'object' &&
-            'then' in result &&
-            typeof result.then === 'function'
-          ) {
-            // It's a Promise
-            result.then(resolve);
-          }
+        // Discriminated on type, not truthiness: `false` is the documented way
+        // to block, and a truthiness check would drop it and never settle.
+        if (typeof result === 'boolean') {
+          resolve(result);
+        } else if (
+          result &&
+          typeof result === 'object' &&
+          'then' in result &&
+          typeof result.then === 'function'
+        ) {
+          result.then(resolve);
         }
       });
 
@@ -138,7 +139,6 @@ export async function requestClose(sheetId: string): Promise<CloseResult> {
         return { closed: false, reason: 'blocked' };
       }
     } catch (error) {
-      // If the interceptor throws, cancel the close for safety
       if (__DEV__) {
         console.warn(
           `[BottomSheet] onBeforeClose interceptor threw an error for sheet "${sheetId}". ` +
@@ -149,6 +149,12 @@ export async function requestClose(sheetId: string): Promise<CloseResult> {
       return { closed: false, reason: 'interceptor-error' };
     }
   }
+
+  // Re-read rather than reusing the pre-interceptor snapshot: awaiting the
+  // interceptor can mean awaiting a user, and the sheet may have been closed,
+  // cleared or re-opened in the meantime.
+  const state = useBottomSheetStore.getState();
+  const currentStatus = state.sheetsById[sheetId]?.status;
 
   if (currentStatus === 'open' || currentStatus === 'opening') {
     state.startClosing(sheetId);
@@ -189,7 +195,6 @@ export async function closeAllAnimated(
 
   const state = useBottomSheetStore.getState();
 
-  // Close from top to bottom (reverse order)
   const reversed = [...(state.stackOrderByGroup[groupId] ?? [])].reverse();
   const closed: string[] = [];
 

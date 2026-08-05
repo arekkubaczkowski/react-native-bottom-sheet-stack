@@ -45,24 +45,6 @@ export { programmatic } from '@swmansion/react-native-bottom-sheet';
 export type { Detent, DetentValue };
 
 /**
- * How gestures starting inside a nested scrollable are negotiated with the
- * sheet. Mirrors the native prop of the same name.
- *
- * Requires `@swmansion/react-native-bottom-sheet` **>= 0.17**. Declared here so
- * the adapter can forward it on newer versions without pinning the peer to a
- * prerelease; on 0.16 the native side ignores it.
- */
-export type SwmansionScrollableNegotiationMode = 'none' | 'initial' | 'handoff';
-
-/** @see {@link SwmansionScrollableNegotiationMode} */
-export type SwmansionScrollableNegotiation =
-  | SwmansionScrollableNegotiationMode
-  | Readonly<{
-      expand: SwmansionScrollableNegotiationMode;
-      collapse: SwmansionScrollableNegotiationMode;
-    }>;
-
-/**
  * Style overrides for the adapter-rendered grab handle (the default pill).
  *
  * For total control over the rendering, pass a custom React element to the
@@ -96,9 +78,9 @@ export interface SwmansionHandleConfig {
  *   the status-bar overlap, so a scaled ancestor cannot shift the sheet.
  *
  * Every other native prop (`detents`, `style`, `surface`,
- * `animateContentHeight`) is forwarded. The `onIndexChange` / `onSettle`
- * callbacks are wrapped by the adapter and your handlers are still invoked
- * afterwards.
+ * `animateContentHeight`, `disableScrollableNegotiation`) is forwarded. The
+ * `onIndexChange` / `onSettle` callbacks are wrapped by the adapter and your
+ * handlers are still invoked afterwards.
  *
  * **`onIndexChange`.** Wider than the native prop: the adapter also fires it for
  * the programmatic open it drives (at animation start), so you get an immediate
@@ -202,7 +184,7 @@ export interface SwmansionSheetAdapterProps
    * Gap between the bottom of the sheet and the bottom of the screen, in px.
    *
    * Only meaningful with {@link detached}. Defaults to the bottom safe-area
-   * inset, or `16` where there is none.
+   * inset, but at least `16`.
    */
   bottomInset?: number;
   /**
@@ -232,16 +214,6 @@ export interface SwmansionSheetAdapterProps
    * is off unless you set this to match its radius.
    */
   cornerRadius?: number;
-  /**
-   * Controls how gestures that start in nested scrollables interact with the
-   * sheet. A string applies to both directions; an object configures expansion
-   * and collapse independently.
-   *
-   * Forwarded as-is to the native sheet, which supports it from **0.17**. On
-   * 0.16 it is ignored — use the (deprecated) `disableScrollableNegotiation`
-   * there.
-   */
-  scrollableNegotiation?: SwmansionScrollableNegotiation;
   /**
    * Called when the sheet's snap index changes.
    *
@@ -290,10 +262,7 @@ function resolveDetentValue(detent: Detent): DetentValue {
 /**
  * Whether the detent at `index` is the collapsed one.
  *
- * The manager treats "settled on a zero-height detent" as closed. Reading the
- * detent's value rather than assuming index `0` keeps this right for sheets
- * whose collapsed detent isn't first, and for `expandedIndex` pointing at a
- * middle detent.
+ * The manager treats "settled on a zero-height detent" as closed.
  */
 function isClosedDetent(detents: Detent[], index: number): boolean {
   const detent = detents[index];
