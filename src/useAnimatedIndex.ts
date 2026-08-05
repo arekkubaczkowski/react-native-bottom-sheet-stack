@@ -10,17 +10,23 @@ import { useBottomSheetContext } from './useBottomSheetContext';
  * - `-1` = hidden (backdrop transparent)
  * - `0`  = fully visible (backdrop opaque)
  *
- * **Binary strategy** — set to `0` on expand and `-1` on close:
+ * Drive it so it travels with the sheet, never in a single step — a discrete
+ * `set(0)` puts the backdrop at full opacity on the first frame, a whole
+ * animation ahead of the sheet it is meant to be backing.
+ *
+ * Hand it to a library that tracks the gesture itself:
  * ```ts
- * const animatedIndex = useAnimatedIndex();
- * // in expand: animatedIndex.set(0);
- * // in close:  animatedIndex.set(-1);
+ * <SomeSheet animatedIndex={useAnimatedIndex()} />
  * ```
  *
- * **Continuous strategy** — pass directly to a library that updates it during gestures:
+ * Derive it from a position the library reports:
  * ```ts
- * const animatedIndex = useAnimatedIndex();
- * <SomeSheet animatedIndex={animatedIndex} />
+ * useDerivedValue(() => animatedIndex.set(progress.value - 1));
+ * ```
+ *
+ * Or animate it with the same config as the sheet, when neither is available:
+ * ```ts
+ * animatedIndex.set(withTiming(0, { duration: openDuration }));
  * ```
  *
  * Must be called inside a sheet component (within `BottomSheetContext`).

@@ -13,6 +13,14 @@ Numbering: `B*` = bug, `P*` = public API, `W*` = internal, `M*` = dead code.
 Each finding carries a status. See `## Status` at the end for what has been
 applied and what is deliberately left alone.
 
+> **Reading note.** The findings below are a snapshot of the tree **as reviewed**,
+> before any of them were applied. File paths, line numbers and quoted code
+> describe that pre-fix tree and are deliberately left as they were — they are
+> the evidence for each finding, not a description of `main`. Files have since
+> been renamed and deleted (`bottomSheet.store.ts` → `store/`, `useEvent.ts` →
+> `useStableCallback.ts`, and more). For the current state, read `## Status` at
+> the end and `CLAUDE.md`.
+
 ---
 
 ## 1. Bugs
@@ -265,6 +273,10 @@ export { useBottomSheetStore } from './bottomSheet.store';
 export type { BottomSheetState } from './bottomSheet.store';
 ```
 
+<sub>(As reviewed. The `bottomSheet.store.ts` re-export layer is gone — see W2 —
+and the public `BottomSheetState` is now `PublicBottomSheetState`, re-exported
+under that name from `./store`.)</sub>
+
 `useBottomSheetStore` exposes the full state and every action — including
 `markOpen`, `finishClosing`, `mount` and `unmount`, which only make sense for the
 coordinator. `BottomSheetState` exposes `content`, `portalSession` and
@@ -339,6 +351,8 @@ context itself.
 the codebase go through `./bottomSheet.store` in some files and `./store` in
 others, with no semantic difference. A layer to delete.
 
+<sub>(Deleted. Everything imports from `./store` now.)</sub>
+
 ### W3. `TriggerState` is defined but used inconsistently
 
 ```ts
@@ -388,6 +402,9 @@ under one name, used in the same repo — and imported side by side in
 
 **Proposal:** rename the local one to `useStableCallback`.
 
+<sub>(Done. The file is `src/useStableCallback.ts`; `src/useEvent.ts` no longer
+exists.)</sub>
+
 ### W8. `useBottomSheetContext` calls selectors with `''`
 
 ```ts
@@ -426,7 +443,7 @@ Applied across three stages on top of the swmansion 0.16.2 bump.
 B1, B2, B4, B6, B7, B8, B9 — done.
 
 **Stage 2 — behavioural consistency:**
-B3, B5, P1, P5, P7, P10, and the dead code in section 4 — done.
+B3, B5, P1, P3, P5, P7, P10, and the dead code in section 4 — done.
 
 **Stage 3 — cleanup (breaking, 2.0):**
 P2, P4, P6, P8, P9, W2, W3, W5, W6, W7, W8 — done.

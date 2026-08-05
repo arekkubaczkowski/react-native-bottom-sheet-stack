@@ -19,6 +19,12 @@ yarn add react-native-reanimated react-native-safe-area-context react-native-tel
 `react-native-worklets` is not optional — it backs Reanimated 4 and is imported
 directly by the core adapters to hop from a worklet back to the JS thread.
 
+:::warning Reanimated 4 required
+The peer range is `react-native-reanimated >= 4.0.0`. Reanimated 3 is not
+supported: the worklet runtime moved into the separate `react-native-worklets`
+package in v4, and the library imports it directly.
+:::
+
 ### Adapter-Specific Dependencies
 
 Install only the dependencies for the adapter(s) you plan to use:
