@@ -418,17 +418,20 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const isContentSized = expandedDetentValue === 'content';
     const shouldFill = fillContent ?? !isContentSized;
 
-    // Detaching = giving the sheet a smaller canvas. The native host fills this
-    // wrapper, so the natively measured detent cap shrinks with it and
-    // 'content' / fullHeight stay correct with no arithmetic here.
-    //
-    // `overflow: 'hidden'` is load-bearing, not cosmetic: the native sheet
-    // container is a full-canvas view translated down to the current position
-    // (and `clipsToBounds` / `clipChildren` are both off), so its surface hangs
-    // below the host by exactly the un-expanded remainder. Without clipping it
-    // would paint straight over the bottom gap and the sheet would not read as
-    // detached at all. Trade-off: a custom `surface` casting a shadow gets that
-    // shadow clipped — the sheet itself draws none.
+    // Only clip content to a radius we actually know: the default surface's, or
+    // one the consumer states for a custom surface via `cornerRadius`.
+    const usingDefaultSurface = surface === undefined || surface === null;
+    const surfaceRadius =
+      cornerRadius ?? (usingDefaultSurface ? DEFAULT_SURFACE_RADIUS : 0);
+    // Top corners only. A detached sheet's bottom corners are rounded by the
+    // frame below, not here: the surface is a full-canvas view translated down
+    // to the sheet's position, so its own bottom edge sits below the frame and
+    // is never the edge anyone sees.
+    const radiusStyle: ViewStyle = {
+      borderTopLeftRadius: surfaceRadius,
+      borderTopRightRadius: surfaceRadius,
+    };
+
     const resolvedBottomInset =
       bottomInset ?? Math.max(insets.bottom, DEFAULT_DETACHED_INSET);
     const resolvedHorizontalInset = horizontalInset ?? DEFAULT_DETACHED_INSET;
@@ -438,23 +441,16 @@ export const SwmansionSheetAdapter = React.forwardRef<
           bottom: resolvedBottomInset,
           left: resolvedHorizontalInset,
           right: resolvedHorizontalInset,
+          // Clips the surface where the sheet visually ends. Without it the
+          // surface — which hangs below by however much the sheet has not
+          // expanded — paints straight over the bottom gap and the sheet stops
+          // reading as detached. The bottom radii live here so the clip itself
+          // is rounded; a rectangular one would square off the corners.
           overflow: 'hidden',
+          borderBottomLeftRadius: surfaceRadius,
+          borderBottomRightRadius: surfaceRadius,
         }
       : null;
-
-    // Only clip content to a radius we actually know: the default surface's, or
-    // one the consumer states for a custom surface via `cornerRadius`.
-    const usingDefaultSurface = surface === undefined || surface === null;
-    const surfaceRadius =
-      cornerRadius ?? (usingDefaultSurface ? DEFAULT_SURFACE_RADIUS : 0);
-    // A floating sheet has no edge to sit flush against, so every corner is
-    // rounded; an anchored one keeps its bottom corners square.
-    const radiusStyle: ViewStyle = detached
-      ? { borderRadius: surfaceRadius }
-      : {
-          borderTopLeftRadius: surfaceRadius,
-          borderTopRightRadius: surfaceRadius,
-        };
 
     const baseSurface = surface ?? (
       <View
