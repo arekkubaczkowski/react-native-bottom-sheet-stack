@@ -28,3 +28,4 @@ export {
   FormSheet,
   ReadOnlySheet,
 } from './CloseInterceptionSheets';
+export { PartialCloseDemo } from './PartialCloseSheets';
