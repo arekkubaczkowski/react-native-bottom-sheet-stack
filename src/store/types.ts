@@ -124,10 +124,35 @@ export type CloseResult =
   | { closed: true }
   | { closed: false; reason: CloseRejectionReason };
 
+/**
+ * How far a cascading close reaches.
+ *
+ * With no bound it empties the group. `until` and `depth` each narrow it, and
+ * combining them takes whichever closes fewer sheets.
+ */
+export interface CascadeOptions {
+  /** Delay in ms between each close animation. Default: 100. */
+  stagger?: number;
+  /**
+   * Stop the cascade at this sheet rather than emptying the group.
+   *
+   * Sheets below it stay open. A sheet that is not on this group's stack
+   * closes nothing — a bounded call must not fall back to closing everything.
+   */
+  until?: string;
+  /** Whether the `until` sheet closes as well. Default: `false`. */
+  inclusive?: boolean;
+  /** Close at most this many sheets, counting from the top of the stack. */
+  depth?: number;
+}
+
 /** Outcome of a cascading close. */
 export interface CloseAllResult {
-  /** Whether every sheet in the group closed. */
-  closedAll: boolean;
+  /**
+   * Whether the cascade closed everything it set out to. Bounded by `until` or
+   * `depth`, that is the requested range — not the whole group.
+   */
+  completed: boolean;
   /** IDs that closed, topmost first. */
   closed: string[];
   /**

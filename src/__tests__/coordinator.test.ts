@@ -104,7 +104,7 @@ describe('closeAllAnimated', () => {
 
     const result = await closeAllAnimated('g1', { stagger: 0 });
 
-    expect(result).toEqual({ closedAll: true, closed: ['c', 'b', 'a'] });
+    expect(result).toEqual({ completed: true, closed: ['c', 'b', 'a'] });
     expect(statusOf('a')).toBe('closing');
     expect(statusOf('c')).toBe('closing');
   });
@@ -118,13 +118,146 @@ describe('closeAllAnimated', () => {
     const result = await closeAllAnimated('g1', { stagger: 0 });
 
     expect(result).toEqual({
-      closedAll: false,
+      completed: false,
       closed: ['c'],
       stoppedAt: 'b',
     });
     // Everything below the refusal stays open.
     expect(statusOf('a')).toBe('open');
     expect(statusOf('b')).toBe('open');
+  });
+
+  describe('bounded cascades', () => {
+    it('closes down to `until`, leaving it and everything below open', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+      openAndSettle('c');
+
+      const result = await closeAllAnimated('g1', { stagger: 0, until: 'b' });
+
+      expect(result).toEqual({ completed: true, closed: ['c'] });
+      expect(statusOf('b')).toBe('open');
+      expect(statusOf('a')).toBe('open');
+    });
+
+    it('closes `until` itself when inclusive', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+      openAndSettle('c');
+
+      const result = await closeAllAnimated('g1', {
+        stagger: 0,
+        until: 'b',
+        inclusive: true,
+      });
+
+      expect(result).toEqual({ completed: true, closed: ['c', 'b'] });
+      expect(statusOf('a')).toBe('open');
+    });
+
+    it('closes nothing when `until` is the topmost sheet', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+
+      const result = await closeAllAnimated('g1', { stagger: 0, until: 'b' });
+
+      expect(result).toEqual({ completed: true, closed: [] });
+      expect(statusOf('b')).toBe('open');
+    });
+
+    // A bounded call that silently emptied the group would be the opposite of
+    // what it asked for — far worse than doing nothing.
+    it('closes nothing when `until` is not on the stack', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+
+      const result = await closeAllAnimated('g1', {
+        stagger: 0,
+        until: 'nope',
+      });
+
+      expect(result).toEqual({ completed: true, closed: [] });
+      expect(statusOf('a')).toBe('open');
+      expect(statusOf('b')).toBe('open');
+    });
+
+    it('closes `depth` sheets from the top', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+      openAndSettle('c');
+
+      const result = await closeAllAnimated('g1', { stagger: 0, depth: 2 });
+
+      expect(result).toEqual({ completed: true, closed: ['c', 'b'] });
+      expect(statusOf('a')).toBe('open');
+    });
+
+    it('empties the group when `depth` exceeds the stack', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+
+      const result = await closeAllAnimated('g1', { stagger: 0, depth: 99 });
+
+      expect(result).toEqual({ completed: true, closed: ['b', 'a'] });
+    });
+
+    it.each([0, -1])('closes nothing at depth %i', async (depth) => {
+      openAndSettle('a');
+      openAndSettle('b');
+
+      const result = await closeAllAnimated('g1', { stagger: 0, depth });
+
+      expect(result).toEqual({ completed: true, closed: [] });
+      expect(statusOf('b')).toBe('open');
+    });
+
+    // Neither bound may widen the other, so the narrower one has to win in
+    // both directions.
+    it('takes the narrower bound when depth is the tighter one', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+      openAndSettle('c');
+
+      const result = await closeAllAnimated('g1', {
+        stagger: 0,
+        until: 'a',
+        depth: 1,
+      });
+
+      expect(result).toEqual({ completed: true, closed: ['c'] });
+      expect(statusOf('b')).toBe('open');
+    });
+
+    it('takes the narrower bound when until is the tighter one', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+      openAndSettle('c');
+
+      const result = await closeAllAnimated('g1', {
+        stagger: 0,
+        until: 'b',
+        depth: 99,
+      });
+
+      expect(result).toEqual({ completed: true, closed: ['c'] });
+      expect(statusOf('b')).toBe('open');
+    });
+
+    it('reports the interceptor that stopped a bounded cascade', async () => {
+      openAndSettle('a');
+      openAndSettle('b');
+      openAndSettle('c');
+      setOnBeforeClose('c', ({ onCancel }) => onCancel());
+
+      const result = await closeAllAnimated('g1', { stagger: 0, depth: 2 });
+
+      expect(result).toEqual({
+        completed: false,
+        closed: [],
+        stoppedAt: 'c',
+      });
+      expect(statusOf('b')).toBe('open');
+    });
   });
 
   // Regression: 'nothing to close' used to break the loop like a refusal,
@@ -141,7 +274,7 @@ describe('closeAllAnimated', () => {
 
     const result = await closeAllAnimated('g1', { stagger: 0 });
 
-    expect(result.closedAll).toBe(true);
+    expect(result.completed).toBe(true);
     // 'b' is skipped rather than treated as a refusal, so 'a' below it still
     // gets closed.
     expect(result.closed).toEqual(['c', 'a']);
@@ -160,7 +293,7 @@ describe('closeAllAnimated', () => {
 
   it('is a no-op for an empty group', async () => {
     await expect(closeAllAnimated('nothing', { stagger: 0 })).resolves.toEqual({
-      closedAll: true,
+      completed: true,
       closed: [],
     });
   });

@@ -26,6 +26,7 @@ import {
 } from '../sheets';
 import { colors, sharedStyles } from '../styles/theme';
 import { CloseInterceptionDemo } from '../sheets/CloseInterceptionSheets';
+import { PartialCloseDemo } from '../sheets/PartialCloseSheets';
 
 export function HomeScreen() {
   const { top } = useSafeAreaInsets();
@@ -165,6 +166,14 @@ export function HomeScreen() {
             color={colors.purple}
             onPress={() =>
               persistentWithPortalControl.open({ scaleBackground: true })
+            }
+          />
+          <DemoCard
+            title="Partial Close"
+            description="closeTo / closeDepth / closeAbove and every edge case"
+            color={colors.cyan}
+            onPress={() =>
+              open(<PartialCloseDemo />, { scaleBackground: true })
             }
           />
           <DemoCard

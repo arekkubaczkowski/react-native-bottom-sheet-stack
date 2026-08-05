@@ -1,16 +1,11 @@
 import React from 'react';
 
 import { useOpen, useClearGroup, type OpenMode } from './store';
-import type { CloseResult } from './store';
+import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import type { SheetAdapterRef } from './adapter.types';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
 import { setSheetRef } from './refsMap';
-
-export interface CloseAllOptions {
-  /** Delay in ms between each cascading close animation. Default: 100 */
-  stagger?: number;
-}
 
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
@@ -80,10 +75,41 @@ export const useBottomSheetManager = () => {
    */
   const close = (id: string): Promise<CloseResult> => requestClose(id);
 
-  const closeAll = (options?: CloseAllOptions) => {
-    const groupId = bottomSheetManagerContext?.groupId || 'default';
-    return closeAllAnimated(groupId, options);
-  };
+  const groupId = () => bottomSheetManagerContext?.groupId || 'default';
+
+  /**
+   * Closes the group's sheets from the top down, one after another.
+   *
+   * Pass `until` or `depth` to stop short of emptying the group — or reach for
+   * {@link closeTo} / {@link closeDepth}, which say the same thing in a name.
+   */
+  const closeAll = (options?: CascadeOptions) =>
+    closeAllAnimated(groupId(), options);
+
+  /**
+   * Closes sheets down to `id`, leaving it open — the stack equivalent of
+   * navigating back to a screen.
+   *
+   * Pass `inclusive` to close `id` too. An `id` that is not on this group's
+   * stack closes nothing, rather than falling through to closing everything.
+   */
+  const closeTo = (
+    id: string,
+    options?: Omit<CascadeOptions, 'until'>
+  ): Promise<CloseAllResult> =>
+    closeAllAnimated(groupId(), { ...options, until: id });
+
+  /**
+   * Closes at most `count` sheets, counting from the top of the stack.
+   *
+   * A count at or past the stack's height empties the group; zero or less
+   * closes nothing.
+   */
+  const closeDepth = (
+    count: number,
+    options?: Omit<CascadeOptions, 'depth'>
+  ): Promise<CloseAllResult> =>
+    closeAllAnimated(groupId(), { ...options, depth: count });
 
   /**
    * Removes every sheet in the group from the store immediately.
@@ -94,14 +120,15 @@ export const useBottomSheetManager = () => {
    * anything user-facing.
    */
   const destroyAll = () => {
-    const groupId = bottomSheetManagerContext?.groupId || 'default';
-    storeClearGroup(groupId);
+    storeClearGroup(groupId());
   };
 
   return {
     open: openBottomSheet,
     close,
     closeAll,
+    closeTo,
+    closeDepth,
     destroyAll,
   };
 };

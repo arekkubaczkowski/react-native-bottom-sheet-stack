@@ -1,6 +1,6 @@
 import type { SheetAdapterEvents } from './adapter.types';
 import { useBottomSheetStore } from './store';
-import type { CloseAllResult, CloseResult } from './store';
+import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
 import { getOnBeforeClose } from './onBeforeCloseRegistry';
 import { getSheetRef } from './refsMap';
 
@@ -170,6 +170,40 @@ export async function requestClose(sheetId: string): Promise<CloseResult> {
 }
 
 /**
+ * The slice of `stack` a cascade should close, in bottom-to-top order.
+ *
+ * Both bounds only move the start later, so a `depth` cannot reach past an
+ * `until` and vice versa — whichever closes fewer sheets holds.
+ */
+function resolveCascadeRange(
+  stack: string[],
+  options?: CascadeOptions
+): string[] {
+  let from = 0;
+
+  if (options?.until !== undefined) {
+    const index = stack.indexOf(options.until);
+    if (index === -1) {
+      // Closing the whole group would be the opposite of what a bounded call
+      // asked for, so an unknown boundary closes nothing.
+      if (__DEV__) {
+        console.warn(
+          `[BottomSheetStack] closeAll: "${options.until}" is not on this group's stack — closing nothing.`
+        );
+      }
+      return [];
+    }
+    from = options.inclusive ? index : index + 1;
+  }
+
+  if (options?.depth !== undefined) {
+    from = Math.max(from, stack.length - Math.max(0, options.depth));
+  }
+
+  return stack.slice(from);
+}
+
+/**
  * Default stagger delay between cascading close animations (ms).
  */
 const DEFAULT_STAGGER_MS = 100;
@@ -183,21 +217,28 @@ const DEFAULT_STAGGER_MS = 100;
  * If a sheet has an `onBeforeClose` interceptor that rejects, the cascade
  * stops at that sheet — sheets below it remain open.
  *
+ * `until` and `depth` narrow the cascade to part of the stack; with both, the
+ * one that closes fewer sheets wins, so neither can be widened past the other.
+ *
  * @param groupId - The manager group to close sheets in.
  * @param options.stagger - Delay in ms between each close (default: 100).
+ * @param options.until - Stop at this sheet instead of emptying the group.
+ * @param options.inclusive - Whether `until` closes too (default: false).
+ * @param options.depth - Close at most this many sheets, counting from the top.
  * @returns A {@link CloseAllResult} naming what closed and, if the cascade was
  * stopped, which sheet stopped it. Without this a blocked cascade is
  * indistinguishable from one that closed everything.
  */
 export async function closeAllAnimated(
   groupId: string,
-  options?: { stagger?: number }
+  options?: CascadeOptions
 ): Promise<CloseAllResult> {
   const stagger = options?.stagger ?? DEFAULT_STAGGER_MS;
 
   const state = useBottomSheetStore.getState();
 
-  const reversed = [...(state.stackOrderByGroup[groupId] ?? [])].reverse();
+  const stack = state.stackOrderByGroup[groupId] ?? [];
+  const reversed = resolveCascadeRange(stack, options).reverse();
   const closed: string[] = [];
 
   for (const [index, sheetId] of reversed.entries()) {
@@ -218,7 +259,7 @@ export async function closeAllAnimated(
         continue;
       }
       // An interceptor declined — stop and report where.
-      return { closedAll: false, closed, stoppedAt: sheetId };
+      return { completed: false, closed, stoppedAt: sheetId };
     }
 
     closed.push(sheetId);
@@ -228,7 +269,7 @@ export async function closeAllAnimated(
     }
   }
 
-  return { closedAll: true, closed };
+  return { completed: true, closed };
 }
 
 /**

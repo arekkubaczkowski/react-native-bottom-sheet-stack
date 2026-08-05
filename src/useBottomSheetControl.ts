@@ -2,7 +2,7 @@ import React from 'react';
 import type { SheetAdapterRef } from './adapter.types';
 
 import { useOpen, useUpdateParams, type OpenMode } from './store';
-import type { CloseAllResult, CloseResult } from './store';
+import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
 import type {
@@ -11,7 +11,6 @@ import type {
   HasParams,
 } from './portal.types';
 import { getSheetRef, setSheetRef } from './refsMap';
-import type { CloseAllOptions } from './useBottomSheetManager';
 
 interface BaseOpenOptions<TParams> {
   mode?: OpenMode;
@@ -57,7 +56,7 @@ export interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
    * @returns A `CloseAllResult` — what closed, and which sheet stopped the
    * cascade if an interceptor did.
    */
-  closeAll: (options?: CloseAllOptions) => Promise<CloseAllResult>;
+  closeAll: (options?: CascadeOptions) => Promise<CloseAllResult>;
   updateParams: (params: BottomSheetPortalParams<T>) => void;
   resetParams: () => void;
 }
@@ -97,7 +96,7 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
 
   const close = () => requestClose(id);
 
-  const closeAll = (options?: CloseAllOptions) => {
+  const closeAll = (options?: CascadeOptions) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';
     return closeAllAnimated(groupId, options);
   };

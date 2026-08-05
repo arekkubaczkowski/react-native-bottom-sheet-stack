@@ -42,7 +42,6 @@ export { useSetBackdrop, useSheetPreventDismiss } from './store';
 
 // Hooks
 export { useBottomSheetManager } from './useBottomSheetManager';
-export type { CloseAllOptions } from './useBottomSheetManager';
 export {
   useBottomSheetControl,
   type UseBottomSheetControlReturn,
@@ -66,6 +65,7 @@ export type {
   OpenRejectionReason,
   CloseResult,
   CloseRejectionReason,
+  CascadeOptions,
   CloseAllResult,
   PublicBottomSheetState as BottomSheetState,
 } from './store';
