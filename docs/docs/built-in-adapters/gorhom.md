@@ -2,7 +2,11 @@
 
 The default adapter. Wraps `@gorhom/bottom-sheet` to provide feature-rich bottom sheets with snap points, spring animations, and swipe gestures.
 
-:::tip:::
+:::tip
+`@gorhom/bottom-sheet` is an optional peer dependency — install it only if you
+use this adapter. It is imported from the `/gorhom` subpath, never from the
+main entry point.
+:::
 
 ## Installation
 
@@ -32,7 +36,25 @@ const MySheet = forwardRef((props, ref) => {
 
 ## Props
 
-Accepts all props from [`@gorhom/bottom-sheet`](https://gorhom.dev/react-native-bottom-sheet/props). The adapter overrides `enablePanDownToClose` to `true` by default.
+`GorhomSheetAdapterProps` extends [`BottomSheetProps`](https://gorhom.dev/react-native-bottom-sheet/props) — the full gorhom prop surface is accepted, nothing is omitted from the type. But the manager owns some of it at runtime.
+
+**Managed by the adapter (your value is ignored or wrapped):**
+
+| Prop | What the adapter does |
+|------|----------------------|
+| `index` | Set from the manager: `0` for portal and inline sheets, `-1` for a persistent sheet that is mounted but closed |
+| `animatedIndex` | Replaced with the manager's shared value, which drives the backdrop and scale. A value you pass is still **mirrored** — the adapter writes every frame into it, so `animatedIndex` you own keeps working |
+| `onChange` | Wrapped — reports `handleOpened()` at index `>= 0`, then calls yours |
+| `onClose` | Wrapped — calls yours, then reports `handleClosed()` |
+| `onAnimate` | Wrapped — reports `handleDismiss()` when animating toward `-1`, then calls yours |
+
+**Adapter defaults (yours wins):**
+
+| Prop | Default | Note |
+|------|---------|------|
+| `animationConfigs` | spring — `stiffness: 400`, `damping: 80`, `mass: 0.7` | |
+| `backdropComponent` | a component returning `null` | See [Backdrop](#backdrop) |
+| `enablePanDownToClose` | `true` | Forced to `false` while a [`useOnBeforeClose`](/close-interception) interceptor is blocking dismissal, so the interceptor always gets to run |
 
 ## Backdrop
 

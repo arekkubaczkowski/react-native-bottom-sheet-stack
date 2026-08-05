@@ -1,5 +1,5 @@
 ---
-sidebar_position: 7
+sidebar_position: 9
 ---
 
 # Type-Safe Portal IDs & Params
@@ -90,7 +90,7 @@ const ProfileSheet = forwardRef((props, ref) => {
   return (
     <GorhomSheetAdapter ref={ref}>
       <BottomSheetView>
-        <Text>User ID: {params.userId}</Text>  {/* ✅ type-safe */}
+        <Text>User ID: {params?.userId}</Text>  {/* ✅ type-safe: string | undefined */}
         <Button title="Close" onPress={close} />
       </BottomSheetView>
     </GorhomSheetAdapter>
@@ -120,8 +120,8 @@ const UserDetailsSheet = forwardRef((props, ref) => {
   return (
     <GorhomSheetAdapter ref={ref} snapPoints={['50%']}>
       <BottomSheetView>
-        <Text>User: {params.userId}</Text>
-        {params.showEmail && <Text>email@example.com</Text>}
+        <Text>User: {params?.userId}</Text>
+        {params?.showEmail && <Text>email@example.com</Text>}
         <Button title="Close" onPress={close} />
       </BottomSheetView>
     </GorhomSheetAdapter>

@@ -13,8 +13,11 @@ yarn add react-native-bottom-sheet-stack
 ### Core Peer Dependencies
 
 ```bash
-yarn add react-native-reanimated react-native-safe-area-context react-native-teleport zustand
+yarn add react-native-reanimated react-native-safe-area-context react-native-teleport react-native-worklets zustand
 ```
+
+`react-native-worklets` is not optional — it backs Reanimated 4 and is imported
+directly by the core adapters to hop from a worklet back to the JS thread.
 
 ### Adapter-Specific Dependencies
 
@@ -123,3 +126,18 @@ function MyComponent() {
   return <Button title="Open Sheet" onPress={handleOpen} />;
 }
 ```
+
+## Testing
+
+The library keeps module-level registries (sheet refs, animated values, portal
+sessions) that outlive React, so tests need to reset them between cases. Import
+the helper from the `/testing` subpath, which stays out of your production
+bundle:
+
+```tsx
+import { resetBottomSheetRegistries } from 'react-native-bottom-sheet-stack/testing';
+
+beforeEach(resetBottomSheetRegistries);
+```
+
+See [`resetBottomSheetRegistries`](/api/hooks#testing) for details.

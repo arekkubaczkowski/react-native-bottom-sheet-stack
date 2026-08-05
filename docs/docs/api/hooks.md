@@ -4,7 +4,10 @@ sidebar_position: 2
 
 # Hooks
 
-Hooks are divided into two categories based on where they can be used:
+Hooks fall into two groups: the ones you use to drive sheets from your app, and
+the ones an [adapter](/custom-adapters) uses to wire a UI library into the stack.
+
+### App hooks
 
 | Hook | Where to use | Purpose |
 |------|--------------|---------|
@@ -13,6 +16,19 @@ Hooks are divided into two categories based on where they can be used:
 | `useBottomSheetStatus` | Anywhere | Subscribe to sheet status by ID |
 | `useBottomSheetContext` | **Inside sheet only** | Access current sheet's state and params |
 | `useOnBeforeClose` | **Inside sheet only** | Intercept close and optionally prevent it |
+
+### Adapter hooks
+
+Exported for [custom adapter authors](/custom-adapters) — every shipped adapter
+is built from these. You do not need them to use the library.
+
+| Hook | Where to use | Purpose |
+|------|--------------|---------|
+| `useAdapterRef` | **Inside adapter only** | Resolve the right ref for inline/portal/persistent mode |
+| `useAnimatedIndex` | **Inside adapter only** | The sheet's `animatedIndex` shared value, driving backdrop and scale |
+| `useBackHandler` | **Inside adapter only** | Android back button, scoped to the topmost open sheet **of its own group** |
+| `useSetBackdrop` | Anywhere | Returns `setBackdrop(id, boolean)` — suppress the manager's shared backdrop for a sheet that renders its own |
+| `useSheetPreventDismiss` | Anywhere | `useSheetPreventDismiss(id)` — whether an interceptor is currently blocking dismissal, so the adapter can disable native gestures |
 
 ---
 
@@ -56,10 +72,11 @@ await closeAll({ stagger: 0 });
 
 ```tsx
 open(<MySheet />, {
-  id: 'my-sheet-id',      // Custom ID (optional)
-  groupId: 'my-group',    // Custom group (optional)
-  mode: 'push',           // 'push' | 'switch' | 'replace'
-  scaleBackground: true,  // Enable scale animation
+  id: 'my-sheet-id',        // Custom ID (optional)
+  groupId: 'my-group',      // Custom group (optional)
+  mode: 'push',             // 'push' | 'switch' | 'replace'
+  scaleBackground: true,    // Enable scale animation
+  params: { userId: '1' },  // Readable via useBottomSheetContext()
 });
 ```
 
@@ -69,7 +86,8 @@ open(<MySheet />, {
 | `groupId` | `string` | context or `'default'` | Group ID for the sheet |
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
-| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when you give them their own backdrop (e.g. a custom gorhom `backdropComponent`), so you rarely set it by hand. |
+| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. `GorhomSheetAdapter` sets this itself when you pass it a custom `backdropComponent`; the other shipped adapters use the manager's backdrop and never touch it. |
+| `params` | `Record<string, unknown>` | - | Params for the sheet, readable inside it via `useBottomSheetContext()`. Untyped here — the typed variant lives on `useBottomSheetControl` |
 
 `open()` returns the sheet's ID, or **`null`** when the store declined to open it — because the sheet is already on the stack, or another sheet in the group is still animating open. A dev-mode warning explains which.
 
@@ -138,8 +156,15 @@ Pass the portal sheet ID as a generic to get typed params:
 ```tsx
 // If registry defines: 'user-sheet': { userId: string }
 const { params } = useBottomSheetContext<'user-sheet'>();
-console.log(params.userId); // type-safe: string
+console.log(params?.userId); // type-safe: string | undefined
 ```
+
+:::note Always optional
+`BottomSheetPortalParams<T>` resolves to `{ userId: string } | undefined`, even
+when the registry marks the params as required. `resetParams()` can clear them
+while the sheet is open, so the sheet must handle their absence — under `strict`,
+`params.userId` is a type error. Read them with `params?.userId`.
+:::
 
 ### Returns
 
@@ -200,7 +225,7 @@ open({
 |--------|------|---------|-------------|
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
-| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. Built-in adapters set this automatically when given their own native backdrop/scrim, so you rarely set it by hand. |
+| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. `GorhomSheetAdapter` sets this itself when you pass it a custom `backdropComponent`; the other shipped adapters use the manager's backdrop and never touch it. |
 | `params` | `BottomSheetPortalParams<T>` | - | Type-safe params |
 
 `useBottomSheetManager().open()` also accepts `params` now, so inline sheets can read them from `useBottomSheetContext()` just like portal sheets.
@@ -221,9 +246,15 @@ const { status, isOpen } = useBottomSheetStatus('my-sheet');
 
 // Inline sheet (using ID from open())
 const { open } = useBottomSheetManager();
-const sheetId = open(<MySheet />);
-// ...
-const { status, isOpen } = useBottomSheetStatus(sheetId);
+const [sheetId, setSheetId] = useState<string | null>(null);
+
+const handleOpen = () => {
+  // open() returns `string | null` — null means the store declined
+  setSheetId(open(<MySheet />));
+};
+
+// The hook needs a string, so fall back to an ID that matches nothing
+const { status, isOpen } = useBottomSheetStatus(sheetId ?? '');
 ```
 
 ### Parameters
@@ -342,3 +373,35 @@ When active, the hook:
 Use `forceClose()` from `useBottomSheetContext` to bypass the interceptor entirely.
 
 See [Close Interception](/close-interception) for detailed guide and examples.
+
+---
+
+## Testing
+
+Test helpers ship on the `react-native-bottom-sheet-stack/testing` subpath, so
+they stay out of your production bundle.
+
+```tsx
+import { resetBottomSheetRegistries } from 'react-native-bottom-sheet-stack/testing';
+
+beforeEach(resetBottomSheetRegistries);
+```
+
+### resetBottomSheetRegistries
+
+Clears the store **and** every module-level registry the library keeps: sheet
+refs, animated index values, portal sessions and `onBeforeClose` interceptors.
+
+Those registries are module state, so they outlive React. Without this, a test
+that opens a sheet leaves its ref and animated value behind for the next test,
+which then sees a sheet it never opened. Prefer this one call over resetting
+registries by hand — it cannot go out of date as registries are added.
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `resetBottomSheetRegistries` | `() => void` | Clears the store and all registries |
+
+:::warning Tests only
+Nothing on this subpath is meant for application code. It clears state without
+running animations or `onBeforeClose` interceptors.
+:::

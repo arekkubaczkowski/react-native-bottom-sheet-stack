@@ -30,6 +30,30 @@ interface SheetAdapterEvents {
 }
 ```
 
+It should also:
+
+3. **Drive `animatedIndex` alongside your own animation**, so the manager's
+   backdrop fades in step with the sheet rather than snapping — see
+   [Animated Index](#animated-index)
+4. **Respect `preventDismiss`** — read it with `useSheetPreventDismiss(id)` and
+   disable your library's native dismiss gestures while it is `true`, so a
+   [`useOnBeforeClose`](/close-interception) interceptor always gets to run
+   before the sheet goes away. Every shipped adapter except `CustomModalAdapter`
+   (which has no dismiss gesture of its own) does this.
+5. **Handle the Android back button** with `useBackHandler(id, handleDismiss)`
+   unless your library already has its own back handling to route into
+   `handleDismiss()`. The hook is scoped to the topmost open sheet **of its own
+   group**, which a hand-rolled `BackHandler` listener is not.
+
+```tsx
+import { useBackHandler, useSheetPreventDismiss } from 'react-native-bottom-sheet-stack';
+
+const preventDismiss = useSheetPreventDismiss(id);
+useBackHandler(id, handleDismiss);
+
+<MyLibrarySheet swipeToDismissEnabled={!preventDismiss} />
+```
+
 ## Step-by-Step Guide
 
 ### 1. Create the Adapter Component
@@ -74,9 +98,13 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
       },
     }), []);
 
-    // 5. Wire up callbacks
+    // 5. Wire up callbacks. Animate animatedIndex with the same timing as your
+    //    own show/hide animation so the manager's backdrop fades in step.
+    const onShowStart = () => {
+      animatedIndex.set(withTiming(0, { duration: 300 }));
+    };
+
     const onShown = () => {
-      animatedIndex.set(0);
       handleOpened();
     };
 
@@ -84,8 +112,11 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
       handleDismiss();
     };
 
+    const onHideStart = () => {
+      animatedIndex.set(withTiming(-1, { duration: 300 }));
+    };
+
     const onHidden = () => {
-      animatedIndex.set(-1);
       handleClosed();
     };
 
@@ -93,8 +124,10 @@ export const MyAdapter = React.forwardRef<SheetAdapterRef, MyAdapterProps>(
     return (
       <MyLibrarySheet
         ref={myLibraryRef}
+        onShowStart={onShowStart}
         onShow={onShown}
         onDismiss={onUserDismiss}
+        onHideStart={onHideStart}
         onHide={onHidden}
         {...props}
       >
