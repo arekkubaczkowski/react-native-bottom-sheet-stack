@@ -1110,6 +1110,7 @@ src/
     └── swmansion/               # → 'react-native-bottom-sheet-stack/swmansion'
         ├── index.ts
         ├── SwmansionSheetAdapter.tsx
+        ├── DetachedFrame.tsx           # detached: inset frame + the clip that tracks the sheet
         └── SwmansionKeyboardInset.tsx  # keyboardBehavior="inset" (optional peer)
 ```
 
