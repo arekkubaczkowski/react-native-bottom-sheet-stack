@@ -18,11 +18,9 @@ export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
     throw new Error('animatedIndex must be defined in BottomSheetBackdrop');
   }
 
-  // Rendered from the first frame, transparent, and faded purely by
-  // `animatedIndex` — which the store rewinds to hidden as the sheet starts
-  // opening. Deferring the mount instead (as this once did) drops the opening
-  // frames the adapter has already driven, so the backdrop pops in part-way
-  // through the fade rather than animating from nothing.
+  // Mounted from the sheet's first frame and faded purely by `animatedIndex`.
+  // Gating the mount on a timer instead drops the opening frames the adapter
+  // has already driven, and the backdrop pops in mid-fade.
   const animatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       animatedIndex.value,

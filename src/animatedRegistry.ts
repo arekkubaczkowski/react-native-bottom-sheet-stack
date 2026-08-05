@@ -22,12 +22,10 @@ export function ensureAnimatedIndex(sheetId: string): SharedValue<number> {
 }
 
 /**
- * Returns the sheet's animated index, rewound to the hidden value first.
+ * Returns the sheet's animated index, rewound to hidden.
  *
- * Called by the store when a sheet starts opening, so the backdrop always has a
- * defined starting point for its fade. Without this a re-opened sheet would
- * still carry the value from its previous cycle, and the backdrop would flash
- * at full opacity for the frames before the adapter drives the value down.
+ * A sheet that re-opens still carries the value from its last cycle; without
+ * the rewind its backdrop flashes opaque before the adapter drives it down.
  */
 export function resetAnimatedIndex(sheetId: string): SharedValue<number> {
   const animatedIndex = ensureAnimatedIndex(sheetId);

@@ -46,10 +46,6 @@ export const useBottomSheetStore = create(
           ? getNextPortalSession(sheet.id)
           : undefined;
 
-        // Rewind to hidden: this sheet is about to animate in, and a persistent
-        // one re-opening still carries the value from its last cycle. The
-        // backdrop reads this value from its first rendered frame, so it must
-        // be the closed one before the adapter starts driving it.
         resetAnimatedIndex(sheet.id);
 
         const newSheet: BottomSheetState = existingSheet
