@@ -1,4 +1,4 @@
-import { useEffect, type PropsWithChildren } from 'react';
+import { memo, useEffect, type PropsWithChildren } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
@@ -23,7 +23,11 @@ interface QueueItemProps {
   isActive: boolean;
 }
 
-export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
+export const QueueItem = memo(function QueueItem({
+  id,
+  stackIndex,
+  isActive,
+}: QueueItemProps) {
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
   const portalSession = useSheetPortalSession(id);
@@ -78,7 +82,7 @@ export function QueueItem({ id, stackIndex, isActive }: QueueItemProps) {
       </ScaleWrapper>
     </>
   );
-}
+});
 
 const ScaleWrapper = ({
   id,

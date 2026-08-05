@@ -27,13 +27,33 @@ plugins: [
 ]
 ```
 
-### THE ONE EXCEPTION: `useStableCallback.ts`
+### SANCTIONED EXCEPTION 1: `QueueItem.tsx`
+`QueueItem` is wrapped in `memo`, and that is **sanctioned**. The compiler
+memoizes work *inside* a component; it does not wrap one in `memo`. Because
+`BottomSheetHost` builds its children with `.map()`, every host render produces
+fresh element references and React must call each `QueueItem` to find out the
+output is unchanged — including persistent sheets that the opening sheet does
+not touch.
+
+Measured on device, opening one sheet with three persistent sheets mounted:
+three `QueueItem` bodies ran for nothing without `memo`, zero with it. The cost
+grows linearly with the number of persistent sheets in the group.
+
+It costs no correctness: a `QueueItem` whose `stackIndex` changes still
+re-renders, and `ScaleWrapper` holds its own store subscription, so scale depth
+updates while its parent is skipped (verified with a push). Do not "clean up"
+this one either.
+
+### SANCTIONED EXCEPTION 2: `useStableCallback.ts`
 `useStableCallback` uses `useCallback` deliberately, and that is **sanctioned**.
 It is not an optimization: the whole point of the hook is that the returned
 function has a *stable identity* while its closure stays fresh (the useEvent
 RFC). `useCallback([])` is the mechanism that produces the stable identity —
-removing it removes the feature. This is the only `useCallback`/`useMemo`/`memo`
-in `src/`. Do not add another, and do not "clean up" this one.
+removing it removes the feature. Do not add another, and do not "clean up" this
+one.
+
+Those two are the only sanctioned manual memoization in `src/`. Anything else
+is still forbidden — and both were added only after measuring, not on a hunch.
 
 ### When Compiler Cannot Optimize:
 Use the `'use no memo'` directive at the top of the file. This is RARE. The only
