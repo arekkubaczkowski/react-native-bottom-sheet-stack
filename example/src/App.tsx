@@ -5,6 +5,7 @@ import {
   BottomSheetScaleView,
 } from 'react-native-bottom-sheet-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { BottomSheetDebugMonitor } from './components/BottomSheetDebugMonitor';
@@ -20,33 +21,49 @@ import { sharedStyles } from './styles/theme';
 export default function App() {
   return (
     <SafeAreaProvider>
-      <GestureHandlerRootView style={sharedStyles.root}>
-        <BottomSheetManagerProvider
-          id="default"
-          scaleConfig={{ scale: 0.92, translateY: 0, borderRadius: 24 }}
-        >
-          <BottomSheetScaleView>
-            <UserProvider value={{ username: 'John Doe', theme: 'dark' }}>
-              <HomeScreen />
-            </UserProvider>
-          </BottomSheetScaleView>
-          <BottomSheetHost />
-          {/* Persistent sheet - always mounted, opens instantly */}
-          <BottomSheetPersistent id="scanner-sheet">
-            <ScannerSheet />
-          </BottomSheetPersistent>
-          {/* Persistent sheet with nested portal sheet inside */}
-          <BottomSheetPersistent id="persistent-with-portal">
-            <PersistentWithPortalSheet />
-          </BottomSheetPersistent>
-          {/* Persistent notepad with mixed adapters */}
-          <BottomSheetPersistent id="persistent-notepad">
-            <PersistentNotepadContent />
-          </BottomSheetPersistent>
-          {/* Debug Monitor */}
-          <BottomSheetDebugMonitor />
-        </BottomSheetManagerProvider>
-      </GestureHandlerRootView>
+      {/*
+        Required by SwmansionSheetAdapter's keyboardBehavior="inset" — the
+        adapter reads the keyboard height from this provider's state. Only apps
+        that use that prop need it; it is an optional peer everywhere else.
+      */}
+      <KeyboardProvider>
+        <GestureHandlerRootView style={sharedStyles.root}>
+          <BottomSheetManagerProvider
+            id="default"
+            scaleConfig={{ scale: 0.92, translateY: 0, borderRadius: 24 }}
+          >
+            <BottomSheetScaleView>
+              <UserProvider value={{ username: 'John Doe', theme: 'dark' }}>
+                <HomeScreen />
+              </UserProvider>
+            </BottomSheetScaleView>
+            <BottomSheetHost />
+            {/* Persistent sheet - always mounted, opens instantly */}
+            <BottomSheetPersistent id="scanner-sheet">
+              <ScannerSheet />
+            </BottomSheetPersistent>
+            {/* Persistent sheet with nested portal sheet inside */}
+            <BottomSheetPersistent id="persistent-with-portal">
+              <PersistentWithPortalSheet />
+            </BottomSheetPersistent>
+            {/* Persistent notepad with mixed adapters */}
+            <BottomSheetPersistent id="persistent-notepad">
+              <PersistentNotepadContent />
+            </BottomSheetPersistent>
+            {/* Debug Monitor */}
+            <BottomSheetDebugMonitor />
+          </BottomSheetManagerProvider>
+
+          {/*
+          A second manager, mounted at the root so its host is a sibling of the
+          first rather than a child. Sheets opened with groupId "secondary" land
+          in this stack, and neither group's closeAll() can reach the other.
+        */}
+          <BottomSheetManagerProvider id="secondary">
+            <BottomSheetHost />
+          </BottomSheetManagerProvider>
+        </GestureHandlerRootView>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

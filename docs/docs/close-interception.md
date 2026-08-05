@@ -180,7 +180,7 @@ if (!result.closed) {
 }
 
 const cascade = await closeAll();
-if (!cascade.closedAll) {
+if (!cascade.completed) {
   cascade.stoppedAt; // the sheet whose interceptor stopped the cascade
   cascade.closed;    // the ones that did close, topmost first
 }

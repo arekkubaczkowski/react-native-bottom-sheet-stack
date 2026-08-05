@@ -37,7 +37,8 @@ is built from these. You do not need them to use the library.
 Main hook for opening and managing bottom sheets imperatively.
 
 ```tsx
-const { open, close, closeAll, destroyAll } = useBottomSheetManager();
+const { open, close, closeAll, closeTo, closeDepth, destroyAll } =
+  useBottomSheetManager();
 ```
 
 ### Returns
@@ -46,27 +47,49 @@ const { open, close, closeAll, destroyAll } = useBottomSheetManager();
 |----------|------|-------------|
 | `open` | `(content, options?) => string \| null` | Opens a bottom sheet and returns its ID, or `null` if the store declined |
 | `close` | `(id: string) => Promise<CloseResult>` | Closes a specific sheet by ID |
-| `closeAll` | `(options?) => Promise<CloseAllResult>` | Closes all sheets with cascading animation |
+| `closeAll` | `(options?) => Promise<CloseAllResult>` | Closes the group's sheets with cascading animation |
+| `closeTo` | `(id, options?) => Promise<CloseAllResult>` | Closes down to `id`, leaving it open |
+| `closeDepth` | `(count, options?) => Promise<CloseAllResult>` | Closes at most `count` sheets from the top |
 | `destroyAll` | `() => void` | Removes all sheets immediately — no animation, **bypasses `onBeforeClose`** |
 
-### closeAll Options
+### Cascade options
 
-Closes all sheets in the group from top to bottom with a staggered animation. Respects [`useOnBeforeClose`](#useonbeforeclose) interceptors — if one blocks, the cascade stops.
+`closeAll()` walks the group from the top down with a staggered animation, and
+respects [`useOnBeforeClose`](#useonbeforeclose) interceptors — if one blocks,
+the cascade stops there and the sheets below it stay open.
 
 ```tsx
-// Default stagger (100ms between each close)
-await closeAll();
-
-// Custom stagger
-await closeAll({ stagger: 200 });
-
-// No stagger (all close at once)
-await closeAll({ stagger: 0 });
+await closeAll();                  // default 100ms stagger
+await closeAll({ stagger: 200 });  // slower
+await closeAll({ stagger: 0 });    // all at once
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `stagger` | `number` | `100` | Delay in ms between each cascading close |
+| `until` | `string` | — | Stop at this sheet instead of emptying the group |
+| `inclusive` | `boolean` | `false` | Whether the `until` sheet closes as well |
+| `depth` | `number` | — | Close at most this many sheets, counting from the top |
+
+### Closing part of the stack
+
+`closeTo()` and `closeDepth()` are the same cascade with one bound pre-filled —
+the stack equivalent of navigating back rather than starting over.
+
+```tsx
+await closeTo('checkout');            // everything above 'checkout' goes
+await closeTo('checkout', { inclusive: true });  // 'checkout' too
+await closeDepth(2);                  // just the top two
+```
+
+An `until` that is not on this group's stack closes **nothing** — a bounded call
+must not fall back to emptying the group. It warns in `__DEV__`. A `depth` of
+zero or less closes nothing; one past the stack's height empties it.
+
+With both bounds set, whichever closes fewer sheets wins.
+
+From inside a sheet, [`closeAbove()`](#usebottomsheetcontext) does the same
+without naming your own ID.
 
 ### open Options
 
@@ -123,7 +146,7 @@ if (!result.closed) {
 }
 
 const cascade = await closeAll();
-if (!cascade.closedAll) {
+if (!cascade.completed) {
   // cascade.stoppedAt — the sheet whose interceptor stopped it.
   // cascade.closed    — the ones that did close, topmost first.
 }
@@ -143,7 +166,7 @@ This hook can **only** be used inside a sheet adapter component (e.g. `GorhomShe
 
 ```tsx
 // Basic usage
-const { id, params, close, forceClose } = useBottomSheetContext();
+const { id, params, close, closeAbove, forceClose } = useBottomSheetContext();
 
 // With typed params (for portal sheets)
 const { params, close } = useBottomSheetContext<'my-sheet'>();
@@ -174,7 +197,17 @@ while the sheet is open, so the sheet must handle their absence — under `stric
 | `params` | `BottomSheetPortalParams<T>` or `unknown` | Type-safe params when generic provided |
 | `preventDismiss` | `boolean` | Whether dismissal is currently blocked for this sheet (set via `useOnBeforeClose`). Useful for UI that should reflect it — e.g. hiding a grab handle. |
 | `close` | `() => Promise<CloseResult>` | Closes this sheet (respects `useOnBeforeClose`). See [Close results](#close-results). |
+| `closeAbove` | `(options?) => Promise<CloseAllResult>` | Closes every sheet stacked above this one, leaving this one open. Pass `inclusive` to close this one too. |
 | `forceClose` | `() => void` | Closes this sheet immediately, bypassing any `useOnBeforeClose` interceptor |
+
+`closeAbove()` is the common case for a sheet deep in a stack: finish here, then
+land back on this screen rather than an empty one — without naming your own ID
+or counting how many sheets are above you.
+
+```tsx
+await closeAbove();                     // land back on this sheet
+await closeAbove({ inclusive: true });  // and close this one as well
+```
 
 ---
 
