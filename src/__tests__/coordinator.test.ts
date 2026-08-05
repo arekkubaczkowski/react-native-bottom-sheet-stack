@@ -1,33 +1,14 @@
 import { closeAllAnimated, requestClose } from '../bottomSheetCoordinator';
 import { setOnBeforeClose } from '../onBeforeCloseRegistry';
-import { useBottomSheetStore } from '../store';
-import type { OpenPayload } from '../store';
-import { resetBottomSheetRegistries } from '../testing';
+import {
+  openAndSettle,
+  portal,
+  setupSheetTest,
+  statusOf,
+  store,
+} from './testUtils';
 
-const store = () => useBottomSheetStore.getState();
-
-const portal = (id: string, groupId = 'g1'): OpenPayload => ({
-  kind: 'portal',
-  id,
-  groupId,
-});
-
-function openAndSettle(id: string, groupId = 'g1', mode?: 'push' | 'switch') {
-  store().open(portal(id, groupId), mode);
-  store().markOpen(id);
-}
-
-const statusOf = (id: string) =>
-  useBottomSheetStore.getState().sheetsById[id]?.status;
-
-beforeEach(() => {
-  resetBottomSheetRegistries();
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
-});
+setupSheetTest();
 
 describe('requestClose', () => {
   it('closes an open sheet', async () => {
@@ -43,8 +24,6 @@ describe('requestClose', () => {
     await expect(requestClose('a')).resolves.toEqual({ closed: true });
   });
 
-  // Each of these used to be indistinguishable — the function returned a bare
-  // boolean that meant four different things.
   it('reports not-closable for a sheet that is already closing', async () => {
     openAndSettle('a');
     await requestClose('a');

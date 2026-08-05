@@ -1,44 +1,24 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { type ReactNode } from 'react';
 
-import { BottomSheetManagerProvider } from '../BottomSheetManager.provider';
 import { getSheetRef, __getAllSheetRefs } from '../refsMap';
-import { useBottomSheetStore } from '../store';
-import { resetBottomSheetRegistries } from '../testing';
 import { useBottomSheetControl } from '../useBottomSheetControl';
 import { useBottomSheetManager } from '../useBottomSheetManager';
 import { useBottomSheetStatus } from '../useBottomSheetStatus';
+import { inGroup, portal, setupSheetTest, statusOf, store } from './testUtils';
 
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <BottomSheetManagerProvider id="g1">{children}</BottomSheetManagerProvider>
-);
+setupSheetTest();
+
+const wrapper = inGroup();
 
 const Sheet = () => null;
 
 /**
- * A registered portal ID.
- *
- * `BottomSheetPortalId` narrows to the registry once an app augments it — and
- * the example app in this repo does, so an arbitrary string no longer type-checks
- * here. Using a real registered ID keeps these tests honest about the type-safe
- * surface rather than casting past it.
+ * `BottomSheetPortalId` narrows to the registry once an app augments it, and
+ * the example app in this repo does — so these use real registered IDs rather
+ * than casting past the type-safe surface.
  */
 const PORTAL_ID = 'portal-mode-sheet-a';
-
-/** A registered portal ID that declares params, so updateParams is meaningful. */
 const PARAM_PORTAL_ID = 'context-portal-sheet';
-
-const statusOf = (id: string) =>
-  useBottomSheetStore.getState().sheetsById[id]?.status;
-
-beforeEach(() => {
-  resetBottomSheetRegistries();
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
-});
 
 describe('useBottomSheetManager', () => {
   it('opens into the provider group and returns the id', () => {
@@ -50,7 +30,7 @@ describe('useBottomSheetManager', () => {
     });
 
     expect(id).toBe('a');
-    expect(useBottomSheetStore.getState().stackOrderByGroup.g1).toEqual(['a']);
+    expect(store().stackOrderByGroup.g1).toEqual(['a']);
   });
 
   it('returns null when the store declines', () => {
@@ -60,7 +40,7 @@ describe('useBottomSheetManager', () => {
       result.current.open(<Sheet />, { id: 'a' });
     });
     act(() => {
-      useBottomSheetStore.getState().markOpen('a');
+      store().markOpen('a');
     });
 
     let second: string | null = 'unset';
@@ -71,14 +51,12 @@ describe('useBottomSheetManager', () => {
     expect(second).toBeNull();
   });
 
-  // B2: the ref map is module-global and only ever cleaned up by QueueItem's
-  // unmount. Registering before the store accepted the sheet leaked an entry
-  // nothing could reclaim — once per rejected call, since inline IDs are random.
+  // The ref map is only cleaned up by QueueItem's unmount, which never happens
+  // for a rejected open — so registering early leaked an unreclaimable entry.
   it('does not leak a ref when the open is declined', () => {
     const { result } = renderHook(() => useBottomSheetManager(), { wrapper });
 
-    // Left in 'opening' on purpose — that is what makes the group busy, so the
-    // next open is genuinely declined.
+    // Left in 'opening' so the group is busy and the next open is declined.
     act(() => {
       result.current.open(<Sheet />, { id: 'a' });
     });
@@ -112,7 +90,7 @@ describe('useBottomSheetManager', () => {
       result.current.open(<Sheet />, { id: 'a', params: { userId: '7' } });
     });
 
-    expect(useBottomSheetStore.getState().sheetsById.a?.params).toEqual({
+    expect(store().sheetsById.a?.params).toEqual({
       userId: '7',
     });
   });
@@ -127,8 +105,8 @@ describe('useBottomSheetManager', () => {
       result.current.destroyAll();
     });
 
-    expect(useBottomSheetStore.getState().sheetsById.a).toBeUndefined();
-    expect(useBottomSheetStore.getState().stackOrderByGroup.g1).toBeUndefined();
+    expect(store().sheetsById.a).toBeUndefined();
+    expect(store().stackOrderByGroup.g1).toBeUndefined();
   });
 });
 
@@ -144,13 +122,9 @@ describe('useBottomSheetControl', () => {
     });
 
     expect(opened).toBe(true);
-    expect(
-      useBottomSheetStore.getState().sheetsById[PORTAL_ID]?.usePortal
-    ).toBe(true);
+    expect(store().sheetsById[PORTAL_ID]?.usePortal).toBe(true);
   });
 
-  // The asymmetry this closes: the store reported the rejection, the hook
-  // consumed it internally and told the caller nothing.
   it('reports false when the store declines', () => {
     const { result } = renderHook(() => useBottomSheetControl(PORTAL_ID), {
       wrapper,
@@ -160,7 +134,7 @@ describe('useBottomSheetControl', () => {
       result.current.open();
     });
     act(() => {
-      useBottomSheetStore.getState().markOpen('sheet');
+      store().markOpen('sheet');
     });
 
     let second: boolean | undefined;
@@ -180,23 +154,21 @@ describe('useBottomSheetControl', () => {
     act(() => {
       result.current.open({ params: { greeting: 'hello' } });
     });
-    expect(
-      useBottomSheetStore.getState().sheetsById[PARAM_PORTAL_ID]?.params
-    ).toEqual({ greeting: 'hello' });
+    expect(store().sheetsById[PARAM_PORTAL_ID]?.params).toEqual({
+      greeting: 'hello',
+    });
 
     act(() => {
       result.current.updateParams({ greeting: 'goodbye' });
     });
-    expect(
-      useBottomSheetStore.getState().sheetsById[PARAM_PORTAL_ID]?.params
-    ).toEqual({ greeting: 'goodbye' });
+    expect(store().sheetsById[PARAM_PORTAL_ID]?.params).toEqual({
+      greeting: 'goodbye',
+    });
 
     act(() => {
       result.current.resetParams();
     });
-    expect(
-      useBottomSheetStore.getState().sheetsById[PARAM_PORTAL_ID]?.params
-    ).toBeUndefined();
+    expect(store().sheetsById[PARAM_PORTAL_ID]?.params).toBeUndefined();
   });
 
   it('close reports the outcome', async () => {
@@ -208,7 +180,7 @@ describe('useBottomSheetControl', () => {
       result.current.open();
     });
     act(() => {
-      useBottomSheetStore.getState().markOpen('sheet');
+      store().markOpen('sheet');
     });
 
     await act(async () => {
@@ -231,15 +203,11 @@ describe('useBottomSheetStatus', () => {
     });
   });
 
-  // isOpen used to include 'opening', so there was no way to tell the
-  // interactive state from the animation.
   it('separates opening from open', () => {
     const { result } = renderHook(() => useBottomSheetStatus('a'));
 
     act(() => {
-      useBottomSheetStore
-        .getState()
-        .open({ kind: 'portal', id: 'a', groupId: 'g1' });
+      store().open(portal('a'));
     });
 
     expect(result.current.isOpening).toBe(true);
@@ -247,7 +215,7 @@ describe('useBottomSheetStatus', () => {
     expect(result.current.isVisible).toBe(true);
 
     act(() => {
-      useBottomSheetStore.getState().markOpen('a');
+      store().markOpen('a');
     });
 
     expect(result.current.isOpen).toBe(true);
@@ -258,10 +226,9 @@ describe('useBottomSheetStatus', () => {
     const { result } = renderHook(() => useBottomSheetStatus('a'));
 
     act(() => {
-      const store = useBottomSheetStore.getState();
-      store.open({ kind: 'portal', id: 'a', groupId: 'g1' });
-      store.markOpen('a');
-      store.startClosing('a');
+      store().open(portal('a'));
+      store().markOpen('a');
+      store().startClosing('a');
     });
 
     expect(result.current.isClosing).toBe(true);

@@ -1,29 +1,10 @@
 import { initBottomSheetCoordinator } from '../bottomSheetCoordinator';
 import { setSheetRef } from '../refsMap';
-import { useBottomSheetStore } from '../store';
-import type { OpenPayload } from '../store';
+import { makeRef, portal, store } from './testUtils';
 import { resetBottomSheetRegistries } from '../testing';
 
-const store = () => useBottomSheetStore.getState();
-
-const portal = (id: string, groupId = 'g1'): OpenPayload => ({
-  kind: 'portal',
-  id,
-  groupId,
-});
-
-const makeRef = () => ({
-  current: { expand: jest.fn(), close: jest.fn() },
-});
-
-/**
- * Frames are driven by hand rather than by timers.
- *
- * The coordinator retries across requestAnimationFrame, and these tests care
- * about exactly how many frames elapse — advancing fake timers instead would
- * couple them to how rAF happens to be polyfilled, and `await` inside a
- * fake-timer loop deadlocks.
- */
+// Frames are driven by hand: these tests care how many elapse, and `await`
+// inside a fake-timer loop deadlocks.
 type FrameCallback = (time: number) => void;
 
 let frameQueue: FrameCallback[] = [];
@@ -94,9 +75,8 @@ describe('store to adapter sync', () => {
     expect(ref.current.expand).not.toHaveBeenCalled();
   });
 
-  // B7: the ref may not exist yet — a portal sheet has to teleport its content
-  // into the PortalHost first. A single attempt was a silent no-op, and for
-  // 'closing' that left the sheet stuck in that status forever.
+  // A portal sheet teleports its content before the adapter mounts, so the ref
+  // can arrive late. A single attempt left 'closing' sheets stuck forever.
   it('retries until the adapter registers its ref', async () => {
     unsubscribe = initBottomSheetCoordinator('g1');
 

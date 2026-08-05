@@ -1,39 +1,27 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { type ReactNode } from 'react';
 
-import { BottomSheetContext } from '../BottomSheet.context';
-import { BottomSheetManagerProvider } from '../BottomSheetManager.provider';
 import { getOnBeforeClose } from '../onBeforeCloseRegistry';
-import { useBottomSheetStore } from '../store';
-import { resetBottomSheetRegistries } from '../testing';
 import { useBottomSheetContext } from '../useBottomSheetContext';
 import { useOnBeforeClose } from '../useOnBeforeClose';
 import { useSheetRenderData } from '../useSheetRenderData';
+import {
+  inGroup,
+  inSheet,
+  portal,
+  setupSheetTest,
+  statusOf,
+  store,
+} from './testUtils';
 
-const store = () => useBottomSheetStore.getState();
+setupSheetTest();
 
-const inGroup =
-  (id: string) =>
-  ({ children }: { children: ReactNode }) => (
-    <BottomSheetManagerProvider id={id}>{children}</BottomSheetManagerProvider>
-  );
-
-const openPortal = (id: string, groupId: string) =>
-  store().open({ kind: 'portal', id, groupId });
-
-beforeEach(() => {
-  resetBottomSheetRegistries();
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
-});
+const openPortal = (id: string, groupId = 'g1') =>
+  store().open(portal(id, groupId));
 
 describe('useSheetRenderData', () => {
   it('returns active sheets with a per-group stack index', () => {
     const { result } = renderHook(() => useSheetRenderData(), {
-      wrapper: inGroup('g1'),
+      wrapper: inGroup(),
     });
 
     act(() => {
@@ -48,8 +36,7 @@ describe('useSheetRenderData', () => {
     ]);
   });
 
-  // Indices drive z-index layering, so they must not shift because another
-  // group happens to have sheets open.
+  // Indices drive z-index layering.
   it('indexes from its own group only', () => {
     const { result } = renderHook(() => useSheetRenderData(), {
       wrapper: inGroup('g2'),
@@ -66,12 +53,10 @@ describe('useSheetRenderData', () => {
     ]);
   });
 
-  // Persistent sheets stay rendered while hidden, so React does not unmount
-  // and remount them across open/close cycles — that is the whole point of
-  // keeping them mounted.
+  // Hidden persistent sheets stay rendered so React never remounts them.
   it('renders hidden persistent sheets before active ones', () => {
     const { result } = renderHook(() => useSheetRenderData(), {
-      wrapper: inGroup('g1'),
+      wrapper: inGroup(),
     });
 
     act(() => {
@@ -87,7 +72,7 @@ describe('useSheetRenderData', () => {
 
   it('moves a persistent sheet into the active list when it opens', () => {
     const { result } = renderHook(() => useSheetRenderData(), {
-      wrapper: inGroup('g1'),
+      wrapper: inGroup(),
     });
 
     act(() => {
@@ -105,7 +90,7 @@ describe('useSheetRenderData', () => {
 
   it('does not leak another group persistent sheets', () => {
     const { result } = renderHook(() => useSheetRenderData(), {
-      wrapper: inGroup('g1'),
+      wrapper: inGroup(),
     });
 
     act(() => {
@@ -117,16 +102,6 @@ describe('useSheetRenderData', () => {
 });
 
 describe('useOnBeforeClose', () => {
-  const inSheet =
-    (id: string) =>
-    ({ children }: { children: ReactNode }) => (
-      <BottomSheetManagerProvider id="g1">
-        <BottomSheetContext.Provider value={{ id }}>
-          {children}
-        </BottomSheetContext.Provider>
-      </BottomSheetManagerProvider>
-    );
-
   it('registers the interceptor and flags the sheet as non-dismissable', () => {
     act(() => {
       openPortal('a', 'g1');
@@ -142,46 +117,39 @@ describe('useOnBeforeClose', () => {
     act(() => unmount());
 
     expect(getOnBeforeClose('a')).toBeUndefined();
-    expect(useBottomSheetStore.getState().sheetsById.a?.preventDismiss).toBe(
-      false
-    );
+    expect(store().sheetsById.a?.preventDismiss).toBe(false);
   });
 
-  it('keeps a stable registration while the callback identity changes', () => {
+  it('keeps one registration that always sees the latest closure', () => {
     act(() => {
-      openPortal('a', 'g1');
+      openPortal('a');
     });
 
+    const noop = { onConfirm: () => {}, onCancel: () => {} };
     const { rerender } = renderHook(
-      ({ flag }: { flag: boolean }) => useOnBeforeClose(() => flag),
-      { wrapper: inSheet('a'), initialProps: { flag: false } }
+      ({ allow }: { allow: boolean }) => useOnBeforeClose(() => allow),
+      { wrapper: inSheet('a'), initialProps: { allow: false } }
     );
 
-    const first = getOnBeforeClose('a');
-    rerender({ flag: true });
+    const registered = getOnBeforeClose('a');
+    expect(registered?.(noop)).toBe(false);
 
-    // Same stable wrapper, but it must now see the latest closure.
-    expect(getOnBeforeClose('a')).toBe(first);
+    rerender({ allow: true });
+
+    expect(getOnBeforeClose('a')).toBe(registered);
+    expect(registered?.(noop)).toBe(true);
   });
 
   it('throws outside a sheet', () => {
     expect(() =>
       renderHook(() => useOnBeforeClose(() => true), {
-        wrapper: inGroup('g1'),
+        wrapper: inGroup(),
       })
     ).toThrow(/must be used within a BottomSheet/);
   });
 });
 
 describe('useBottomSheetContext', () => {
-  const inSheet =
-    (id: string) =>
-    ({ children }: { children: ReactNode }) => (
-      <BottomSheetContext.Provider value={{ id }}>
-        {children}
-      </BottomSheetContext.Provider>
-    );
-
   it('exposes the sheet id, params and dismissal state', () => {
     act(() => {
       store().open({
@@ -201,26 +169,24 @@ describe('useBottomSheetContext', () => {
     expect(result.current.preventDismiss).toBe(false);
   });
 
-  it('forceClose bypasses the interceptor', async () => {
+  it('forceClose closes without consulting the interceptor', () => {
     act(() => {
-      openPortal('a', 'g1');
+      openPortal('a');
       store().markOpen('a');
     });
+
+    const interceptor = jest.fn<void, [{ onCancel: () => void }]>(
+      ({ onCancel }) => onCancel()
+    );
+    renderHook(() => useOnBeforeClose(interceptor), { wrapper: inSheet('a') });
 
     const { result } = renderHook(() => useBottomSheetContext(), {
       wrapper: inSheet('a'),
     });
-
-    // An interceptor that would refuse if it were consulted.
-    const { unmount } = renderHook(
-      () => useOnBeforeClose(({ onCancel }) => onCancel()),
-      { wrapper: inSheet('a') }
-    );
-
     act(() => result.current.forceClose());
 
-    expect(useBottomSheetStore.getState().sheetsById.a?.status).toBe('closing');
-    unmount();
+    expect(interceptor).not.toHaveBeenCalled();
+    expect(statusOf('a')).toBe('closing');
   });
 
   it('throws outside a sheet', () => {

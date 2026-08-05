@@ -5,17 +5,13 @@ import {
   HIDDEN_ANIMATED_INDEX,
   resetAnimatedIndex,
 } from '../animatedRegistry';
-import {
-  getOnBeforeClose,
-  removeOnBeforeClose,
-  setOnBeforeClose,
-} from '../onBeforeCloseRegistry';
+import { getOnBeforeClose, setOnBeforeClose } from '../onBeforeCloseRegistry';
 import { getNextPortalSession } from '../portalSessionRegistry';
-import { cleanupSheetRef, getSheetRef, setSheetRef } from '../refsMap';
-import { useBottomSheetStore } from '../store';
+import { getSheetRef, setSheetRef } from '../refsMap';
 import { resetBottomSheetRegistries } from '../testing';
+import { portal, setupSheetTest, store } from './testUtils';
 
-beforeEach(resetBottomSheetRegistries);
+setupSheetTest();
 
 describe('animatedRegistry', () => {
   it('creates a value at the hidden position and reuses it', () => {
@@ -29,8 +25,7 @@ describe('animatedRegistry', () => {
     const value = ensureAnimatedIndex('a');
     value.value = 0;
 
-    // Same object — adapters and the backdrop already hold this reference, so
-    // swapping it would silently detach them.
+    // Same object: adapters already hold this reference.
     expect(resetAnimatedIndex('a')).toBe(value);
     expect(value.value).toBe(HIDDEN_ANIMATED_INDEX);
   });
@@ -43,32 +38,26 @@ describe('animatedRegistry', () => {
   });
 });
 
-// The backdrop reads animatedIndex from its first rendered frame, so a
-// re-opened sheet must not still carry the value from its last cycle.
 describe('store rewinds animatedIndex on open', () => {
   it('resets a persistent sheet to hidden when it re-opens', () => {
-    const store = useBottomSheetStore.getState();
-    store.mount({ id: 'p', groupId: 'g1' });
+    store().mount({ id: 'p', groupId: 'g1' });
 
     const value = ensureAnimatedIndex('p');
-    value.value = 0; // as if fully open from a previous cycle
+    value.value = 0;
 
-    store.open({ kind: 'portal', id: 'p', groupId: 'g1' });
+    store().open(portal('p'));
 
     expect(value.value).toBe(HIDDEN_ANIMATED_INDEX);
   });
 
   it('does not rewind when the open is rejected', () => {
-    const store = useBottomSheetStore.getState();
-    store.open({ kind: 'portal', id: 'a', groupId: 'g1' });
-    store.markOpen('a');
+    store().open(portal('a'));
+    store().markOpen('a');
 
     const value = ensureAnimatedIndex('a');
     value.value = 0;
 
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
-    store.open({ kind: 'portal', id: 'a', groupId: 'g1' }); // already-active
-    jest.restoreAllMocks();
+    store().open(portal('a'));
 
     // The sheet is still open on screen; rewinding would blank its backdrop.
     expect(value.value).toBe(0);
@@ -83,42 +72,17 @@ describe('portalSessionRegistry', () => {
   });
 });
 
-describe('refsMap', () => {
-  it('stores, reads and clears refs', () => {
-    const ref = { current: { expand: jest.fn(), close: jest.fn() } };
-    setSheetRef('a', ref);
-
-    expect(getSheetRef('a')).toBe(ref);
-
-    cleanupSheetRef('a');
-    expect(getSheetRef('a')).toBeUndefined();
-  });
-});
-
-describe('onBeforeCloseRegistry', () => {
-  it('stores and removes interceptors', () => {
-    const cb = jest.fn();
-    setOnBeforeClose('a', cb);
-
-    expect(getOnBeforeClose('a')).toBe(cb);
-
-    removeOnBeforeClose('a');
-    expect(getOnBeforeClose('a')).toBeUndefined();
-  });
-});
-
 describe('resetBottomSheetRegistries', () => {
   it('clears the store and every module-level registry', () => {
-    const store = useBottomSheetStore.getState();
-    store.open({ kind: 'portal', id: 'a', groupId: 'g1' });
+    store().open(portal('a'));
     setSheetRef('a', { current: null });
     setOnBeforeClose('a', jest.fn());
     ensureAnimatedIndex('a');
 
     resetBottomSheetRegistries();
 
-    expect(useBottomSheetStore.getState().sheetsById).toEqual({});
-    expect(useBottomSheetStore.getState().stackOrderByGroup).toEqual({});
+    expect(store().sheetsById).toEqual({});
+    expect(store().stackOrderByGroup).toEqual({});
     expect(getSheetRef('a')).toBeUndefined();
     expect(getOnBeforeClose('a')).toBeUndefined();
     expect(getAnimatedIndex('a')).toBeUndefined();
