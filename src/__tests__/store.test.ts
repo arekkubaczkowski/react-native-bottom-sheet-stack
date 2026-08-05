@@ -168,6 +168,35 @@ describe('group isolation', () => {
   });
 });
 
+describe('re-opening a sheet that is still on the stack', () => {
+  it('does not leave a duplicate entry', () => {
+    store().mount({ id: 'p', groupId: 'g1' });
+    openAndSettle('p');
+    openAndSettle('q', 'g1', 'switch');
+
+    // 'p' is hidden but still stacked, which is what let it through twice.
+    store().open(portal('p'));
+
+    expect(stackOf('g1')).toEqual(['q', 'p']);
+  });
+
+  it('rejects an open from a group the sheet does not belong to', () => {
+    store().mount({ id: 'p', groupId: 'g1' });
+
+    const result = store().open(portal('p', 'g2'));
+
+    expect(result).toEqual({
+      opened: false,
+      id: 'p',
+      reason: 'group-mismatch',
+    });
+    // The record would otherwise stay in g1 while the stack entry landed in
+    // g2, leaving the sheet unremovable from either.
+    expect(store().sheetsById.p?.groupId).toBe('g1');
+    expect(stackOf('g2')).toEqual([]);
+  });
+});
+
 describe('close lifecycle', () => {
   it('removes a non-persistent sheet once closing finishes', () => {
     openAndSettle('a');
@@ -190,6 +219,19 @@ describe('close lifecycle', () => {
 
     expect(statusOf('p')).toBe('hidden');
     expect(stackOf('g1')).toEqual([]);
+  });
+
+  it('does not restore the sheet below when closing from mid-stack', () => {
+    openAndSettle('a');
+    openAndSettle('b', 'g1', 'switch');
+    openAndSettle('c');
+
+    store().startClosing('b');
+
+    // 'c' is still on top, so reviving 'a' underneath it would both look wrong
+    // and block the group — the busy guard keys on 'opening'.
+    expect(statusOf('a')).toBe('hidden');
+    expect(statusOf('c')).toBe('open');
   });
 
   it('restores the sheet below when the one above closes', () => {
@@ -228,6 +270,19 @@ describe('mount / unmount', () => {
     store().mount({ id: 'p', groupId: 'g1' });
 
     expect(store().sheetsById.p).toBe(before);
+  });
+
+  it('unmount restores the sheet below, like finishing a close does', () => {
+    store().mount({ id: 'p', groupId: 'g1' });
+    openAndSettle('p');
+    openAndSettle('q', 'g1', 'switch');
+
+    store().unmount('q');
+
+    // BottomSheetPersistent unmounts on every screen teardown, so leaving 'p'
+    // hidden-but-stacked would render it as active while it is actually closed.
+    expect(statusOf('p')).toBe('opening');
+    expect(stackOf('g1')).toEqual(['p']);
   });
 
   it('unmount removes the sheet from its group stack too', () => {

@@ -116,6 +116,21 @@ describe('store to adapter sync', () => {
     );
   });
 
+  it('forces a ref-less sheet closed so its group is not wedged', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+
+    store().open(portal('a')); // ref never arrives
+    await flushFrames(15);
+
+    // Left in 'opening', the busy guard would reject every later open in the
+    // group with no way back short of destroyAll().
+    expect(store().sheetsById.a).toBeUndefined();
+
+    const ref = makeRef();
+    setSheetRef('b', ref);
+    expect(store().open(portal('b')).opened).toBe(true);
+  });
+
   it('does not expand a sheet that stopped opening while waiting', async () => {
     unsubscribe = initBottomSheetCoordinator('g1');
     const ref = makeRef();
