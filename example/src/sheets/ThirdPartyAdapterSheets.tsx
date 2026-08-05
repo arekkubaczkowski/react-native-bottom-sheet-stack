@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   CustomModalAdapter,
   useBottomSheetContext,
@@ -399,6 +399,13 @@ export function SwmansionSheetDemoContent() {
     });
   };
 
+  const handleKeyboard = (behavior: 'none' | 'inset') => {
+    open(<KeyboardSwmansionSheet behavior={behavior} />, {
+      mode: 'push',
+      scaleBackground: true,
+    });
+  };
+
   return (
     <SwmansionSheetAdapter detents={[0, 'content']} handle>
       <View style={styles.swmSheetContent}>
@@ -447,12 +454,83 @@ export function SwmansionSheetDemoContent() {
           <Button title="Switch to Sheet" onPress={handleSwitch} />
           <Button title="Replace with Sheet" onPress={handleReplace} />
           <Button title="Push Detached Sheet" onPress={handleDetached} />
+          <Button
+            title="Keyboard: inset"
+            onPress={() => handleKeyboard('inset')}
+          />
+          <SecondaryButton
+            title="Keyboard: none (compare)"
+            onPress={() => handleKeyboard('none')}
+          />
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
     </SwmansionSheetAdapter>
   );
 }
+
+/**
+ * `keyboardBehavior` side by side.
+ *
+ * With `'inset'` the sheet pads its content by the keyboard height, so a
+ * content-sized sheet re-measures taller and the field stays above the
+ * keyboard. With `'none'` the keyboard covers the bottom of the sheet — the
+ * content is expected to own keyboard avoidance itself.
+ *
+ * `'inset'` needs the optional peer `react-native-keyboard-controller` and a
+ * `KeyboardProvider` at the app root (see `App.tsx`); without it the adapter
+ * warns once and renders as if `'none'`.
+ */
+const KeyboardSwmansionSheet = ({
+  behavior,
+  ref,
+}: {
+  behavior: 'none' | 'inset';
+  ref?: React.Ref<unknown>;
+}) => {
+  const { close } = useBottomSheetContext();
+  const [text, setText] = React.useState('');
+
+  return (
+    <SwmansionSheetAdapter
+      ref={ref as any}
+      detents={[0, 'content']}
+      keyboardBehavior={behavior}
+      handle
+    >
+      <View style={styles.swmSheetContent}>
+        <View style={styles.badgeRow}>
+          <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
+          <Badge
+            label={`keyboard: ${behavior}`}
+            color={behavior === 'inset' ? colors.success : colors.warning}
+          />
+        </View>
+        <Text style={sharedStyles.h1}>Keyboard {behavior}</Text>
+        <Text style={sharedStyles.text}>
+          {behavior === 'inset'
+            ? 'Focus the field — the sheet grows by the keyboard height, so the field and the buttons below it stay reachable.'
+            : 'Focus the field — the keyboard covers the bottom of the sheet. This is the default; the content is expected to handle avoidance itself.'}
+        </Text>
+
+        <TextInput
+          style={styles.keyboardInput}
+          placeholder="Type something…"
+          placeholderTextColor={colors.textMuted}
+          value={text}
+          onChangeText={setText}
+        />
+
+        <View style={styles.actions}>
+          <Text style={sharedStyles.contextValue}>
+            chars: {text.length} — this row is the bottom of the sheet
+          </Text>
+          <SecondaryButton title="Close" onPress={close} />
+        </View>
+      </View>
+    </SwmansionSheetAdapter>
+  );
+};
 
 /**
  * Detached (floating) presentation — the sheet is lifted off the screen edges
@@ -806,6 +884,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 48,
+  },
+  keyboardInput: {
+    backgroundColor: colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    color: colors.text,
+    fontSize: 15,
+    marginBottom: 16,
   },
   badgeRow: {
     flexDirection: 'row',
