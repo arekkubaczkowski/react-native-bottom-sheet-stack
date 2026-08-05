@@ -12,6 +12,8 @@ import {
   AdapterComparisonContent,
   ContextComparisonSheet,
   ContextSheetPortal,
+  ForceCloseDemo,
+  GroupASheet,
   HeavySheet,
   GorhomSheetDemoContent,
   ModalAdapterDemoContent,
@@ -22,6 +24,8 @@ import {
   RNModalDemoContent,
   SheetA,
   SimpleModalContent,
+  StatusDemoPanel,
+  StatusDemoSheet,
   SwmansionSheetDemoContent,
 } from '../sheets';
 import { colors, sharedStyles } from '../styles/theme';
@@ -83,6 +87,13 @@ export function HomeScreen() {
       </BottomSheetPortal>
       <BottomSheetPortal id="swmansion-sheet-demo">
         <SwmansionSheetDemoContent />
+      </BottomSheetPortal>
+      {/* Status flag demos */}
+      <BottomSheetPortal id="status-demo">
+        <StatusDemoSheet id="status-demo" />
+      </BottomSheetPortal>
+      <BottomSheetPortal id="status-demo-b">
+        <StatusDemoSheet id="status-demo-b" />
       </BottomSheetPortal>
 
       <ScrollView
@@ -184,6 +195,30 @@ export function HomeScreen() {
               open(<CloseInterceptionDemo />, { scaleBackground: true })
             }
           />
+        </View>
+
+        {/* Lifecycle */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Lifecycle &amp; Groups</Text>
+
+          <DemoCard
+            title="Force Close & Teardown"
+            description="close() vs forceClose() vs destroyAll() against a refusing interceptor, plus backdrop: false"
+            color={colors.error}
+            onPress={() => open(<ForceCloseDemo />, { scaleBackground: true })}
+          />
+
+          <DemoCard
+            title="Group Isolation"
+            description="Two managers, two stacks — closeAll() in one leaves the other standing"
+            color={colors.cyan}
+            onPress={() => open(<GroupASheet />, { scaleBackground: true })}
+          />
+
+          <Text style={[styles.sectionTitle, styles.panelTitle]}>
+            Status flags & open rejection
+          </Text>
+          <StatusDemoPanel />
         </View>
 
         {/* Mixed Adapters */}
@@ -333,6 +368,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: 14,
+  },
+  panelTitle: {
+    marginTop: 14,
   },
   featuresGrid: {
     flexDirection: 'row',

@@ -135,8 +135,8 @@ Outcome of a cascading `closeAll()`.
 
 ```tsx
 interface CloseAllResult {
-  /** Whether every sheet in the group closed. */
-  closedAll: boolean;
+  /** Whether the whole requested range closed. */
+  completed: boolean;
   /** IDs that closed, topmost first. */
   closed: string[];
   /** The sheet whose interceptor stopped the cascade, if one did. */
@@ -315,7 +315,7 @@ interface UseBottomSheetControlReturn<T extends BottomSheetPortalId> {
   /** `false` when the store declined — see OpenRejectionReason. */
   open: OpenFunction<T>;
   close: () => Promise<CloseResult>;
-  closeAll: (options?: CloseAllOptions) => Promise<CloseAllResult>;
+  closeAll: (options?: CascadeOptions) => Promise<CloseAllResult>;
   updateParams: (params: BottomSheetPortalParams<T>) => void;
   resetParams: () => void;
 }
@@ -333,6 +333,10 @@ interface UseBottomSheetContextReturn<TParams> {
   params: TParams;
   preventDismiss: boolean;
   close: () => Promise<CloseResult>;
+  /** Closes every sheet above this one. `inclusive` closes this one too. */
+  closeAbove: (
+    options?: Omit<CascadeOptions, 'until'>
+  ) => Promise<CloseAllResult>;
   forceClose: () => void;
 }
 ```
@@ -384,13 +388,24 @@ If the promise rejects, the close is cancelled for safety.
 
 ---
 
-### CloseAllOptions
+### CascadeOptions
 
-Options for `closeAll()` (available on both `useBottomSheetManager` and `useBottomSheetControl`).
+Options for `closeAll()` (available on both `useBottomSheetManager` and `useBottomSheetControl`),
+and for the bounded variants `closeTo()`, `closeDepth()` and `closeAbove()`.
 
 ```tsx
-interface CloseAllOptions {
-  /** Delay in ms between each cascading close animation. Default: 100 */
+interface CascadeOptions {
+  /** Delay in ms between each close animation. Default: 100 */
   stagger?: number;
+  /** Stop at this sheet rather than emptying the group. */
+  until?: string;
+  /** Whether the `until` sheet closes as well. Default: false */
+  inclusive?: boolean;
+  /** Close at most this many sheets, counting from the top. */
+  depth?: number;
 }
 ```
+
+`until` and `depth` both narrow the range, so with both set the one that closes
+fewer sheets wins — neither can widen past the other. An `until` that is not on
+the group's stack closes nothing rather than falling back to closing everything.

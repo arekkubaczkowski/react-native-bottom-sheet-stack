@@ -46,6 +46,15 @@ export default function App() {
           {/* Debug Monitor */}
           <BottomSheetDebugMonitor />
         </BottomSheetManagerProvider>
+
+        {/*
+          A second manager, mounted at the root so its host is a sibling of the
+          first rather than a child. Sheets opened with groupId "secondary" land
+          in this stack, and neither group's closeAll() can reach the other.
+        */}
+        <BottomSheetManagerProvider id="secondary">
+          <BottomSheetHost />
+        </BottomSheetManagerProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

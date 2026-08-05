@@ -28,5 +28,8 @@ declare module 'react-native-bottom-sheet-stack' {
     'actions-sheet-demo': true;
     'gorhom-sheet-demo': true;
     'swmansion-sheet-demo': true;
+    // Status flags and open-rejection demos
+    'status-demo': true;
+    'status-demo-b': true;
   }
 }
