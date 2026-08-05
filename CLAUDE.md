@@ -969,16 +969,38 @@ Each group:
 
 ---
 
-## Testing Utilities
+## Testing
+
+`yarn test`. Suites live in `src/__tests__/`.
 
 ```typescript
 import { resetBottomSheetRegistries } from 'react-native-bottom-sheet-stack/testing';
 
 // Clears the store and every module-level registry (refs, animated values,
 // portal sessions, onBeforeClose). One call, so it cannot go stale as
-// registries are added.
+// registries are added. Registries are module state and outlive React, so
+// without this a test inherits the previous one's sheets.
 beforeEach(resetBottomSheetRegistries);
 ```
+
+**Reanimated and react-native-teleport are mocked in `jest.setup.ts`.** The store
+and coordinator only use shared values as somewhere to put a number, and the
+portal components as plumbing — running either for real would drag ESM transform
+config, worklet plumbing and frame timing into tests about state transitions. A
+test that genuinely needs their behaviour should unmock at its own scope.
+
+**Frames are driven by hand, not by timers.** `driveSheetRef` retries across
+`requestAnimationFrame`, and the tests care how many frames elapse, so
+`coordinatorSync.test.ts` stubs `requestAnimationFrame` with an explicit queue.
+Advancing fake timers instead couples the test to how rAF is polyfilled, and
+`await` inside a fake-timer loop deadlocks.
+
+**Write the test so it fails without the fix.** Several of these cover bugs whose
+naive test passes either way — group isolation is the sharp case: asserting on a
+single sheet in the untouched group misses a leak that writes to the *other*
+group's stack, so the assertions compare the whole `stackOrderByGroup`. When
+adding a regression test, confirm it fails against the unfixed code before
+trusting it.
 
 ---
 
