@@ -10,7 +10,7 @@ import {
   removeFromStack,
   updateSheet,
 } from './helpers';
-import { ensureAnimatedIndex } from '../animatedRegistry';
+import { ensureAnimatedIndex, resetAnimatedIndex } from '../animatedRegistry';
 import { getNextPortalSession } from '../portalSessionRegistry';
 import type { BottomSheetState, BottomSheetStore } from './types';
 
@@ -46,7 +46,7 @@ export const useBottomSheetStore = create(
           ? getNextPortalSession(sheet.id)
           : undefined;
 
-        ensureAnimatedIndex(sheet.id);
+        resetAnimatedIndex(sheet.id);
 
         const newSheet: BottomSheetState = existingSheet
           ? {

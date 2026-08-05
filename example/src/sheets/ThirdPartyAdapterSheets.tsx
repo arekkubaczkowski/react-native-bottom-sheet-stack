@@ -392,6 +392,13 @@ export function SwmansionSheetDemoContent() {
     });
   };
 
+  const handleDetached = () => {
+    open(<DetachedSwmansionSheet />, {
+      mode: 'push',
+      scaleBackground: true,
+    });
+  };
+
   return (
     <SwmansionSheetAdapter detents={[0, 'content']} handle>
       <View style={styles.swmSheetContent}>
@@ -439,12 +446,50 @@ export function SwmansionSheetDemoContent() {
           <Button title="Push Sheet" onPress={handlePush} />
           <Button title="Switch to Sheet" onPress={handleSwitch} />
           <Button title="Replace with Sheet" onPress={handleReplace} />
+          <Button title="Push Detached Sheet" onPress={handleDetached} />
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
     </SwmansionSheetAdapter>
   );
 }
+
+/**
+ * Detached (floating) presentation — the sheet is lifted off the screen edges
+ * instead of anchored to the bottom, with all four corners rounded.
+ *
+ * The insets default to 16pt horizontally and the bottom safe-area inset, so a
+ * bare `detached` already clears the home indicator; both are overridable.
+ */
+const DetachedSwmansionSheet = ({ ref }: { ref?: React.Ref<unknown> }) => {
+  const { close } = useBottomSheetContext();
+
+  return (
+    <SwmansionSheetAdapter
+      ref={ref as any}
+      detents={[0, 'content']}
+      detached
+      handle
+    >
+      <View style={styles.swmSheetContent}>
+        <View style={styles.badgeRow}>
+          <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
+          <Badge label="detached" color={colors.warning} />
+        </View>
+        <Text style={sharedStyles.h1}>Detached Sheet</Text>
+        <Text style={sharedStyles.text}>
+          Floats above the screen edges with every corner rounded. Detent
+          heights are measured against the inset frame, so `content` and
+          `fullHeight` stay correct with no arithmetic.
+        </Text>
+
+        <View style={styles.actions}>
+          <SecondaryButton title="Close" onPress={close} />
+        </View>
+      </View>
+    </SwmansionSheetAdapter>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Stacked components (same adapter type for each)

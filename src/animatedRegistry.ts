@@ -7,14 +7,29 @@ import { makeMutable, type SharedValue } from 'react-native-reanimated';
  */
 const animatedIndexRegistry = new Map<string, SharedValue<number>>();
 
+/** The value of a fully hidden sheet — the low end of the backdrop's fade. */
+export const HIDDEN_ANIMATED_INDEX = -1;
+
 export function ensureAnimatedIndex(sheetId: string): SharedValue<number> {
   const existing = animatedIndexRegistry.get(sheetId);
   if (existing) {
     return existing;
   }
 
-  const animatedIndex = makeMutable(-1);
+  const animatedIndex = makeMutable(HIDDEN_ANIMATED_INDEX);
   animatedIndexRegistry.set(sheetId, animatedIndex);
+  return animatedIndex;
+}
+
+/**
+ * Returns the sheet's animated index, rewound to hidden.
+ *
+ * A sheet that re-opens still carries the value from its last cycle; without
+ * the rewind its backdrop flashes opaque before the adapter drives it down.
+ */
+export function resetAnimatedIndex(sheetId: string): SharedValue<number> {
+  const animatedIndex = ensureAnimatedIndex(sheetId);
+  animatedIndex.value = HIDDEN_ANIMATED_INDEX;
   return animatedIndex;
 }
 

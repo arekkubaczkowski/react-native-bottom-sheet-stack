@@ -221,7 +221,11 @@ This ensures backdrop always renders below its sheet's content.
 
 #### `BottomSheetBackdrop.tsx` - Custom Backdrop
 **Purpose**: Animated backdrop with opacity based on sheet's animatedIndex.
-**Key**: Only interactive when status is 'open' (prevents animation conflicts).
+**Key**: Mounted from the sheet's first frame and faded purely by `animatedIndex`.
+The store rewinds `animatedIndex` to `-1` in `open()` (`resetAnimatedIndex`), so
+the fade always starts from transparent. Do **not** reintroduce a timer/delay
+gate here — deferring the mount drops the opening frames the adapter has already
+driven, and the backdrop pops in part-way through the fade.
 
 ### Hooks
 
@@ -834,10 +838,27 @@ react-native-bottom-sheet-stack/actions-sheet:
 
 react-native-bottom-sheet-stack/swmansion:
   @swmansion/react-native-bottom-sheet ──▶ SwmansionSheetAdapter
-  (Fabric native component — requires New Architecture, RN >= 0.76)
+  (Fabric native component — requires New Architecture, RN >= 0.76, and the
+   sheet library >= 0.16: geometry is measured natively from 0.16 on, and the
+   backdrop fade rides its rewritten position-follower path)
   react-native-keyboard-controller ──────▶ SwmansionKeyboardInset (OPTIONAL peer;
     lazy require, only used by keyboardBehavior="inset"; degrades gracefully)
 ```
+
+**SwmansionSheetAdapter constraints** (learned the hard way — don't regress):
+- The native `scrimColor` / `scrimOpacities` are gated on `modal` sheets on both
+  platforms. The manager always renders inline, so those props can never paint —
+  the adapter does not accept them. Use `backdrop: false` to suppress instead.
+- `fullHeight` passes a detent taller than any screen and lets native clamp it to
+  the measured cap. Do **not** recompute `windowHeight - insets.top` in JS: since
+  0.16 there is no JS-provided cap, and a JS estimate ignores the fact that the
+  sheet lives inside the manager's `QueueItem` layer.
+- `detached` wraps the sheet in an inset frame that the native host fills, so the
+  natively measured detent cap shrinks with it and `'content'` / `fullHeight`
+  stay correct. The frame's `overflow: 'hidden'` is **required**: the native
+  sheet container is a full-canvas view translated to the current position and
+  sets `clipsToBounds = false` / `clipChildren = false`, so its surface hangs
+  below the host and would paint over the bottom gap.
 
 ---
 
