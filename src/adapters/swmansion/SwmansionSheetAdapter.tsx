@@ -17,10 +17,9 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import Animated, {
-  Extrapolation,
-  interpolate,
   useAnimatedStyle,
   useEvent,
+  useSharedValue,
 } from 'react-native-reanimated';
 
 import type {
@@ -35,7 +34,6 @@ import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.contex
 import { useSheetPreventDismiss } from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterRef } from '../../useAdapterRef';
-import { HIDDEN_ANIMATED_INDEX } from '../../animatedRegistry';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
@@ -416,6 +414,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // which no transform can affect.
     const topOffset = extendUnderStatusBar ? 0 : insets.top;
 
+    const sheetPosition = useSharedValue(0);
+    const peakPosition = useSharedValue(0);
+
     const detents =
       detentsProp ?? (fullHeight ? [0, FULL_HEIGHT_DETENT] : DEFAULT_DETENTS);
 
@@ -464,13 +465,14 @@ export const SwmansionSheetAdapter = React.forwardRef<
         }
       : null;
 
+    // Follows the sheet by however many points it has lost from its settled
+    // height, so the gap closes at the sheet's own speed. Interpolating the
+    // index instead moves the clip by the gap's height while the sheet moves by
+    // its own — the sheet outruns it and slides under the edge.
     const detachedClipStyle = useAnimatedStyle(() => ({
-      bottom: interpolate(
-        animatedIndex.value,
-        [HIDDEN_ANIMATED_INDEX, 0],
-        [0, resolvedBottomInset],
-        Extrapolation.CLAMP
-      ),
+      bottom:
+        resolvedBottomInset -
+        Math.max(0, peakPosition.value - sheetPosition.value),
     }));
 
     // The host keeps a fixed height while the clip above it moves. Sizing it
@@ -531,6 +533,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
           const prevIndex = lastIndexRef.current;
           lastIndexRef.current = openIndex;
           onIndexChange?.(openIndex, prevIndex);
+          peakPosition.set(0);
           setIndex(openIndex);
         },
         close: () => {
@@ -540,7 +543,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
           setIndex(0);
         },
       }),
-      [openIndex, onIndexChange]
+      [openIndex, onIndexChange, peakPosition]
     );
 
     const handleNativeSettle = (settledIndex: number) => {
@@ -572,6 +575,12 @@ export const SwmansionSheetAdapter = React.forwardRef<
       (event) => {
         'worklet';
         animatedIndex.set(event.index - 1);
+        sheetPosition.set(event.position);
+        // The height the sheet reached before it started leaving; the clip is
+        // measured back from it.
+        if (event.position > peakPosition.value) {
+          peakPosition.set(event.position);
+        }
       },
       ['onPositionChange']
     );
