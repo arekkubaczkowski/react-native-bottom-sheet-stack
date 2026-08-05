@@ -12,8 +12,16 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useEvent } from 'react-native-reanimated';
+import {
+  useSafeAreaFrame,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useEvent,
+} from 'react-native-reanimated';
 
 import type {
   BottomSheetProps,
@@ -27,6 +35,7 @@ import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.contex
 import { useSheetPreventDismiss } from '../../bottomSheet.store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterRef } from '../../useAdapterRef';
+import { HIDDEN_ANIMATED_INDEX } from '../../animatedRegistry';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
@@ -395,6 +404,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
     const insets = useSafeAreaInsets();
+    const { height: frameHeight } = useSafeAreaFrame();
 
     // The native detent cap is always measured as the sheet host's full height,
     // never as "height minus the status-bar overlap". That subtraction is
@@ -435,22 +445,44 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const resolvedBottomInset =
       bottomInset ?? Math.max(insets.bottom, DEFAULT_DETACHED_INSET);
     const resolvedHorizontalInset = horizontalInset ?? DEFAULT_DETACHED_INSET;
+    // The clip is what makes a detached sheet read as detached: the native
+    // surface is a full-canvas view hanging below the sheet by however much it
+    // has not expanded, and unclipped it paints straight over the bottom gap.
+    //
+    // Its bottom edge tracks the sheet instead of standing still, because a
+    // fixed edge would also clip the sheet on its way out — it would vanish
+    // into thin air a gap's height above the screen edge. Open, the clip sits
+    // at the gap; closed, it reaches the screen edge and lets the sheet leave.
     const detachedFrameStyle: ViewStyle | null = detached
       ? {
           top: topOffset,
-          bottom: resolvedBottomInset,
           left: resolvedHorizontalInset,
           right: resolvedHorizontalInset,
-          // Clips the surface where the sheet visually ends. Without it the
-          // surface — which hangs below by however much the sheet has not
-          // expanded — paints straight over the bottom gap and the sheet stops
-          // reading as detached. The bottom radii live here so the clip itself
-          // is rounded; a rectangular one would square off the corners.
           overflow: 'hidden',
           borderBottomLeftRadius: surfaceRadius,
           borderBottomRightRadius: surfaceRadius,
         }
       : null;
+
+    const detachedClipStyle = useAnimatedStyle(() => ({
+      bottom: interpolate(
+        animatedIndex.value,
+        [HIDDEN_ANIMATED_INDEX, 0],
+        [0, resolvedBottomInset],
+        Extrapolation.CLAMP
+      ),
+    }));
+
+    // The host keeps a fixed height while the clip above it moves. Sizing it
+    // from the frame instead would feed the clip's animation back into the
+    // natively measured detent cap, and the sheet would re-anchor every frame.
+    const detachedHostStyle: ViewStyle = {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: Math.max(0, frameHeight - topOffset - resolvedBottomInset),
+    };
 
     const baseSurface = surface ?? (
       <View
@@ -601,12 +633,14 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // `box-none` so taps in the gap around the floating sheet fall through to
     // the manager's backdrop below, keeping tap-to-dismiss working.
     return (
-      <View
+      <Animated.View
         pointerEvents="box-none"
-        style={[StyleSheet.absoluteFill, detachedFrameStyle]}
+        style={[StyleSheet.absoluteFill, detachedFrameStyle, detachedClipStyle]}
       >
-        {sheet}
-      </View>
+        <View pointerEvents="box-none" style={detachedHostStyle}>
+          {sheet}
+        </View>
+      </Animated.View>
     );
   }
 );
