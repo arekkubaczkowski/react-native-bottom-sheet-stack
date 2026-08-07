@@ -1110,7 +1110,6 @@ src/
     └── swmansion/               # → 'react-native-bottom-sheet-stack/swmansion'
         ├── index.ts
         ├── SwmansionSheetAdapter.tsx
-        ├── DetachedFrame.tsx           # detached: inset frame + the clip that tracks the sheet
         └── SwmansionKeyboardInset.tsx  # keyboardBehavior="inset" (optional peer)
 ```
 
@@ -1157,12 +1156,25 @@ react-native-bottom-sheet-stack/swmansion:
   the measured cap. Do **not** recompute `windowHeight - insets.top` in JS: since
   0.16 there is no JS-provided cap, and a JS estimate ignores the fact that the
   sheet lives inside the manager's `QueueItem` layer.
-- `detached` wraps the sheet in an inset frame that the native host fills, so the
-  natively measured detent cap shrinks with it and `'content'` / `fullHeight`
-  stay correct. The frame's `overflow: 'hidden'` is **required**: the native
-  sheet container is a full-canvas view translated to the current position and
-  sets `clipsToBounds = false` / `clipChildren = false`, so its surface hangs
-  below the host and would paint over the bottom gap.
+- `detached` is a **margin box inside the sheet's own content region**, not a
+  frame around an inset host. The card carries `marginHorizontal` /
+  `marginBottom` and the full corner radius, and the native `surface` is left
+  off so nothing paints outside it.
+
+  This shape is load-bearing. The native container is anchored bottom-to-host
+  and only *translated* (`sheetContainer.transform = translationY(...)`), so the
+  sheet's visible body always ends at the host bottom. Anchor the gap to that
+  bottom — by insetting the host, or by clipping — and the card's bottom edge
+  never moves: it grows in place instead of entering from off-screen. Hanging
+  the card off the sheet's **top** edge instead makes its bottom travel with the
+  sheet, so it enters and leaves past the screen edge with nothing to clip.
+
+  The earlier implementation inset the host and animated a clip from
+  `peak - position`. `peak` is a running maximum, so it equals `position` for
+  the whole opening animation and the clip stayed shut — the sheet rose behind
+  a masked strip, while closing (where `peak` holds the settled height) looked
+  right. Do not reintroduce a clip that needs the settled height: it is not
+  knowable during the first rise.
 
 ---
 
