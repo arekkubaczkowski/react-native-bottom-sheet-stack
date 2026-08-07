@@ -12,11 +12,8 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-import {
-  useSafeAreaFrame,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
-import Animated, { useEvent, useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useEvent } from 'react-native-reanimated';
 
 import type {
   BottomSheetProps,
@@ -33,7 +30,6 @@ import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
-import { DetachedFrame } from './DetachedFrame';
 import { SwmansionKeyboardInset } from './SwmansionKeyboardInset';
 
 // Lazy require so the main bundle never loads the native module unless this
@@ -169,11 +165,12 @@ export interface SwmansionSheetAdapterProps
    * Floats the sheet free of the screen edges instead of anchoring it to the
    * bottom — the "detached" presentation from `@gorhom/bottom-sheet`.
    *
-   * The sheet's host is inset by {@link bottomInset} and
-   * {@link horizontalInset}, so the sheet rises from — and settles above — that
-   * frame, and all four corners are rounded rather than just the top two.
-   * Detent heights are measured against the inset frame, so `'content'` and
-   * {@link fullHeight} stay correct without any arithmetic on your side.
+   * The insets become margins on the sheet's own content, so the card hangs off
+   * the sheet's top edge and travels with it: it enters from below the screen
+   * and leaves the same way, rather than growing in place above a fixed gap.
+   * All four corners are rounded rather than just the top two, and a
+   * `'content'` detent measures the card plus its margins, so heights stay
+   * correct without any arithmetic on your side.
    *
    * Defaults to off. When on, the insets default to `16` horizontally and the
    * bottom safe-area inset (at least `16`) vertically, so a bare `detached`
@@ -366,15 +363,11 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
     const insets = useSafeAreaInsets();
-    const { height: frameHeight } = useSafeAreaFrame();
 
     // Forced on natively and compensated here instead: the native subtraction
     // is derived from where the host sits in the window, so an ancestor
     // transform (the background scale) would re-anchor the sheet mid-animation.
     const topOffset = extendUnderStatusBar ? 0 : insets.top;
-
-    const sheetPosition = useSharedValue(0);
-    const peakPosition = useSharedValue(0);
 
     const detents =
       detentsProp ?? (fullHeight ? [0, FULL_HEIGHT_DETENT] : DEFAULT_DETENTS);
@@ -450,7 +443,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
           const prevIndex = lastIndexRef.current;
           lastIndexRef.current = openIndex;
           onIndexChange?.(openIndex, prevIndex);
-          peakPosition.set(0);
           setIndex(openIndex);
         },
         close: () => {
@@ -460,7 +452,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
           setIndex(0);
         },
       }),
-      [openIndex, onIndexChange, peakPosition]
+      [openIndex, onIndexChange]
     );
 
     const handleNativeSettle = (settledIndex: number) => {
@@ -492,12 +484,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
       (event) => {
         'worklet';
         animatedIndex.set(event.index - 1);
-        sheetPosition.set(event.position);
-        // Only ever grows, so the detached clip can measure back from the
-        // height the sheet settled at rather than its live one.
-        if (event.position > peakPosition.value) {
-          peakPosition.set(event.position);
-        }
       },
       ['onPositionChange']
     );
@@ -512,33 +498,58 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const handleInsetStyle = handleResult
       ? { paddingTop: handleResult.contentInset }
       : null;
+    // A detached sheet clips to its own card instead, so the inner wrapper
+    // leaves the corners alone.
     const clipStyle: ViewStyle | null =
-      surfaceRadius > 0 ? { overflow: 'hidden', ...radiusStyle } : null;
+      surfaceRadius > 0 && !detached
+        ? { overflow: 'hidden', ...radiusStyle }
+        : null;
     // Applies to every sheet size: a content-sized sheet re-measures taller, a
     // fixed-height one (carries `fillStyle`) shrinks its scroll area instead.
     const needsKeyboardInset = keyboardBehavior === 'inset';
 
-    let content = children;
-    if (needsKeyboardInset) {
-      content = (
-        <SwmansionKeyboardInset
-          style={[fillStyle, handleInsetStyle, clipStyle]}
-        >
-          {children}
-        </SwmansionKeyboardInset>
-      );
-    } else if (fillStyle || handleInsetStyle || clipStyle) {
-      content = (
-        <View style={[fillStyle, handleInsetStyle, clipStyle]}>{children}</View>
-      );
-    }
+    const innerStyle = [fillStyle, handleInsetStyle, clipStyle];
+    const needsInnerWrapper = fillStyle || handleInsetStyle || clipStyle;
 
-    const sheet = (
+    const inner = needsKeyboardInset ? (
+      <SwmansionKeyboardInset style={innerStyle}>
+        {children}
+      </SwmansionKeyboardInset>
+    ) : needsInnerWrapper ? (
+      <View style={innerStyle}>{children}</View>
+    ) : (
+      children
+    );
+
+    // The detached card is a margin box inside the sheet's own content region,
+    // not a frame around an inset host. Because it hangs off the sheet's top
+    // edge, its bottom travels with the sheet — so it enters from below the
+    // screen and leaves the same way, with nothing to clip and no gap to
+    // reopen mid-animation.
+    const cardStyle: ViewStyle = {
+      marginLeft: resolvedHorizontalInset,
+      marginRight: resolvedHorizontalInset,
+      marginBottom: resolvedBottomInset,
+      borderRadius: surfaceRadius,
+      overflow: 'hidden',
+    };
+
+    const content = detached ? (
+      <View style={[fillStyle, cardStyle]}>
+        {baseSurface}
+        {handleResult?.overlay}
+        {inner}
+      </View>
+    ) : (
+      inner
+    );
+
+    return (
       <BottomSheet
         {...props}
         extendUnderStatusBar
         detents={resolvedDetents}
-        style={[detached ? null : { top: topOffset }, style]}
+        style={[{ top: topOffset }, style]}
         // Managed by the adapter (not overridable):
         index={index}
         animateIn
@@ -546,28 +557,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
         onIndexChange={handleNativeIndexChange}
         onSettle={handleNativeSettle}
         onPositionChange={onPositionChange}
-        surface={composedSurface}
+        surface={detached ? undefined : composedSurface}
       >
         {content}
       </BottomSheet>
-    );
-
-    if (!detached) {
-      return sheet;
-    }
-
-    return (
-      <DetachedFrame
-        topOffset={topOffset}
-        bottomInset={resolvedBottomInset}
-        horizontalInset={resolvedHorizontalInset}
-        cornerRadius={surfaceRadius}
-        frameHeight={frameHeight}
-        position={sheetPosition}
-        peak={peakPosition}
-      >
-        {sheet}
-      </DetachedFrame>
     );
   }
 );
