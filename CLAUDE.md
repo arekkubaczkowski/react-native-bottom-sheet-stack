@@ -363,37 +363,6 @@ Consumer apps need nothing — Metro reads `exports` from package.json.
 
 ---
 
-## File map
-
-```
-src/
-├── index.tsx                    # public exports (no 3rd-party adapter deps)
-├── testing.ts                   # → '…/testing'
-├── store/                       # store · hooks · helpers · types
-├── bottomSheetCoordinator.ts    # store ↔ adapter
-├── refsMap · animatedRegistry · onBeforeCloseRegistry · portalSessionRegistry
-├── adapter.types.ts · portal.types.ts · backdrop.types.ts
-├── backdrop.equality.ts          # value compare for setBackdrop's write bail
-│
-├── BottomSheetManager.provider.tsx / .context.tsx
-├── BottomSheet.context.ts · BottomSheetRef.context.ts
-├── BottomSheetDefaultIndex.context.ts   # 0 for portal, -1 for persistent
-│
-├── BottomSheetHost · QueueItem · BottomSheetBackdrop · BottomSheetScaleView
-├── BottomSheetPortal ('use no memo') · BottomSheetPersistent
-│
-├── useBottomSheetManager · useBottomSheetControl · useBottomSheetContext
-├── useBottomSheetStatus · useOnBeforeClose · useSheetRenderData
-├── useScaleAnimation · useStableCallback
-├── useAdapterRef · useAnimatedIndex · useBackHandler · useAdapterBackdrop
-│
-└── adapters/                    # one directory per subpath export, no barrel
-    ├── gorhom-sheet · custom-modal · react-native-modal · actions-sheet
-    └── swmansion/               # + SwmansionKeyboardInset (optional peer)
-```
-
----
-
 ## Pitfalls
 
 1. Do not memoize by hand — three sanctioned exceptions, listed above.
