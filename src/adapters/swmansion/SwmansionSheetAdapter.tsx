@@ -22,8 +22,10 @@ import type {
   PositionChangeEventData,
 } from '@swmansion/react-native-bottom-sheet';
 
-import type { SheetAdapterRef } from '../../adapter.types';
-import type { BackdropConfig } from '../../backdrop.types';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
@@ -100,21 +102,15 @@ export interface SwmansionHandleConfig {
  * `<SwmansionSheetAdapter>` behaves like the raw native sheet.
  */
 export interface SwmansionSheetAdapterProps
-  extends Omit<
-    BottomSheetProps,
-    | 'index'
-    | 'animateIn'
-    | 'onPositionChange'
-    | 'wrapNativeView'
-    | 'onIndexChange'
-  > {
-  /**
-   * The manager-rendered backdrop for this sheet: a {@link BackdropConfig}
-   * overrides the group's `backdropConfig`, `false` disables it. The native
-   * scrim can never paint here (see the class docs), so this is the only
-   * backdrop knob.
-   */
-  backdrop?: BackdropConfig | false;
+  extends AdapterBackdropProps,
+    Omit<
+      BottomSheetProps,
+      | 'index'
+      | 'animateIn'
+      | 'onPositionChange'
+      | 'wrapNativeView'
+      | 'onIndexChange'
+    > {
   /**
    * Index into `detents` the sheet expands to when opened.
    *

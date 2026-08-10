@@ -5,7 +5,7 @@ import type { ScaleConfig } from './useScaleAnimation';
 export interface BottomSheetManagerContextValue {
   groupId: string;
   scaleConfig?: ScaleConfig;
-  backdropConfig?: BackdropConfig;
+  backdrop?: BackdropConfig | false;
 }
 
 export const BottomSheetManagerContext =

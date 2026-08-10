@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 
 import type { BackdropConfig } from './backdrop.types';
 import { useSetBackdrop } from './store';
@@ -14,6 +14,13 @@ import { useSetBackdrop } from './store';
  * on value equality, and the cleanup runs only when the adapter is really
  * going away.
  *
+ * Layout effects rather than passive ones because the write lands a commit
+ * after the backdrop first renders: until it does, the sheet inherits the
+ * group default. For a `styled` group default that is invisible — the fade
+ * holds it at zero opacity on that frame — but a `custom` one owns its fade
+ * and would otherwise paint at full strength for a frame before the sheet's
+ * own config replaces it.
+ *
  * Public for third-party adapters — pair it with a
  * `backdrop?: BackdropConfig | false` prop to reach parity with the shipped
  * ones.
@@ -24,13 +31,13 @@ export function useAdapterBackdrop(
 ): void {
   const setBackdrop = useSetBackdrop();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // `undefined` still writes, as a clear: removing the prop must fall the
     // sheet back to the group default, not freeze the last value.
-    setBackdrop(id, backdrop === undefined ? true : backdrop);
+    setBackdrop(id, backdrop ?? true);
   }, [id, backdrop, setBackdrop]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => setBackdrop(id, true);
   }, [id, setBackdrop]);
 }

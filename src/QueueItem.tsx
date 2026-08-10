@@ -6,8 +6,10 @@ import { PortalHost } from 'react-native-teleport';
 
 import { cleanupAnimatedIndex, getAnimatedIndex } from './animatedRegistry';
 import { BottomSheetContext } from './BottomSheet.context';
+import { isBackdropEnabled } from './backdrop.resolve';
+import { useBottomSheetManagerContext } from './BottomSheetManager.context';
 import {
-  useSheetBackdropEnabled,
+  useSheetBackdropOverride,
   useSheetContent,
   useSheetPortalSession,
   useSheetUsePortal,
@@ -31,7 +33,11 @@ export const QueueItem = memo(function QueueItem({
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
   const portalSession = useSheetPortalSession(id);
-  const backdropEnabled = useSheetBackdropEnabled(id);
+  const { backdrop: groupBackdrop } = useBottomSheetManagerContext();
+  const backdropEnabled = isBackdropEnabled(
+    useSheetBackdropOverride(id),
+    groupBackdrop
+  );
 
   const { width, height } = useSafeAreaFrame();
 

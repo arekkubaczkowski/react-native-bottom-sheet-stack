@@ -3,8 +3,10 @@ import { withTiming } from 'react-native-reanimated';
 
 import type { ModalProps } from 'react-native-modal';
 
-import type { SheetAdapterRef } from '../../adapter.types';
-import type { BackdropConfig } from '../../backdrop.types';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
 import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterBackdrop } from '../../useAdapterBackdrop';
@@ -41,25 +43,20 @@ export interface ReactNativeModalAdapterProps
   // required and fills them from `defaultProps` — as a consumer-facing type
   // every one of them is optional.
   extends Partial<
-    Omit<
-      ModalProps,
-      | 'isVisible'
-      | 'coverScreen'
-      | 'hasBackdrop'
-      | 'onModalShow'
-      | 'onModalHide'
-      | 'onBackButtonPress'
-      | 'onSwipeComplete'
-      | 'children'
-    >
-  > {
+      Omit<
+        ModalProps,
+        | 'isVisible'
+        | 'coverScreen'
+        | 'hasBackdrop'
+        | 'onModalShow'
+        | 'onModalHide'
+        | 'onBackButtonPress'
+        | 'onSwipeComplete'
+        | 'children'
+      >
+    >,
+    AdapterBackdropProps {
   children: React.ReactNode;
-  /**
-   * The manager-rendered backdrop for this sheet: a {@link BackdropConfig}
-   * overrides the group's `backdropConfig`, `false` disables it. (The modal's
-   * own `hasBackdrop` stays forced off either way.)
-   */
-  backdrop?: BackdropConfig | false;
 }
 
 /**

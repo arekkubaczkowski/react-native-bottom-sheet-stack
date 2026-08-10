@@ -49,7 +49,7 @@ It adds one prop of its own: `backdrop` (`BackdropConfig | false`) — see [Back
 | `onChange` | Wrapped — reports `handleOpened()` at index `>= 0`, then calls yours |
 | `onClose` | Wrapped — calls yours, then reports `handleClosed()` |
 | `onAnimate` | Wrapped — reports `handleDismiss()` when animating toward `-1`, then calls yours |
-| `backdropComponent` | Forced to render nothing — the manager draws the backdrop. Not accepted by the type; use `backdrop` instead. See [Backdrop](#backdrop) |
+| `backdropComponent` | Forced to render nothing — the manager draws the backdrop. Not accepted by the type; use `backdrop` instead. See [Backdrop](#backdrop) and [Migration](/backdrop#migration-from-v2) |
 
 **Adapter defaults (yours wins):**
 

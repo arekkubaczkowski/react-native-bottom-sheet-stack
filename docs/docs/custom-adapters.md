@@ -346,20 +346,32 @@ bridge Software Mansion's native sheet. Note that `animatedIndex` is driven
 reports the end of an animation and would therefore snap the backdrop to its
 final value one animation late.
 
-### Suppressing the manager backdrop
+### Backdrop
 
-If your adapter renders a backdrop of its own, suppress the manager's shared one so the two don't stack into a double-dark overlay:
+The manager draws the one shared, stack-aware backdrop for every sheet. Your adapter should **force its library's own overlay off** — two would stack, and only the manager's is stack-aware — and expose a `backdrop` prop so consumers can configure the manager's:
 
 ```tsx
-import { useSetBackdrop, useSheetPreventDismiss } from 'react-native-bottom-sheet-stack';
+import {
+  useAdapterBackdrop,
+  type AdapterBackdropProps,
+} from 'react-native-bottom-sheet-stack';
 
-const setBackdrop = useSetBackdrop();
-useEffect(() => {
-  if (!hasOwnBackdrop) return;
-  setBackdrop(id, false);
-  return () => setBackdrop(id, true);
-}, [id, hasOwnBackdrop, setBackdrop]);
+interface MyAdapterProps extends AdapterBackdropProps {
+  children: React.ReactNode;
+}
+
+function MyAdapter({ backdrop, children }: MyAdapterProps) {
+  const { id } = useBottomSheetContext();
+  useAdapterBackdrop(id, backdrop);
+  // ...
+}
 ```
+
+That is the whole contract, and it is what all five shipped adapters do. `AdapterBackdropProps` supplies the `backdrop?: BackdropConfig | false` prop and its documentation; see [Backdrop](/backdrop) for what consumers can pass.
+
+Do **not** hand-roll the effect. A single effect keyed on the prop clears and rewrites the store on every consumer render, because a JSX object literal is a fresh object each time — `useAdapterBackdrop` splits the value sync from the unmount cleanup precisely to avoid that.
+
+`useSetBackdrop` remains the imperative escape hatch: `setBackdrop(id, false)` suppresses the shared backdrop, `setBackdrop(id, true)` clears the override.
 
 `useSheetPreventDismiss(id)` reports whether a `useOnBeforeClose` interceptor is currently blocking dismissal, so you can disable your library's native swipe/tap gestures while it is.
 

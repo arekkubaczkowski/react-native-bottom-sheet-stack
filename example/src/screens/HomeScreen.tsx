@@ -203,7 +203,7 @@ export function HomeScreen() {
 
           <DemoCard
             title="Force Close & Teardown"
-            description="close() vs forceClose() vs destroyAll() against a refusing interceptor, plus backdrop: false"
+            description="close() vs forceClose() vs destroyAll() against a refusing interceptor, plus backdrop={false}"
             color={colors.error}
             onPress={() => open(<ForceCloseDemo />, { scaleBackground: true })}
           />

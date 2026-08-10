@@ -112,7 +112,7 @@ open(<MySheet />, {
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
 | `params` | `Record<string, unknown>` | - | Params for the sheet, readable inside it via `useBottomSheetContext()`. Untyped here — the typed variant lives on `useBottomSheetControl` |
 
-The backdrop is configured on the adapter (the `backdrop` prop) or on the provider (`backdropConfig`), not per `open()` call — see [Backdrop](/backdrop).
+`backdrop?: boolean` was **removed in v3** — configure it on the adapter (the `backdrop` prop) or on the provider, not per `open()` call. See [Backdrop → Migration](/backdrop#migration-from-v2).
 
 `open()` returns the sheet's ID, or **`null`** when the store declined to open it — because the sheet is already on the stack, or another sheet in the group is still animating open. A dev-mode warning explains which.
 
@@ -262,7 +262,7 @@ open({
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
 | `params` | `BottomSheetPortalParams<T>` | - | Type-safe params |
 
-The backdrop is configured on the adapter (the `backdrop` prop) or on the provider (`backdropConfig`), not per `open()` call — see [Backdrop](/backdrop).
+`backdrop?: boolean` was **removed in v3** — configure it on the adapter (the `backdrop` prop) or on the provider, not per `open()` call. See [Backdrop → Migration](/backdrop#migration-from-v2).
 
 `useBottomSheetManager().open()` also accepts `params` now, so inline sheets can read them from `useBottomSheetContext()` just like portal sheets.
 

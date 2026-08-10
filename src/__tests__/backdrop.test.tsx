@@ -6,6 +6,7 @@ import {
 } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
+import { useAnimatedStyle } from 'react-native-reanimated';
 
 import type { BackdropComponentProps, BackdropConfig } from '../backdrop.types';
 import { getAnimatedIndex } from '../animatedRegistry';
@@ -13,6 +14,8 @@ import { BottomSheetBackdrop } from '../BottomSheetBackdrop';
 import { BottomSheetManagerProvider } from '../BottomSheetManager.provider';
 import { setOnBeforeClose } from '../onBeforeCloseRegistry';
 import { useBottomSheetStore } from '../store';
+import { isBackdropEnabled } from '../backdrop.resolve';
+import { useSheetBackdropOverride } from '../store';
 import { useAdapterBackdrop } from '../useAdapterBackdrop';
 import { portal, setupSheetTest, statusOf, store } from './testUtils';
 
@@ -99,6 +102,38 @@ describe('setBackdrop', () => {
     unsubscribe();
   });
 
+  // Walking only one style's keys returned `true` here — the count matched
+  // because the explicit `undefined` counted as a key — and the restyle was
+  // silently dropped.
+  it('sees a change when one style carries an explicit undefined', () => {
+    setBackdrop('a', {
+      kind: 'styled',
+      style: { backgroundColor: 'red', opacity: undefined },
+    });
+    setBackdrop('a', {
+      kind: 'styled',
+      style: { backgroundColor: 'red', borderRadius: 20 },
+    });
+
+    expect(backdropOf('a')).toMatchObject({
+      style: { backgroundColor: 'red', borderRadius: 20 },
+    });
+  });
+
+  it('treats an explicit undefined as the absence of the key', () => {
+    const listener = jest.fn();
+    setBackdrop('a', { kind: 'styled', style: { backgroundColor: 'red' } });
+
+    const unsubscribe = useBottomSheetStore.subscribe(listener);
+    setBackdrop('a', {
+      kind: 'styled',
+      style: { backgroundColor: 'red', opacity: undefined },
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
   it('ignores writes for unknown sheets', () => {
     const listener = jest.fn();
     const unsubscribe = useBottomSheetStore.subscribe(listener);
@@ -151,6 +186,25 @@ describe('useAdapterBackdrop', () => {
     expect(backdropOf('a')).toBeUndefined();
   });
 
+  // The hook's whole reason to exist. A single effect with a cleanup would
+  // clear-and-rewrite here, because a consumer's JSX rebuilds the literal on
+  // every render.
+  it('does not touch the store when the prop is re-created value-equal', () => {
+    const value = (): BackdropConfig => styled('red');
+    const { rerender } = renderHook(
+      ({ v }: { v: BackdropConfig }) => useAdapterBackdrop('a', v),
+      { initialProps: { v: value() } }
+    );
+
+    const listener = jest.fn();
+    const unsubscribe = useBottomSheetStore.subscribe(listener);
+    rerender({ v: value() });
+    rerender({ v: value() });
+
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
   // Removing the prop must fall the sheet back to the group default, not
   // freeze the last value.
   it('clears the override when the prop becomes undefined', () => {
@@ -166,35 +220,45 @@ describe('useAdapterBackdrop', () => {
   });
 });
 
-/** The subset of react-test-renderer's JSON output the style walk reads. */
-interface RenderedJson {
-  type: string;
-  props: Record<string, unknown>;
-  children: (RenderedJson | string)[] | null;
-}
+describe('backdrop enablement', () => {
+  beforeEach(() => {
+    store().open(portal('a'));
+  });
 
-/** Flattened styles of every View in the tree, outermost first. */
-function collectViewStyles(
-  node: RenderedJson | RenderedJson[] | string | null
-): Record<string, unknown>[] {
-  if (!node || typeof node === 'string') return [];
-  if (Array.isArray(node)) return node.flatMap(collectViewStyles);
-  const own =
-    node.type === 'View' && node.props.style
-      ? [
-          StyleSheet.flatten(
-            node.props.style as Parameters<typeof StyleSheet.flatten>[0]
-          ) as Record<string, unknown>,
-        ]
-      : [];
-  return [...own, ...(node.children ?? []).flatMap(collectViewStyles)];
-}
+  // `QueueItem` is memoized because every host render rebuilds its children;
+  // subscribing it to the config would re-render the whole sheet layer on
+  // every restyle.
+  it('re-renders on on/off but not on restyle', () => {
+    let renders = 0;
+    renderHook(() => {
+      renders += 1;
+      return useSheetBackdropOverride('a');
+    });
+    const afterMount = renders;
+
+    act(() => setBackdrop('a', styled('red')));
+    act(() => setBackdrop('a', styled('blue')));
+    const afterRestyle = renders;
+
+    act(() => setBackdrop('a', false));
+
+    expect(afterRestyle).toBe(afterMount + 1); // 'inherit' → 'own', then flat
+    expect(renders).toBe(afterRestyle + 1); // 'own' → 'off'
+  });
+
+  it('answers inherit from the group, and lets the sheet override it', () => {
+    expect(isBackdropEnabled('inherit', undefined)).toBe(true);
+    expect(isBackdropEnabled('inherit', false)).toBe(false);
+    expect(isBackdropEnabled('own', false)).toBe(true);
+    expect(isBackdropEnabled('off', undefined)).toBe(false);
+  });
+});
 
 describe('BottomSheetBackdrop rendering', () => {
-  const renderBackdrop = (groupConfig?: BackdropConfig) =>
+  const renderBackdrop = (groupConfig?: BackdropConfig | false) =>
     render(<BottomSheetBackdrop sheetId="a" />, {
       wrapper: ({ children }: { children: ReactNode }) => (
-        <BottomSheetManagerProvider id="g1" backdropConfig={groupConfig}>
+        <BottomSheetManagerProvider id="g1" backdrop={groupConfig}>
           {children}
         </BottomSheetManagerProvider>
       ),
@@ -211,26 +275,49 @@ describe('BottomSheetBackdrop rendering', () => {
     store().markOpen('a');
   });
 
-  it('keeps the default scrim with no config anywhere', () => {
-    const { toJSON } = renderBackdrop();
-    expect(collectViewStyles(toJSON())).toContainEqual(
-      expect.objectContaining({ backgroundColor: 'rgba(0, 0, 0, 0.5)' })
+  /** The resolved style of the scrim itself — the Pressable's only child. */
+  const scrimStyle = (result: ReturnType<typeof renderBackdrop>) => {
+    const scrim = result.getByTestId('bottom-sheet-backdrop-a').children[0];
+    if (typeof scrim === 'string') throw new Error('expected the scrim view');
+    return StyleSheet.flatten(
+      scrim.props.style as Parameters<typeof StyleSheet.flatten>[0]
     );
+  };
+
+  it('keeps the default scrim with no config anywhere', () => {
+    expect(scrimStyle(renderBackdrop())).toMatchObject({
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    });
   });
 
   it('layers group style over the default', () => {
-    const { toJSON } = renderBackdrop(styled('red'));
-    expect(collectViewStyles(toJSON())).toContainEqual(
-      expect.objectContaining({ backgroundColor: 'red' })
-    );
+    expect(scrimStyle(renderBackdrop(styled('red')))).toMatchObject({
+      backgroundColor: 'red',
+    });
   });
 
   it('composes sheet style over group style when both are styled', () => {
     act(() => setBackdrop('a', styled('blue')));
-    const { toJSON } = renderBackdrop(styled('red'));
-    expect(collectViewStyles(toJSON())).toContainEqual(
-      expect.objectContaining({ backgroundColor: 'blue' })
+    expect(scrimStyle(renderBackdrop(styled('red')))).toMatchObject({
+      backgroundColor: 'blue',
+    });
+  });
+
+  // The manager drives the fade off `animatedIndex`; a config style carrying
+  // its own `opacity` must restyle the scrim without replacing that fade.
+  it('keeps the animated opacity over a static one in the config', () => {
+    jest.mocked(useAnimatedStyle).mockReturnValueOnce({ opacity: 0.99 });
+    act(() =>
+      setBackdrop('a', {
+        kind: 'styled',
+        style: { backgroundColor: 'black', opacity: 0.3 },
+      })
     );
+
+    expect(scrimStyle(renderBackdrop())).toMatchObject({
+      backgroundColor: 'black',
+      opacity: 0.99,
+    });
   });
 
   it('renders a custom component with the sheet id and live animated index', () => {

@@ -9,8 +9,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import type { SheetAdapterRef } from '../../adapter.types';
-import type { BackdropConfig } from '../../backdrop.types';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
@@ -22,14 +24,9 @@ const ANIMATION_DURATION = 300;
 
 const ZOOM_INITIAL_SCALE = 0.85;
 
-export interface ModalAdapterProps {
+export interface ModalAdapterProps extends AdapterBackdropProps {
   children: React.ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
-  /**
-   * This sheet's backdrop: a {@link BackdropConfig} overrides the group's
-   * `backdropConfig`, `false` disables the backdrop entirely.
-   */
-  backdrop?: BackdropConfig | false;
 }
 
 export const CustomModalAdapter = React.forwardRef<

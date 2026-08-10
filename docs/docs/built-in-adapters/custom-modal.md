@@ -40,3 +40,7 @@ open(<MyBottomSheet />, { mode: 'push' });
 modalControl.open({ mode: 'push' });
 // Both are in the stack — closing the modal returns to the bottom sheet
 ```
+
+### Backdrop
+
+`backdrop` (`BackdropConfig | false`) configures the manager-rendered backdrop for this sheet — a config overrides the group's `backdrop` default, `false` disables it. The library's own overlay stays forced off either way. See [Backdrop](/backdrop).

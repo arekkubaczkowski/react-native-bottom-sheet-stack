@@ -13,6 +13,7 @@ export {
 
 // Adapter types
 export type {
+  AdapterBackdropProps,
   SheetAdapterRef,
   SheetAdapterEvents,
   SheetRef,

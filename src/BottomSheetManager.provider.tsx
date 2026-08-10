@@ -9,20 +9,22 @@ interface ProviderProps extends PropsWithChildren {
   id: string;
   scaleConfig?: ScaleConfig;
   /**
-   * The group's default backdrop. A sheet overrides it with the `backdrop`
-   * prop on its adapter — the sheet's visual choice wins atomically; when both
-   * are `styled` the styles compose, and `pressToDismiss` resolves per field.
+   * The group's default backdrop; `false` gives the whole group no backdrop.
+   *
+   * Same name and type as the adapters' `backdrop` prop, which overrides it per
+   * sheet — the sheet's visual choice wins atomically; when both are `styled`
+   * the styles compose, and `pressToDismiss` resolves per field.
    */
-  backdropConfig?: BackdropConfig;
+  backdrop?: BackdropConfig | false;
 }
 
 export function BottomSheetManagerProvider({
   id,
   scaleConfig,
-  backdropConfig,
+  backdrop,
   children,
 }: ProviderProps) {
-  const value = { groupId: id, scaleConfig, backdropConfig };
+  const value = { groupId: id, scaleConfig, backdrop };
 
   return (
     <PortalProvider>

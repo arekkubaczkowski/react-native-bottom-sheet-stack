@@ -22,7 +22,7 @@ export interface BottomSheetState {
    * Per-sheet backdrop override, written only by `setBackdrop` (the adapters'
    * `backdrop` prop routes through it) — never by `open()`, so it survives
    * re-open cycles of a persistent sheet. `false` disables the backdrop,
-   * `undefined` falls back to the group's `backdropConfig`.
+   * `undefined` falls back to the group's `backdrop` default.
    */
   backdrop?: BackdropConfig | false;
   usePortal?: boolean;

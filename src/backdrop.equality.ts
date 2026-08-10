@@ -1,17 +1,25 @@
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import type { BackdropConfig } from './backdrop.types';
 
 /**
  * Value equality for a sheet's backdrop override.
  *
- * Adapters re-apply their `backdrop` prop from an effect, and a JSX object
- * literal is fresh on every consumer render — so `setBackdrop` compares by
- * value and skips the write. Without it a consumer re-render would patch the
- * store, waking `BottomSheetBackdrop` (and any other subscriber) each time.
+ * Adapters re-apply their `backdrop` prop from an effect and a JSX object
+ * literal is fresh on every consumer render, so `setBackdrop` compares by value
+ * and skips the write — otherwise a consumer re-render would patch the store
+ * and re-render `BottomSheetBackdrop` each time.
+ *
+ * Styles are compared as flattened JSON, which is key-order sensitive: a
+ * literal whose key order varied between renders would cost one redundant
+ * write, never a wrong render. Comparing key-by-key instead is not worth it —
+ * it has to reach for `JSON.stringify` on nested values (`transform`,
+ * `shadowOffset`) anyway, and walking only one side's keys silently returns
+ * `true` when one style carries an explicit `undefined` where the other
+ * carries a real value, which *would* be a wrong render.
  *
  * Lives beside the backdrop rather than in `store/helpers.ts`: those are pure
- * stack operations and stay free of React Native imports.
+ * stack operations, free of React Native imports.
  */
 export function backdropValuesEqual(
   a: BackdropConfig | false | undefined,
@@ -20,37 +28,14 @@ export function backdropValuesEqual(
   if (a === b) return true;
   if (!a || !b) return false;
   if (a.kind !== b.kind || a.pressToDismiss !== b.pressToDismiss) return false;
-  if (a.kind !== 'styled' || b.kind !== 'styled') {
-    return a.kind === 'custom' && b.kind === 'custom'
-      ? a.component === b.component
-      : false;
+  if (a.kind === 'custom' && b.kind === 'custom') {
+    return a.component === b.component;
   }
-  return flattenedStylesEqual(a.style, b.style);
-}
-
-function flattenedStylesEqual(
-  a: StyleProp<ViewStyle> | undefined,
-  b: StyleProp<ViewStyle> | undefined
-): boolean {
-  const flatA = StyleSheet.flatten(a);
-  const flatB = StyleSheet.flatten(b);
-  if (flatA === flatB) return true;
-  if (!flatA || !flatB) return !flatA && !flatB;
-
-  const keysA = Object.keys(flatA) as (keyof ViewStyle)[];
-  if (keysA.length !== Object.keys(flatB).length) return false;
-
-  return keysA.every((key) => {
-    const valueA = flatA[key];
-    const valueB = flatB[key];
-    if (Object.is(valueA, valueB)) return true;
-    // Nested values (`transform`, `shadowOffset`) miss the shallow check; they
-    // are plain serializable style data, so structural comparison is sound.
-    // A literal whose key order varies between renders would compare unequal —
-    // that costs one redundant write, never a wrong render.
-    if (typeof valueA === 'object' && valueA && typeof valueB === 'object') {
-      return JSON.stringify(valueA) === JSON.stringify(valueB);
-    }
-    return false;
-  });
+  if (a.kind === 'styled' && b.kind === 'styled') {
+    return (
+      JSON.stringify(StyleSheet.flatten(a.style)) ===
+      JSON.stringify(StyleSheet.flatten(b.style))
+    );
+  }
+  return false;
 }

@@ -31,7 +31,7 @@ export interface BackdropComponentProps {
  * `requestClose` stay with the manager either way.
  *
  * Levels, most specific winning atomically per visual choice:
- * 1. `backdropConfig` on `BottomSheetManagerProvider` — the group default.
+ * 1. `backdrop` on `BottomSheetManagerProvider` — the group default.
  * 2. The `backdrop` prop on an adapter — per sheet; `false` disables.
  *
  * When both levels are `styled`, their styles compose (group under sheet);

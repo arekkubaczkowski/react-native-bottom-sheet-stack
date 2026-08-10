@@ -6,8 +6,10 @@ import type {
   ActionSheetRef,
 } from 'react-native-actions-sheet';
 
-import type { SheetAdapterRef } from '../../adapter.types';
-import type { BackdropConfig } from '../../backdrop.types';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
 import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterBackdrop } from '../../useAdapterBackdrop';
@@ -37,21 +39,16 @@ const ActionSheet = require('react-native-actions-sheet')
  */
 export interface ActionsSheetAdapterProps
   extends Omit<
-    ActionSheetProps,
-    | 'isModal'
-    | 'defaultOverlayOpacity'
-    | 'onOpen'
-    | 'onClose'
-    | 'onBeforeClose'
-    | 'children'
-  > {
+      ActionSheetProps,
+      | 'isModal'
+      | 'defaultOverlayOpacity'
+      | 'onOpen'
+      | 'onClose'
+      | 'onBeforeClose'
+      | 'children'
+    >,
+    AdapterBackdropProps {
   children: React.ReactNode;
-  /**
-   * The manager-rendered backdrop for this sheet: a {@link BackdropConfig}
-   * overrides the group's `backdropConfig`, `false` disables it. (The
-   * library's own overlay stays forced transparent either way.)
-   */
-  backdrop?: BackdropConfig | false;
 }
 
 /**

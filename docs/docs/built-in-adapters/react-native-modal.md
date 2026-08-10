@@ -69,3 +69,7 @@ style. The manager's backdrop is faded with `withTiming` over
 `animationInTiming` / `animationOutTiming`, so overriding those keeps the
 backdrop in step with the modal instead of letting it run ahead.
 :::
+
+### Backdrop
+
+`backdrop` (`BackdropConfig | false`) configures the manager-rendered backdrop for this sheet — a config overrides the group's `backdrop` default, `false` disables it. The library's own overlay stays forced off either way. See [Backdrop](/backdrop).

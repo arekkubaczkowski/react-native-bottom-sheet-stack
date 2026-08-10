@@ -203,15 +203,17 @@ whole stack above arbitrary app chrome — without it any host view with a modes
 opening frames the adapter already drove, and the backdrop pops in mid-fade.
 
 The backdrop's *look* is configurable (`BackdropConfig`, a `kind: 'styled' |
-'custom'` union): group default via `backdropConfig` on the provider, per sheet
+'custom'` union): group default via `backdrop` on the provider, per sheet
 via the `backdrop` prop on the adapter (routed through `useAdapterBackdrop` →
 `setBackdrop`). Resolution is **atomic for the visual choice** — a sheet-level
 config replaces the group's rendering entirely; only `pressToDismiss` resolves
 per field, and styles compose (`[default, group, sheet]`) when both levels are
 `styled`. The adapter prop lands via effect a beat after the backdrop first
-mounts; that is safe *because* `animatedIndex` starts at `-1` and cannot move
-until the coordinator has the adapter's ref, so the swap happens while the
-backdrop is still transparent. A `kind: 'custom'` component owns its own fade
+mounts, so it is applied in a *layout* effect: `animatedIndex` starts at `-1`,
+which holds a `styled` backdrop at zero opacity for that frame, but a `custom`
+one owns its own fade and would otherwise paint at full strength before the
+sheet's config replaced it. The guarantee is structural for `styled` and
+contractual for `custom`. A `kind: 'custom'` component owns its own fade
 off `animatedIndex` — the built-in opacity is deliberately not applied on top.
 
 Two selectors read the field, and the split is deliberate: `QueueItem` takes
@@ -219,8 +221,9 @@ Two selectors read the field, and the split is deliberate: `QueueItem` takes
 not re-render the memoized sheet layer, and only `BottomSheetBackdrop` takes the
 config through `useSheetBackdrop`.
 
-Every shipped adapter forces its own library's backdrop off and exposes only
-`backdrop?: BackdropConfig | false`. Re-exposing the underlying prop (gorhom's
+Every shipped adapter exposes `backdrop?: BackdropConfig | false` (via the
+shared `AdapterBackdropProps`) and, where its library draws an overlay of its
+own, forces that overlay off. Re-exposing the underlying prop (gorhom's
 `backdropComponent`, actions-sheet's overlay) would let a second, non-stack-aware
 overlay paint over the manager's.
 

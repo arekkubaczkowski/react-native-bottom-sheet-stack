@@ -46,7 +46,7 @@ Software Mansion's sheet is **fully controlled**: it exposes no imperative ref, 
 
 | Manager action / event | What the adapter does |
 | --- | --- |
-| `expand()` | Sets `index` to `expandedIndex` (defaults to the last detent) |
+| `expand()` | Sets `index` to `backdrop`, `expandedIndex` (defaults to the last detent) |
 | `close()` | Sets `index` back to the collapsed detent |
 | `onSettle(i)` | Settled on a zero-height detent → reports **closed**; anything else → reports **opened** |
 | `onIndexChange(i)` | User swiped down to a zero-height detent → reports **dismiss** (re-snaps up when the sheet is non-dismissable) |

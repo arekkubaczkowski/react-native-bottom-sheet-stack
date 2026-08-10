@@ -7,8 +7,10 @@ import React, { useImperativeHandle, useRef } from 'react';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import type { SheetAdapterRef } from '../../adapter.types';
-import type { BackdropConfig } from '../../backdrop.types';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
 import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
@@ -28,15 +30,8 @@ import { useBottomSheetContext } from '../../useBottomSheetContext';
  * top of it. Configure it through {@link backdrop} instead.
  */
 export interface GorhomSheetAdapterProps
-  extends Omit<BottomSheetProps, 'backdropComponent'> {
-  /**
-   * The manager-rendered backdrop for this sheet: a {@link BackdropConfig}
-   * overrides the group's `backdropConfig`, `false` disables it. Use
-   * `kind: 'custom'` for a blur or any other bespoke rendering — it keeps the
-   * stack-aware behaviour a gorhom `backdropComponent` would lose.
-   */
-  backdrop?: BackdropConfig | false;
-}
+  extends Omit<BottomSheetProps, 'backdropComponent'>,
+    AdapterBackdropProps {}
 
 const nullBackdrop = () => null;
 

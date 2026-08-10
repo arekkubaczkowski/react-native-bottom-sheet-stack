@@ -242,19 +242,19 @@ const springConfig: ScaleAnimationConfig = {
 
 ### BackdropConfig
 
-What the manager's shared backdrop renders — a discriminated union, `kind` first. Set as the group default via `backdropConfig` on the provider, or per sheet via the `backdrop` prop on an adapter (`false` there disables the backdrop). See [Backdrop](/backdrop).
+What the manager's shared backdrop renders — a discriminated union, `kind` first. Set as the group default via `backdrop` on the provider, or per sheet via the `backdrop` prop on an adapter (`false` there disables the backdrop). See [Backdrop](/backdrop).
 
 ```tsx
 type BackdropConfig =
   | {
       kind: 'styled';
-      style?: StyleProp<ViewStyle>;   // merged over the default rgba(0,0,0,0.5)
+      style?: StyleProp<ViewStyle>;   // merged over the group's style and the default rgba(0,0,0,0.5)
       pressToDismiss?: boolean;       // default: true
     }
   | {
       kind: 'custom';
       component: ComponentType<BackdropComponentProps>;
-      pressToDismiss?: boolean;
+      pressToDismiss?: boolean;       // default: true
     };
 ```
 
