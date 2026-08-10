@@ -36,7 +36,9 @@ const MySheet = forwardRef((props, ref) => {
 
 ## Props
 
-`GorhomSheetAdapterProps` extends [`BottomSheetProps`](https://gorhom.dev/react-native-bottom-sheet/props) — the full gorhom prop surface is accepted, nothing is omitted from the type. But the manager owns some of it at runtime.
+`GorhomSheetAdapterProps` extends [`BottomSheetProps`](https://gorhom.dev/react-native-bottom-sheet/props) — the full gorhom prop surface is accepted except `backdropComponent`, which the manager owns. Some other props are owned at runtime.
+
+It adds one prop of its own: `backdrop` (`BackdropConfig | false`) — see [Backdrop](#backdrop).
 
 **Managed by the adapter (your value is ignored or wrapped):**
 
@@ -47,30 +49,33 @@ const MySheet = forwardRef((props, ref) => {
 | `onChange` | Wrapped — reports `handleOpened()` at index `>= 0`, then calls yours |
 | `onClose` | Wrapped — calls yours, then reports `handleClosed()` |
 | `onAnimate` | Wrapped — reports `handleDismiss()` when animating toward `-1`, then calls yours |
+| `backdropComponent` | Forced to render nothing — the manager draws the backdrop. Not accepted by the type; use `backdrop` instead. See [Backdrop](#backdrop) |
 
 **Adapter defaults (yours wins):**
 
 | Prop | Default | Note |
 |------|---------|------|
 | `animationConfigs` | spring — `stiffness: 400`, `damping: 80`, `mass: 0.7` | |
-| `backdropComponent` | a component returning `null` | See [Backdrop](#backdrop) |
 | `enablePanDownToClose` | `true` | Forced to `false` while a [`useOnBeforeClose`](/close-interception) interceptor is blocking dismissal, so the interceptor always gets to run |
 
 ## Backdrop
 
-By default this adapter renders gorhom's `backdropComponent` as `null` so the **stack manager's shared backdrop** (`BottomSheetBackdrop`) is used instead. This is recommended — the manager's backdrop is **stack-aware** (correct opacity across stacked sheets, z-index, scale coordination, cascading tap-to-dismiss), which a per-sheet gorhom backdrop is not.
+The **stack manager's shared backdrop** (`BottomSheetBackdrop`) is always the one rendered: gorhom's own `backdropComponent` is forced to render nothing, and is not part of `GorhomSheetAdapterProps`. Two overlays would otherwise stack into a double-dark layer, and only the manager's is **stack-aware** (correct opacity across stacked sheets, z-index, scale coordination, cascading tap-to-dismiss).
 
-To restyle or replace the manager's backdrop — or turn it off — pass the `backdrop` prop (`BackdropConfig | false`), which keeps all of the stack-aware behavior; see [Backdrop](/backdrop).
-
-You **can** also override it by passing your own gorhom `backdropComponent`, but it's **not recommended** unless you specifically need gorhom's backdrop behavior. When you do, the adapter **automatically disables the manager backdrop** for that sheet so the two never stack (an explicit `backdrop` prop outranks that inference — don't pass both):
+Configure it with the `backdrop` prop — restyle it, replace it with your own component (blur, gradients), or turn it off entirely, all without losing that stack-aware behavior:
 
 ```tsx
-import { BottomSheetBackdrop as GorhomBackdrop } from '@gorhom/bottom-sheet';
+// Restyle
+<GorhomSheetAdapter snapPoints={['50%']} backdrop={{ kind: 'styled', style: { backgroundColor: 'rgba(0,0,0,0.8)' } }}>
 
-<GorhomSheetAdapter snapPoints={['50%']} backdropComponent={GorhomBackdrop}>
-  {/* ... */}
-</GorhomSheetAdapter>;
+// Replace (receives the sheet's live animatedIndex)
+<GorhomSheetAdapter snapPoints={['50%']} backdrop={{ kind: 'custom', component: BlurBackdrop }}>
+
+// None
+<GorhomSheetAdapter snapPoints={['50%']} backdrop={false}>
 ```
+
+See [Backdrop](/backdrop) for the full API.
 
 ## When to Use
 

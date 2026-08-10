@@ -3,7 +3,7 @@ import BottomSheetOriginal, {
   type BottomSheetProps,
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import React, { useEffect, useImperativeHandle, useRef } from 'react';
+import React, { useImperativeHandle, useRef } from 'react';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -18,12 +18,22 @@ import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
-export interface GorhomSheetAdapterProps extends BottomSheetProps {
+/**
+ * Props for {@link GorhomSheetAdapter}.
+ *
+ * Forwards the full prop surface of `@gorhom/bottom-sheet`, except the props
+ * the stack manager owns — among them `backdropComponent`, which is forced to
+ * render nothing: the manager draws the one shared, stack-aware backdrop for
+ * every sheet, and a per-sheet gorhom backdrop would stack a second overlay on
+ * top of it. Configure it through {@link backdrop} instead.
+ */
+export interface GorhomSheetAdapterProps
+  extends Omit<BottomSheetProps, 'backdropComponent'> {
   /**
-   * This sheet's manager-rendered backdrop: a {@link BackdropConfig} overrides
-   * the group's `backdropConfig`, `false` disables it. Distinct from gorhom's
-   * own `backdropComponent`, which renders inside the sheet — passing that
-   * alone suppresses the manager's backdrop so the two don't stack.
+   * The manager-rendered backdrop for this sheet: a {@link BackdropConfig}
+   * overrides the group's `backdropConfig`, `false` disables it. Use
+   * `kind: 'custom'` for a blur or any other bespoke rendering — it keeps the
+   * stack-aware behaviour a gorhom `backdropComponent` would lose.
    */
   backdrop?: BackdropConfig | false;
 }
@@ -41,7 +51,6 @@ export const GorhomSheetAdapter = React.forwardRef<
       onChange,
       onClose,
       enablePanDownToClose = true,
-      backdropComponent = nullBackdrop,
       backdrop,
       animatedIndex: externalAnimatedIndex,
       ...props
@@ -53,28 +62,9 @@ export const GorhomSheetAdapter = React.forwardRef<
     const contextAnimatedIndex = useAnimatedIndex();
     const defaultIndex = useBottomSheetDefaultIndex();
     const preventDismiss = useSheetPreventDismiss(id);
+    useAdapterBackdrop(id, backdrop);
 
     const gorhomRef = useRef<BottomSheetMethods | null>(null);
-
-    // Passing a custom gorhom backdrop means this sheet owns its backdrop, so
-    // suppress the manager's shared one to avoid stacking two into a
-    // double-dark overlay — unless an explicit `backdrop` prop says otherwise;
-    // being deliberate, it outranks the inference.
-    const usesCustomBackdrop = backdropComponent !== nullBackdrop;
-    useAdapterBackdrop(
-      id,
-      backdrop !== undefined ? backdrop : usesCustomBackdrop ? false : undefined
-    );
-    const hasExplicitBackdrop = backdrop !== undefined;
-    useEffect(() => {
-      if (__DEV__ && usesCustomBackdrop && hasExplicitBackdrop) {
-        console.warn(
-          '[GorhomSheetAdapter] Both `backdrop` and a custom `backdropComponent` were passed. ' +
-            'The explicit `backdrop` prop wins, so the manager keeps rendering its shared ' +
-            'backdrop and the two will stack; drop one of them.'
-        );
-      }
-    }, [usesCustomBackdrop, hasExplicitBackdrop]);
 
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
@@ -149,7 +139,9 @@ export const GorhomSheetAdapter = React.forwardRef<
         onChange={wrappedOnChange}
         onClose={wrappedOnClose}
         onAnimate={wrappedOnAnimate}
-        backdropComponent={backdropComponent}
+        // The manager owns the backdrop; gorhom's own must render nothing so
+        // the two never stack into a double-dark overlay.
+        backdropComponent={nullBackdrop}
         enablePanDownToClose={preventDismiss ? false : enablePanDownToClose}
       >
         {children}

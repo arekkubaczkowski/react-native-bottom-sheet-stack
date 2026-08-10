@@ -7,7 +7,7 @@ import { PortalHost } from 'react-native-teleport';
 import { cleanupAnimatedIndex, getAnimatedIndex } from './animatedRegistry';
 import { BottomSheetContext } from './BottomSheet.context';
 import {
-  useSheetBackdrop,
+  useSheetBackdropEnabled,
   useSheetContent,
   useSheetPortalSession,
   useSheetUsePortal,
@@ -31,7 +31,7 @@ export const QueueItem = memo(function QueueItem({
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
   const portalSession = useSheetPortalSession(id);
-  const backdrop = useSheetBackdrop(id);
+  const backdropEnabled = useSheetBackdropEnabled(id);
 
   const { width, height } = useSafeAreaFrame();
 
@@ -59,7 +59,7 @@ export const QueueItem = memo(function QueueItem({
 
   return (
     <>
-      {isActive && backdrop !== false && (
+      {isActive && backdropEnabled && (
         <View
           style={[StyleSheet.absoluteFill, { zIndex: backdropZIndex }]}
           pointerEvents="box-none"

@@ -214,6 +214,16 @@ until the coordinator has the adapter's ref, so the swap happens while the
 backdrop is still transparent. A `kind: 'custom'` component owns its own fade
 off `animatedIndex` — the built-in opacity is deliberately not applied on top.
 
+Two selectors read the field, and the split is deliberate: `QueueItem` takes
+`useSheetBackdropEnabled` (a boolean — "render one at all") so restyling does
+not re-render the memoized sheet layer, and only `BottomSheetBackdrop` takes the
+config through `useSheetBackdrop`.
+
+Every shipped adapter forces its own library's backdrop off and exposes only
+`backdrop?: BackdropConfig | false`. Re-exposing the underlying prop (gorhom's
+`backdropComponent`, actions-sheet's overlay) would let a second, non-stack-aware
+overlay paint over the manager's.
+
 `useSheetRenderData` orders hidden persistent sheets before active ones so React
 does not unmount and remount across transitions.
 
@@ -362,7 +372,8 @@ src/
 ├── store/                       # store · hooks · helpers · types
 ├── bottomSheetCoordinator.ts    # store ↔ adapter
 ├── refsMap · animatedRegistry · onBeforeCloseRegistry · portalSessionRegistry
-├── adapter.types.ts · portal.types.ts
+├── adapter.types.ts · portal.types.ts · backdrop.types.ts
+├── backdrop.equality.ts          # value compare for setBackdrop's write bail
 │
 ├── BottomSheetManager.provider.tsx / .context.tsx
 ├── BottomSheet.context.ts · BottomSheetRef.context.ts
@@ -374,7 +385,7 @@ src/
 ├── useBottomSheetManager · useBottomSheetControl · useBottomSheetContext
 ├── useBottomSheetStatus · useOnBeforeClose · useSheetRenderData
 ├── useScaleAnimation · useStableCallback
-├── useAdapterRef · useAnimatedIndex · useBackHandler
+├── useAdapterRef · useAnimatedIndex · useBackHandler · useAdapterBackdrop
 │
 └── adapters/                    # one directory per subpath export, no barrel
     ├── gorhom-sheet · custom-modal · react-native-modal · actions-sheet
@@ -397,3 +408,8 @@ src/
 8. Do not set `animatedIndex` discretely in an adapter.
 9. Do not branch on `isOpen` for "is it on screen" — use `isVisible`.
 10. Do not read `params` without `?.`.
+11. Do not drop `setBackdrop`'s value-equality bail, and do not subscribe
+    `QueueItem` to the backdrop *config* — both turn one consumer render into a
+    store write that re-renders the whole sheet layer.
+12. An adapter must never expose its library's own backdrop prop. The manager
+    renders the one backdrop; a second overlay stacks and is not stack-aware.

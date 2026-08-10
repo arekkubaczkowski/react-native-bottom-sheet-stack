@@ -3,7 +3,6 @@ import { createWithEqualityFn as create } from 'zustand/traditional';
 
 import {
   applyModeToTopSheet,
-  backdropValuesEqual,
   detachFromGroup,
   getGroupStack,
   getSheetBelowId,
@@ -15,6 +14,7 @@ import {
   withGroupStack,
 } from './helpers';
 import { ensureAnimatedIndex, resetAnimatedIndex } from '../animatedRegistry';
+import { backdropValuesEqual } from '../backdrop.equality';
 import { getNextPortalSession } from '../portalSessionRegistry';
 import type {
   BottomSheetState,

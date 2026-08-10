@@ -22,8 +22,26 @@ export const useSheetUsePortal = (id: string) =>
 export const useSheetKeepMounted = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.keepMounted);
 
+/**
+ * The sheet's backdrop override, for resolving what to render.
+ *
+ * Returns an object without `shallow` on purpose: `setBackdrop` bails on
+ * value-equal writes, so the stored config's identity is already stable across
+ * the re-applications an adapter's effect performs.
+ */
 export const useSheetBackdrop = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.backdrop);
+
+/**
+ * Whether the manager should render a backdrop for this sheet at all.
+ *
+ * Separate from {@link useSheetBackdrop} so `QueueItem` — memoized precisely
+ * because every host render rebuilds its children — subscribes to a boolean
+ * and re-renders only when the backdrop is switched on or off, not whenever
+ * its styling changes.
+ */
+export const useSheetBackdropEnabled = (id: string) =>
+  useBottomSheetStore((state) => state.sheetsById[id]?.backdrop !== false);
 
 export const useSheetPortalSession = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.portalSession);

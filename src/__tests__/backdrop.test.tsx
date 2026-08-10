@@ -16,55 +16,6 @@ import { useBottomSheetStore } from '../store';
 import { useAdapterBackdrop } from '../useAdapterBackdrop';
 import { portal, setupSheetTest, statusOf, store } from './testUtils';
 
-/**
- * The global reanimated mock has no `Animated.View` — nothing rendered a
- * reanimated component in tests before the backdrop grew configurable. This
- * re-mock keeps the same minimal shared-value shape and adds just enough for
- * `BottomSheetBackdrop` to render: a passthrough `Animated.View` (a plain RN
- * `View`) so styles land in the test tree and can be asserted on.
- */
-jest.mock('react-native-reanimated', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-
-  const makeMutable = <T,>(initial: T) => {
-    let current = initial;
-    return {
-      get value() {
-        return current;
-      },
-      set value(next: T) {
-        current = next;
-      },
-      get: () => current,
-      set: (next: T) => {
-        current = next;
-      },
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
-      modify: jest.fn(),
-    };
-  };
-
-  return {
-    __esModule: true,
-    default: {
-      View: (props: Record<string, unknown>) =>
-        React.createElement(View, props),
-    },
-    makeMutable,
-    withTiming: <T,>(toValue: T) => toValue,
-    withSpring: <T,>(toValue: T) => toValue,
-    useSharedValue: makeMutable,
-    useDerivedValue: jest.fn(),
-    useAnimatedStyle: jest.fn(() => ({})),
-    useAnimatedReaction: jest.fn(),
-    useEvent: jest.fn(),
-    interpolate: jest.fn(),
-    Extrapolation: { CLAMP: 'clamp' },
-  };
-});
-
 setupSheetTest();
 
 const setBackdrop = (id: string, value: boolean | BackdropConfig) =>
@@ -95,8 +46,9 @@ describe('setBackdrop', () => {
     expect(backdropOf('a')).toBeUndefined();
   });
 
-  // A suppress/restore cycle (how GorhomSheetAdapter hides the shared backdrop
-  // behind its own) must round-trip to "no override", not to a stored `true`.
+  // The boolean suppress/restore cycle an adapter drives (`false` while it
+  // draws its own backdrop, `true` to hand it back) must round-trip to "no
+  // override", not to a stored `true`.
   it('round-trips the boolean suppress/restore cycle', () => {
     setBackdrop('a', false);
     setBackdrop('a', true);

@@ -129,7 +129,7 @@ function MyAdapter({ backdrop, ...props }: { backdrop?: BackdropConfig | false }
 
 ## Migration from v2
 
-`backdrop: false` moved from `open()` options to the adapter:
+**`backdrop: false` moved from `open()` options to the adapter:**
 
 ```tsx
 // v2
@@ -139,4 +139,16 @@ open(<MySheet />, { backdrop: false });
 <GorhomSheetAdapter backdrop={false}>
 ```
 
-The `open()` option is gone because it only worked for inline sheets and duplicated per call site what is really a property of the sheet — the adapter prop declares it once and works identically in inline, portal, and persistent mode.
+The `open()` option is gone because it duplicated per call site what is really a property of the sheet — the adapter prop declares it once and works identically in inline, portal, and persistent mode.
+
+**`GorhomSheetAdapter` no longer accepts gorhom's `backdropComponent`.** The manager always renders the backdrop, so the two can never stack:
+
+```tsx
+// v2
+<GorhomSheetAdapter backdropComponent={MyGorhomBackdrop}>
+
+// v3 — the same rendering, but stack-aware
+<GorhomSheetAdapter backdrop={{ kind: 'custom', component: MyBackdrop }}>
+```
+
+The replacement is not a like-for-like swap: a `kind: 'custom'` component receives `{ sheetId, animatedIndex, close }` instead of gorhom's `BottomSheetBackdropProps`, and it renders in the manager's backdrop layer — outside the scale transform, correctly z-indexed within the stack.
