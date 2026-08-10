@@ -3,6 +3,7 @@ import { createWithEqualityFn as create } from 'zustand/traditional';
 
 import {
   applyModeToTopSheet,
+  backdropValuesEqual,
   detachFromGroup,
   getGroupStack,
   getSheetBelowId,
@@ -122,7 +123,6 @@ export const useBottomSheetStore = create(
               status: 'opening',
               scaleBackground:
                 sheet.scaleBackground ?? existingSheet.scaleBackground,
-              backdrop: sheet.backdrop ?? existingSheet.backdrop,
               params: sheet.params ?? existingSheet.params,
             }
           : { ...fields, status: 'opening', portalSession };
@@ -201,8 +201,24 @@ export const useBottomSheetStore = create(
     setPreventDismiss: (id, prevent) =>
       set((state) => patchSheet(state, id, { preventDismiss: prevent })),
 
+    // `true` clears the override (back to the group default) rather than
+    // storing a truthy flag — the old boolean restore keeps its meaning now
+    // that the field can also hold a config. The equality bail matters:
+    // adapters re-apply their `backdrop` prop with a fresh object literal on
+    // every consumer render, and without it each render would wake every
+    // subscriber of the store.
     setBackdrop: (id, backdrop) =>
-      set((state) => patchSheet(state, id, { backdrop })),
+      set((state) => {
+        const sheet = state.sheetsById[id];
+        if (!sheet) return state;
+
+        const next = backdrop === true ? undefined : backdrop;
+        if (backdropValuesEqual(sheet.backdrop, next)) return state;
+
+        return {
+          sheetsById: updateSheet(state.sheetsById, id, { backdrop: next }),
+        };
+      }),
 
     clearGroup: (groupId) =>
       set((state) => {

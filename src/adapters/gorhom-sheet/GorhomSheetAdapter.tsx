@@ -8,15 +8,25 @@ import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import type { SheetAdapterRef } from '../../adapter.types';
-import { useSetBackdrop, useSheetPreventDismiss } from '../../store';
+import type { BackdropConfig } from '../../backdrop.types';
+import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
+import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
-export interface GorhomSheetAdapterProps extends BottomSheetProps {}
+export interface GorhomSheetAdapterProps extends BottomSheetProps {
+  /**
+   * This sheet's manager-rendered backdrop: a {@link BackdropConfig} overrides
+   * the group's `backdropConfig`, `false` disables it. Distinct from gorhom's
+   * own `backdropComponent`, which renders inside the sheet — passing that
+   * alone suppresses the manager's backdrop so the two don't stack.
+   */
+  backdrop?: BackdropConfig | false;
+}
 
 const nullBackdrop = () => null;
 
@@ -32,6 +42,7 @@ export const GorhomSheetAdapter = React.forwardRef<
       onClose,
       enablePanDownToClose = true,
       backdropComponent = nullBackdrop,
+      backdrop,
       animatedIndex: externalAnimatedIndex,
       ...props
     },
@@ -42,18 +53,28 @@ export const GorhomSheetAdapter = React.forwardRef<
     const contextAnimatedIndex = useAnimatedIndex();
     const defaultIndex = useBottomSheetDefaultIndex();
     const preventDismiss = useSheetPreventDismiss(id);
-    const setBackdrop = useSetBackdrop();
 
     const gorhomRef = useRef<BottomSheetMethods | null>(null);
 
-    // Passing a custom backdrop means this sheet owns its backdrop, so suppress
-    // the manager's shared one to avoid stacking two into a double-dark overlay.
+    // Passing a custom gorhom backdrop means this sheet owns its backdrop, so
+    // suppress the manager's shared one to avoid stacking two into a
+    // double-dark overlay — unless an explicit `backdrop` prop says otherwise;
+    // being deliberate, it outranks the inference.
     const usesCustomBackdrop = backdropComponent !== nullBackdrop;
+    useAdapterBackdrop(
+      id,
+      backdrop !== undefined ? backdrop : usesCustomBackdrop ? false : undefined
+    );
+    const hasExplicitBackdrop = backdrop !== undefined;
     useEffect(() => {
-      if (!usesCustomBackdrop) return;
-      setBackdrop(id, false);
-      return () => setBackdrop(id, true);
-    }, [id, usesCustomBackdrop, setBackdrop]);
+      if (__DEV__ && usesCustomBackdrop && hasExplicitBackdrop) {
+        console.warn(
+          '[GorhomSheetAdapter] Both `backdrop` and a custom `backdropComponent` were passed. ' +
+            'The explicit `backdrop` prop wins, so the manager keeps rendering its shared ' +
+            'backdrop and the two will stack; drop one of them.'
+        );
+      }
+    }, [usesCustomBackdrop, hasExplicitBackdrop]);
 
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);

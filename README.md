@@ -10,6 +10,7 @@ A stack manager for bottom sheets and modals in React Native. Supports `push`, `
 - [Imperative vs Portal API](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/api-comparison)
 - [Navigation Modes](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/navigation-modes)
 - [Scale Animation](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/scale-animation)
+- [Backdrop](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/backdrop)
 - [Portal API (Context Preservation)](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/context-preservation)
 - [Persistent Sheets](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/persistent-sheets)
 - [Type-Safe IDs & Params](https://arekkubaczkowski.github.io/react-native-bottom-sheet-stack/type-safe-ids)
@@ -21,6 +22,7 @@ A stack manager for bottom sheets and modals in React Native. Supports `push`, `
 - **Adapter Architecture** - Pluggable adapters for different bottom sheet/modal libraries. Ships with adapters for `@gorhom/bottom-sheet`, `react-native-modal`, `react-native-actions-sheet`, `@swmansion/react-native-bottom-sheet`, and a custom modal. You can also build your own.
 - **Stack Navigation** - `push`, `switch`, and `replace` modes for managing multiple sheets
 - **Scale Animation** - iOS-style background scaling effect when sheets are stacked
+- **Configurable Backdrop** - Theme the shared stack-aware backdrop per group or per sheet, or replace it with a custom component (e.g. blur)
 - **Context Preservation** - Portal-based API that preserves React context in bottom sheets
 - **Mixed Stacking** - Bottom sheets and modals coexist in the same stack
 - **Persistent Sheets** - Pre-mounted sheets that open instantly and preserve state

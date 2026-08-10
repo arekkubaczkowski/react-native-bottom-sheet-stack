@@ -1,5 +1,7 @@
 import { type ReactNode } from 'react';
 
+import type { BackdropConfig } from '../backdrop.types';
+
 export type BottomSheetStatus = 'opening' | 'open' | 'closing' | 'hidden';
 export type OpenMode = 'push' | 'switch' | 'replace';
 
@@ -16,7 +18,13 @@ export interface BottomSheetState {
   content?: ReactNode;
   status: BottomSheetStatus;
   scaleBackground?: boolean;
-  backdrop?: boolean;
+  /**
+   * Per-sheet backdrop override, written only by `setBackdrop` (the adapters'
+   * `backdrop` prop routes through it) — never by `open()`, so it survives
+   * re-open cycles of a persistent sheet. `false` disables the backdrop,
+   * `undefined` falls back to the group's `backdropConfig`.
+   */
+  backdrop?: BackdropConfig | false;
   usePortal?: boolean;
   params?: Record<string, unknown>;
   keepMounted?: boolean;
@@ -52,7 +60,6 @@ interface OpenPayloadBase {
   id: string;
   groupId: string;
   scaleBackground?: boolean;
-  backdrop?: boolean;
   params?: Record<string, unknown>;
 }
 
@@ -181,7 +188,13 @@ export interface BottomSheetStoreActions {
   finishClosing(id: string): void;
   updateParams(id: string, params: Record<string, unknown> | undefined): void;
   setPreventDismiss(id: string, prevent: boolean): void;
-  setBackdrop(id: string, backdrop: boolean): void;
+  /**
+   * Sets the sheet's backdrop override: `false` = no backdrop, a
+   * {@link BackdropConfig} = custom look, `true` = clear the override and fall
+   * back to the group default. Widened from the old boolean signature, so
+   * adapters that only ever suppress/restore keep working unchanged.
+   */
+  setBackdrop(id: string, backdrop: boolean | BackdropConfig): void;
   clearGroup(groupId: string): void;
   clearAll(): void;
   mount(sheet: MountPayload): void;

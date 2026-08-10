@@ -4,8 +4,10 @@ import { withTiming } from 'react-native-reanimated';
 import type { ModalProps } from 'react-native-modal';
 
 import type { SheetAdapterRef } from '../../adapter.types';
+import type { BackdropConfig } from '../../backdrop.types';
 import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
+import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
@@ -52,6 +54,12 @@ export interface ReactNativeModalAdapterProps
     >
   > {
   children: React.ReactNode;
+  /**
+   * The manager-rendered backdrop for this sheet: a {@link BackdropConfig}
+   * overrides the group's `backdropConfig`, `false` disables it. (The modal's
+   * own `hasBackdrop` stays forced off either way.)
+   */
+  backdrop?: BackdropConfig | false;
 }
 
 /**
@@ -76,6 +84,7 @@ export const ReactNativeModalAdapter = React.forwardRef<
       children,
       animationInTiming = DEFAULT_ANIMATION_IN_TIMING,
       animationOutTiming = DEFAULT_ANIMATION_OUT_TIMING,
+      backdrop,
       ...modalProps
     },
     forwardedRef
@@ -84,6 +93,7 @@ export const ReactNativeModalAdapter = React.forwardRef<
     const ref = useAdapterRef(forwardedRef);
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
+    useAdapterBackdrop(id, backdrop);
     const [isVisible, setIsVisible] = useState(false);
 
     const { handleDismiss, handleOpened, handleClosed } =

@@ -1,3 +1,6 @@
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+
+import type { BackdropConfig } from '../backdrop.types';
 import type {
   BottomSheetState,
   BottomSheetStatus,
@@ -113,6 +116,55 @@ export function detachFromGroup(
       newGroupStack
     ),
   };
+}
+
+/**
+ * Value equality for a sheet's backdrop override.
+ *
+ * Adapters re-apply their `backdrop` prop from an effect, and JSX object
+ * literals are fresh on every consumer render — comparing by value lets
+ * `setBackdrop` skip the write, so a consumer re-render does not wake every
+ * store subscriber. Styles are compared flattened; a value that defeats the
+ * comparison only costs one redundant write, never a wrong render.
+ */
+export function backdropValuesEqual(
+  a: BackdropConfig | false | undefined,
+  b: BackdropConfig | false | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.kind !== b.kind || a.pressToDismiss !== b.pressToDismiss) return false;
+  if (a.kind === 'custom' || b.kind === 'custom') {
+    return (
+      a.kind === 'custom' && b.kind === 'custom' && a.component === b.component
+    );
+  }
+  return flattenedStylesEqual(a.style, b.style);
+}
+
+function flattenedStylesEqual(
+  a: StyleProp<ViewStyle> | undefined,
+  b: StyleProp<ViewStyle> | undefined
+): boolean {
+  const flatA = StyleSheet.flatten(a);
+  const flatB = StyleSheet.flatten(b);
+  if (flatA === flatB) return true;
+  if (!flatA || !flatB) return !flatA && !flatB;
+
+  const keysA = Object.keys(flatA) as (keyof ViewStyle)[];
+  if (keysA.length !== Object.keys(flatB).length) return false;
+
+  return keysA.every((key) => {
+    const valueA = flatA[key];
+    const valueB = flatB[key];
+    if (Object.is(valueA, valueB)) return true;
+    // Nested values (e.g. `transform`) miss the shallow check; they are plain
+    // serializable style data, so structural comparison is sound.
+    if (typeof valueA === 'object' && valueA && typeof valueB === 'object') {
+      return JSON.stringify(valueA) === JSON.stringify(valueB);
+    }
+    return false;
+  });
 }
 
 /**

@@ -7,6 +7,7 @@ import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import { forwardRef, useCallback, useMemo, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { GorhomSheetAdapter } from '../../../src/adapters/gorhom-sheet';
+import type { BackdropConfig } from 'react-native-bottom-sheet-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, sharedStyles } from '../styles/theme';
@@ -18,6 +19,7 @@ interface SheetProps {
   enableDynamicSizing?: boolean;
   scrollable?: boolean;
   style?: StyleProp<ViewStyle>;
+  backdrop?: BackdropConfig | false;
 }
 
 export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
@@ -29,6 +31,7 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
       enableDynamicSizing = true,
       scrollable = false,
       style,
+      backdrop,
     },
     ref
   ) => {
@@ -89,6 +92,7 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
           ref={ref}
           handleComponent={renderHandle}
           backgroundStyle={backgroundStyle}
+          backdrop={backdrop}
         >
           <Content style={scrollable ? undefined : [{ flex: 1 }, contentStyle]}>
             {scrollable ? (
@@ -107,6 +111,7 @@ export const Sheet = forwardRef<BottomSheetMethods, SheetProps>(
         ref={ref}
         handleComponent={renderHandle}
         backgroundStyle={backgroundStyle}
+        backdrop={backdrop}
       >
         <Content style={scrollable ? undefined : contentStyle}>
           {scrollable ? <View style={contentStyle}>{children}</View> : children}

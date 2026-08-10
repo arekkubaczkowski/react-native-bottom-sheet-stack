@@ -7,6 +7,7 @@ const sidebars: SidebarsConfig = {
     'api-comparison',
     'navigation-modes',
     'scale-animation',
+    'backdrop',
     'context-preservation',
     'persistent-sheets',
     'close-interception',

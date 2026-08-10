@@ -207,7 +207,7 @@ Defaults are chosen so a bare `detached` looks right: `16` horizontally, and the
 The sheet uses the **stack manager's shared backdrop** (`BottomSheetBackdrop`), faded from the sheet's live native position via `onPositionChange`. The manager's backdrop is **stack-aware**: it interpolates opacity correctly across stacked sheets, sits at the right z-index, coordinates with the background scale animation, and participates in cascading tap-to-dismiss.
 
 :::info There is no native-scrim option here
-swmansion's `scrimColor` / `scrimOpacities` only apply to **modal** sheets. The manager always renders inline inside its `QueueItem` layer so the sheet's z-index participates in the stack, and the native scrim is gated on `modal` on both platforms — so it would never paint. The adapter therefore does not accept those props. To render no backdrop at all, pass `backdrop: false` when opening the sheet.
+swmansion's `scrimColor` / `scrimOpacities` only apply to **modal** sheets. The manager always renders inline inside its `QueueItem` layer so the sheet's z-index participates in the stack, and the native scrim is gated on `modal` on both platforms — so it would never paint. The adapter therefore does not accept those props. To render no backdrop at all, pass `backdrop={false}` to the adapter; to restyle or replace it, pass a `BackdropConfig` — see [Backdrop](/backdrop).
 :::
 
 ## Android back button

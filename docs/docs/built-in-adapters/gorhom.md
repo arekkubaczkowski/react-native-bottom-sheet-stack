@@ -60,7 +60,9 @@ const MySheet = forwardRef((props, ref) => {
 
 By default this adapter renders gorhom's `backdropComponent` as `null` so the **stack manager's shared backdrop** (`BottomSheetBackdrop`) is used instead. This is recommended — the manager's backdrop is **stack-aware** (correct opacity across stacked sheets, z-index, scale coordination, cascading tap-to-dismiss), which a per-sheet gorhom backdrop is not.
 
-You **can** override it by passing your own `backdropComponent`, but it's **not recommended** unless you specifically need gorhom's backdrop behavior. When you do, the adapter **automatically disables the manager backdrop** for that sheet so the two never stack:
+To restyle or replace the manager's backdrop — or turn it off — pass the `backdrop` prop (`BackdropConfig | false`), which keeps all of the stack-aware behavior; see [Backdrop](/backdrop).
+
+You **can** also override it by passing your own gorhom `backdropComponent`, but it's **not recommended** unless you specifically need gorhom's backdrop behavior. When you do, the adapter **automatically disables the manager backdrop** for that sheet so the two never stack (an explicit `backdrop` prop outranks that inference — don't pass both):
 
 ```tsx
 import { BottomSheetBackdrop as GorhomBackdrop } from '@gorhom/bottom-sheet';

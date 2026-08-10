@@ -27,7 +27,8 @@ is built from these. You do not need them to use the library.
 | `useAdapterRef` | **Inside adapter only** | Resolve the right ref for inline/portal/persistent mode |
 | `useAnimatedIndex` | **Inside adapter only** | The sheet's `animatedIndex` shared value, driving backdrop and scale |
 | `useBackHandler` | **Inside adapter only** | Android back button, scoped to the topmost open sheet **of its own group** |
-| `useSetBackdrop` | Anywhere | Returns `setBackdrop(id, boolean)` — suppress the manager's shared backdrop for a sheet that renders its own |
+| `useAdapterBackdrop` | **Inside adapter only** | Applies the adapter's `backdrop` prop (`BackdropConfig \| false`) to the sheet — see [Backdrop](/backdrop) |
+| `useSetBackdrop` | Anywhere | Returns `setBackdrop(id, value)` — `false` suppresses the manager's shared backdrop, a `BackdropConfig` restyles/replaces it, `true` clears the override |
 | `useSheetPreventDismiss` | Anywhere | `useSheetPreventDismiss(id)` — whether an interceptor is currently blocking dismissal, so the adapter can disable native gestures |
 
 ---
@@ -109,8 +110,9 @@ open(<MySheet />, {
 | `groupId` | `string` | context or `'default'` | Group ID for the sheet |
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
-| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. `GorhomSheetAdapter` sets this itself when you pass it a custom `backdropComponent`; the other shipped adapters use the manager's backdrop and never touch it. |
 | `params` | `Record<string, unknown>` | - | Params for the sheet, readable inside it via `useBottomSheetContext()`. Untyped here — the typed variant lives on `useBottomSheetControl` |
+
+The backdrop is configured on the adapter (the `backdrop` prop) or on the provider (`backdropConfig`), not per `open()` call — see [Backdrop](/backdrop).
 
 `open()` returns the sheet's ID, or **`null`** when the store declined to open it — because the sheet is already on the stack, or another sheet in the group is still animating open. A dev-mode warning explains which.
 
@@ -258,8 +260,9 @@ open({
 |--------|------|---------|-------------|
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
-| `backdrop` | `boolean` | `true` | When `false`, the manager's shared backdrop is not rendered for this sheet. `GorhomSheetAdapter` sets this itself when you pass it a custom `backdropComponent`; the other shipped adapters use the manager's backdrop and never touch it. |
 | `params` | `BottomSheetPortalParams<T>` | - | Type-safe params |
+
+The backdrop is configured on the adapter (the `backdrop` prop) or on the provider (`backdropConfig`), not per `open()` call — see [Backdrop](/backdrop).
 
 `useBottomSheetManager().open()` also accepts `params` now, so inline sheets can read them from `useBottomSheetContext()` just like portal sheets.
 

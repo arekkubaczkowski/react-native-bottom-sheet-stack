@@ -76,8 +76,8 @@ to the `Pick` semver-locks it.
 
 ```ts
 type OpenPayload =
-  | { kind: 'inline'; id; groupId; content: ReactNode; scaleBackground?; backdrop?; params? }
-  | { kind: 'portal'; id; groupId; scaleBackground?; backdrop?; params? };
+  | { kind: 'inline'; id; groupId; content: ReactNode; scaleBackground?; params? }
+  | { kind: 'portal'; id; groupId; scaleBackground?; params? };
 ```
 
 `kind` is what callers reason about, `usePortal` is what the renderer checks;
@@ -94,6 +94,13 @@ Key actions:
   group's top and the one below is `hidden` — undoing a `switch`.
 - `finishClosing(id)` hides if `keepMounted`, removes otherwise.
 - `clearGroup` / `clearAll` are teardown: no animation, interceptors skipped.
+- `setBackdrop(id, false | true | BackdropConfig)` is the **only** writer of the
+  record's `backdrop` field — `open()` never touches it, which is what lets a
+  persistent sheet's config survive re-open cycles. `true` means *clear the
+  override*, not a stored flag. The action bails on value-equal writes
+  (`backdropValuesEqual`): adapters re-apply their `backdrop` prop with a fresh
+  object literal on every consumer render, and without the bail each render
+  would wake every store subscriber.
 
 **Modes:** `push` keeps the previous sheet visible, `switch` hides it (restored
 on close), `replace` closes it.
@@ -195,6 +202,18 @@ whole stack above arbitrary app chrome — without it any host view with a modes
 `animatedIndex`. Do not add a timer or delay gate: deferring the mount drops the
 opening frames the adapter already drove, and the backdrop pops in mid-fade.
 
+The backdrop's *look* is configurable (`BackdropConfig`, a `kind: 'styled' |
+'custom'` union): group default via `backdropConfig` on the provider, per sheet
+via the `backdrop` prop on the adapter (routed through `useAdapterBackdrop` →
+`setBackdrop`). Resolution is **atomic for the visual choice** — a sheet-level
+config replaces the group's rendering entirely; only `pressToDismiss` resolves
+per field, and styles compose (`[default, group, sheet]`) when both levels are
+`styled`. The adapter prop lands via effect a beat after the backdrop first
+mounts; that is safe *because* `animatedIndex` starts at `-1` and cannot move
+until the coordinator has the adapter's ref, so the swap happens while the
+backdrop is still transparent. A `kind: 'custom'` component owns its own fade
+off `animatedIndex` — the built-in opacity is deliberately not applied on top.
+
 `useSheetRenderData` orders hidden persistent sheets before active ones so React
 does not unmount and remount across transitions.
 
@@ -237,7 +256,8 @@ Public so a third-party adapter reaches parity with the shipped ones:
 | `useAdapterRef(forwardedRef)` | resolves the ref context (portal/persistent) or the forwarded one (inline) |
 | `useAnimatedIndex()` | the sheet's shared value, `-1` hidden → `0` visible |
 | `useBackHandler(id, onBackPress)` | registered only while the sheet is open **and** topmost in its own group |
-| `useSetBackdrop()` | suppress the manager's shared backdrop when the adapter draws its own |
+| `useAdapterBackdrop(id, backdrop)` | applies the adapter's `backdrop?: BackdropConfig \| false` prop; two effects on purpose — value-sync (store bails on equal) and unmount-clear — so fresh JSX literals don't clear-and-rewrite every render |
+| `useSetBackdrop()` | imperative form: `false` suppresses the shared backdrop (adapter draws its own), config restyles it, `true` clears |
 | `useSheetPreventDismiss(id)` | whether an interceptor is blocking, so native gestures can be disabled |
 
 **Drive `animatedIndex` continuously.** Setting it discretely in expand/close
@@ -250,7 +270,7 @@ when the show animation ends and `handleClosed` when the hide animation ends.
 
 - Native `scrimColor` / `scrimOpacities` are gated on `modal` sheets on both
   platforms. The manager always renders inline, so they can never paint — the
-  adapter does not accept them. Use `backdrop: false`.
+  adapter does not accept them. Use the `backdrop` prop (`false` to disable).
 - `fullHeight` passes a detent taller than any screen and lets native clamp it.
   Do **not** recompute `windowHeight - insets.top` in JS: since 0.16 there is no
   JS-provided cap, and a JS estimate ignores that the sheet lives inside the
