@@ -30,5 +30,11 @@ export {
 } from './CloseInterceptionSheets';
 export { PartialCloseDemo } from './PartialCloseSheets';
 export { ForceCloseDemo, NoBackdropSheet } from './ForceCloseSheets';
+export {
+  BackdropDemo,
+  BlurBackdropSheet,
+  TintedBackdropSheet,
+  StubbornBackdropSheet,
+} from './BackdropSheets';
 export { GroupASheet, GroupBSheet } from './GroupIsolationSheets';
 export { StatusDemoPanel, StatusDemoSheet } from './SheetStatusSheets';
