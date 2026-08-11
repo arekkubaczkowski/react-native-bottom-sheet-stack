@@ -110,9 +110,8 @@ open(<MySheet />, {
 | `groupId` | `string` | context or `'default'` | Group ID for the sheet |
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
+| `backdrop` | `boolean` | `true` | **Deprecated.** Configure the backdrop on the adapter (`backdrop={false}`, or a `BackdropConfig`) or on the provider instead — the adapter prop works in all three modes and can restyle, not just disable. See [Backdrop → Deprecations](/backdrop#deprecations). |
 | `params` | `Record<string, unknown>` | - | Params for the sheet, readable inside it via `useBottomSheetContext()`. Untyped here — the typed variant lives on `useBottomSheetControl` |
-
-`backdrop?: boolean` was **removed in v3** — configure it on the adapter (the `backdrop` prop) or on the provider, not per `open()` call. See [Backdrop → Migration](/backdrop#migration-from-v2).
 
 `open()` returns the sheet's ID, or **`null`** when the store declined to open it — because the sheet is already on the stack, or another sheet in the group is still animating open. A dev-mode warning explains which.
 
@@ -260,9 +259,8 @@ open({
 |--------|------|---------|-------------|
 | `mode` | `OpenMode` | `'push'` | Navigation mode |
 | `scaleBackground` | `boolean` | `false` | Enable background scaling |
+| `backdrop` | `boolean` | `true` | **Deprecated.** Configure the backdrop on the adapter (`backdrop={false}`, or a `BackdropConfig`) or on the provider instead — the adapter prop works in all three modes and can restyle, not just disable. See [Backdrop → Deprecations](/backdrop#deprecations). |
 | `params` | `BottomSheetPortalParams<T>` | - | Type-safe params |
-
-`backdrop?: boolean` was **removed in v3** — configure it on the adapter (the `backdrop` prop) or on the provider, not per `open()` call. See [Backdrop → Migration](/backdrop#migration-from-v2).
 
 `useBottomSheetManager().open()` also accepts `params` now, so inline sheets can read them from `useBottomSheetContext()` just like portal sheets.
 

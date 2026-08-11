@@ -223,9 +223,16 @@ config through `useSheetBackdrop`.
 
 Every shipped adapter exposes `backdrop?: BackdropConfig | false` (via the
 shared `AdapterBackdropProps`) and, where its library draws an overlay of its
-own, forces that overlay off. Re-exposing the underlying prop (gorhom's
-`backdropComponent`, actions-sheet's overlay) would let a second, non-stack-aware
-overlay paint over the manager's.
+own, forces that overlay off. Re-exposing the underlying prop would let a
+second, non-stack-aware overlay paint over the manager's — gorhom's
+`backdropComponent` still is exposed, deprecated, and suppresses the manager's
+backdrop so the two never stack.
+
+Two deprecated paths write the same field and must not fight: `open({ backdrop })`
+writes through `setBackdrop` after the store accepts the open, so
+`useAdapterBackdrop` only writes when the adapter actually carries a `backdrop`
+prop. An adapter that never sets one has no opinion to state — clearing
+unconditionally would wipe the option's value on the next commit.
 
 `useSheetRenderData` orders hidden persistent sheets before active ones so React
 does not unmount and remount across transitions.
@@ -383,5 +390,7 @@ Consumer apps need nothing — Metro reads `exports` from package.json.
 11. Do not drop `setBackdrop`'s value-equality bail, and do not subscribe
     `QueueItem` to the backdrop *config* — both turn one consumer render into a
     store write that re-renders the whole sheet layer.
-12. An adapter must never expose its library's own backdrop prop. The manager
+12. A new adapter must not expose its library's own backdrop prop. The manager
     renders the one backdrop; a second overlay stacks and is not stack-aware.
+    Gorhom's `backdropComponent` is the one exception, kept deprecated for
+    back-compat — do not copy the pattern.

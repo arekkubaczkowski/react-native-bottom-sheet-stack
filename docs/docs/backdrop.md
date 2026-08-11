@@ -148,21 +148,30 @@ function MyAdapter({ backdrop, ...props }: { backdrop?: BackdropConfig | false }
 
 `useSetBackdrop` is the imperative escape hatch for what the prop cannot express: `setBackdrop(id, false)` suppresses the shared backdrop (for an adapter that draws its own overlay), `setBackdrop(id, config)` restyles or replaces it, and `setBackdrop(id, true)` **clears** the override so the sheet falls back to the group default.
 
-## Migration from v2
+## Deprecations
 
-**`backdrop: false` moved from `open()` options to the adapter:**
+Both of these still work. They are deprecated rather than removed, so upgrading
+needs no code changes — but each emits a dev-mode warning and goes away in the
+next major.
+
+**`backdrop: boolean` on `open()` → the adapter's `backdrop` prop.**
 
 ```tsx
-// v2
+// deprecated
 open(<MySheet />, { backdrop: false });
 
-// v3 — in MySheet's JSX
+// preferred — in MySheet's JSX
 <GorhomSheetAdapter backdrop={false}>
 ```
 
-The `open()` option is gone because it duplicated per call site what is really a property of the sheet — the adapter prop declares it once and works identically in inline, portal, and persistent mode. It is also what lets a persistent sheet keep its backdrop across close/re-open cycles, since `open()` no longer writes the field at all.
+The adapter prop declares the backdrop once, next to the sheet's other visual
+props, and works identically in inline, portal and persistent mode. It also
+expresses more than on/off: the `open()` option can only disable the backdrop,
+never restyle or replace it.
 
-The capability that moves rather than disappears is **per-open variation** — the same sheet opening with a scrim from one flow and without one from another. Drive it from `params`:
+The one thing the option could do that the prop cannot is vary the backdrop
+**per open** — the same sheet opening with a scrim from one flow and without one
+from another. Drive that from `params` instead:
 
 ```tsx
 function MySheet() {
@@ -173,14 +182,21 @@ function MySheet() {
 open({ params: { bare: true } });
 ```
 
-**`GorhomSheetAdapter` no longer accepts gorhom's `backdropComponent`.** The manager always renders the backdrop, so the two can never stack:
+An adapter that declares its own `backdrop` prop overrides the option, since it
+is the more specific declaration.
+
+**`backdropComponent` on `GorhomSheetAdapter` → `backdrop={{ kind: 'custom' }}`.**
 
 ```tsx
-// v2
+// deprecated — renders inside the sheet, suppresses the manager's backdrop
 <GorhomSheetAdapter backdropComponent={MyGorhomBackdrop}>
 
-// v3 — the same rendering, but stack-aware
+// preferred — the same rendering, in the manager's stack-aware layer
 <GorhomSheetAdapter backdrop={{ kind: 'custom', component: MyBackdrop }}>
 ```
 
-The replacement is not a like-for-like swap: a `kind: 'custom'` component receives `{ sheetId, animatedIndex, close }` instead of gorhom's `BottomSheetBackdropProps`, and it renders in the manager's backdrop layer — outside the scale transform, correctly z-indexed within the stack.
+Not a like-for-like swap: a `kind: 'custom'` component receives
+`{ sheetId, animatedIndex, close }` rather than gorhom's
+`BottomSheetBackdropProps`, and it renders outside the scale transform,
+correctly z-indexed within the stack. Passing both is a mistake — the `backdrop`
+prop wins and the two overlays stack.

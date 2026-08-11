@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 import type { BackdropConfig } from './backdrop.types';
 import { useSetBackdrop } from './store';
@@ -30,14 +30,26 @@ export function useAdapterBackdrop(
   backdrop: BackdropConfig | false | undefined
 ): void {
   const setBackdrop = useSetBackdrop();
+  /**
+   * Whether this adapter has an opinion to withdraw.
+   *
+   * An adapter that has never been given a `backdrop` prop must not write at
+   * all — clearing unconditionally would wipe a value set from somewhere else,
+   * which is exactly what the deprecated `open({ backdrop })` option does.
+   * Once the prop *has* been set, dropping it back to `undefined` still clears,
+   * so a conditional prop falls back to the group default rather than freezing.
+   */
+  const hasWritten = useRef(false);
 
   useLayoutEffect(() => {
-    // `undefined` still writes, as a clear: removing the prop must fall the
-    // sheet back to the group default, not freeze the last value.
+    if (backdrop === undefined && !hasWritten.current) return;
+    hasWritten.current = backdrop !== undefined;
     setBackdrop(id, backdrop ?? true);
   }, [id, backdrop, setBackdrop]);
 
   useLayoutEffect(() => {
-    return () => setBackdrop(id, true);
+    return () => {
+      if (hasWritten.current) setBackdrop(id, true);
+    };
   }, [id, setBackdrop]);
 }

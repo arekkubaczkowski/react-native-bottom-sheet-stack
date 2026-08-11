@@ -1,7 +1,13 @@
 import React from 'react';
 import type { SheetAdapterRef } from './adapter.types';
 
-import { useOpen, useUpdateParams, type OpenMode } from './store';
+import { applyDeprecatedBackdrop } from './deprecatedBackdropOption';
+import {
+  useOpen,
+  useSetBackdrop,
+  useUpdateParams,
+  type OpenMode,
+} from './store';
 import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
@@ -15,6 +21,13 @@ import { getSheetRef, setSheetRef } from './refsMap';
 interface BaseOpenOptions<TParams> {
   mode?: OpenMode;
   scaleBackground?: boolean;
+  /**
+   * @deprecated Configure the backdrop on the sheet's adapter instead:
+   * `<MyAdapter backdrop={false}>`, or a `BackdropConfig` to restyle or replace
+   * it. The adapter prop lives with the sheet's other visual props and can
+   * express more than on/off. Removed in the next major.
+   */
+  backdrop?: boolean;
   params?: TParams;
 }
 
@@ -67,6 +80,7 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
 
   const storeOpen = useOpen();
   const storeUpdateParams = useUpdateParams();
+  const setBackdrop = useSetBackdrop();
 
   const open = (options?: OpenOptions<T>) => {
     const groupId = bottomSheetManagerContext?.groupId || 'default';
@@ -87,6 +101,10 @@ export function useBottomSheetControl<T extends BottomSheetPortalId>(
     // sheets already registered their own ref on mount — don't replace it.
     if (result.opened && !getSheetRef(id)) {
       setSheetRef(id, React.createRef<SheetAdapterRef>());
+    }
+
+    if (result.opened) {
+      applyDeprecatedBackdrop(id, options?.backdrop, setBackdrop);
     }
 
     return result.opened;

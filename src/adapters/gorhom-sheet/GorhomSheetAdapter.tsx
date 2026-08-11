@@ -23,14 +23,17 @@ import { useBottomSheetContext } from '../../useBottomSheetContext';
 /**
  * Props for {@link GorhomSheetAdapter}.
  *
- * Forwards the full prop surface of `@gorhom/bottom-sheet`, except the props
- * the stack manager owns — among them `backdropComponent`, which is forced to
- * render nothing: the manager draws the one shared, stack-aware backdrop for
- * every sheet, and a per-sheet gorhom backdrop would stack a second overlay on
- * top of it. Configure it through {@link backdrop} instead.
+ * Forwards the full prop surface of `@gorhom/bottom-sheet`, plus the manager's
+ * own `backdrop`.
+ *
+ * **`backdropComponent` is deprecated.** It renders inside the sheet, so it is
+ * not stack-aware and it suppresses the manager's shared backdrop to avoid
+ * stacking two overlays. `backdrop={{ kind: 'custom', component }}` gives the
+ * same rendering in the manager's own layer; the gorhom prop is removed in the
+ * next major.
  */
 export interface GorhomSheetAdapterProps
-  extends Omit<BottomSheetProps, 'backdropComponent'>,
+  extends BottomSheetProps,
     AdapterBackdropProps {}
 
 const nullBackdrop = () => null;
@@ -47,6 +50,7 @@ export const GorhomSheetAdapter = React.forwardRef<
       onClose,
       enablePanDownToClose = true,
       backdrop,
+      backdropComponent = nullBackdrop,
       animatedIndex: externalAnimatedIndex,
       ...props
     },
@@ -57,7 +61,31 @@ export const GorhomSheetAdapter = React.forwardRef<
     const contextAnimatedIndex = useAnimatedIndex();
     const defaultIndex = useBottomSheetDefaultIndex();
     const preventDismiss = useSheetPreventDismiss(id);
-    useAdapterBackdrop(id, backdrop);
+
+    // A gorhom backdrop draws inside the sheet, so the sheet owns its backdrop:
+    // suppress the manager's rather than stack two into a double-dark overlay.
+    // An explicit `backdrop` prop is deliberate and outranks that inference.
+    const usesDeprecatedBackdrop = backdropComponent !== nullBackdrop;
+    useAdapterBackdrop(
+      id,
+      backdrop !== undefined
+        ? backdrop
+        : usesDeprecatedBackdrop
+          ? false
+          : undefined
+    );
+
+    if (__DEV__ && usesDeprecatedBackdrop) {
+      console.warn(
+        '[GorhomSheetAdapter] `backdropComponent` is deprecated and will be removed in the ' +
+          'next major. It renders inside the sheet, so it is not stack-aware — use ' +
+          "`backdrop={{ kind: 'custom', component }}` instead." +
+          (backdrop
+            ? ' Both were passed: `backdrop` wins, so the manager still renders its own and ' +
+              'the two will stack.'
+            : '')
+      );
+    }
 
     const gorhomRef = useRef<BottomSheetMethods | null>(null);
 
@@ -134,9 +162,7 @@ export const GorhomSheetAdapter = React.forwardRef<
         onChange={wrappedOnChange}
         onClose={wrappedOnClose}
         onAnimate={wrappedOnAnimate}
-        // The manager owns the backdrop; gorhom's own must render nothing so
-        // the two never stack into a double-dark overlay.
-        backdropComponent={nullBackdrop}
+        backdropComponent={backdropComponent}
         enablePanDownToClose={preventDismiss ? false : enablePanDownToClose}
       >
         {children}
