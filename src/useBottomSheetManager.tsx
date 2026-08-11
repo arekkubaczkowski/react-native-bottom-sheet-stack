@@ -1,6 +1,7 @@
 import React from 'react';
 
-import { useOpen, useClearGroup, type OpenMode } from './store';
+import { applyDeprecatedBackdrop } from './deprecatedBackdropOption';
+import { useOpen, useClearGroup, useSetBackdrop, type OpenMode } from './store';
 import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import type { SheetAdapterRef } from './adapter.types';
@@ -12,6 +13,7 @@ export const useBottomSheetManager = () => {
 
   const storeOpen = useOpen();
   const storeClearGroup = useClearGroup();
+  const setBackdrop = useSetBackdrop();
 
   /**
    * Opens a sheet with inline content.
@@ -27,6 +29,14 @@ export const useBottomSheetManager = () => {
       groupId?: string;
       mode?: OpenMode;
       scaleBackground?: boolean;
+      /**
+       * @deprecated Configure the backdrop on the sheet's adapter instead:
+       * `<MyAdapter backdrop={false}>`, or a `BackdropConfig` to restyle or
+       * replace it. The adapter prop works identically in inline, portal and
+       * persistent mode, and can express more than on/off. Removed in the next
+       * major.
+       */
+      backdrop?: boolean;
       params?: Record<string, unknown>;
     } = {}
   ): string | null => {
@@ -61,6 +71,8 @@ export const useBottomSheetManager = () => {
     }
 
     setSheetRef(id, ref);
+
+    applyDeprecatedBackdrop(id, options.backdrop, setBackdrop);
 
     return id;
   };

@@ -15,6 +15,7 @@ import { BottomSheetManagerProvider } from '../BottomSheetManager.provider';
 import { setOnBeforeClose } from '../onBeforeCloseRegistry';
 import { useBottomSheetStore } from '../store';
 import { isBackdropEnabled } from '../backdrop.resolve';
+import { applyDeprecatedBackdrop } from '../deprecatedBackdropOption';
 import { useSheetBackdropOverride } from '../store';
 import { useAdapterBackdrop } from '../useAdapterBackdrop';
 import { portal, setupSheetTest, statusOf, store } from './testUtils';
@@ -206,7 +207,8 @@ describe('useAdapterBackdrop', () => {
   });
 
   // Removing the prop must fall the sheet back to the group default, not
-  // freeze the last value.
+  // freeze the last value — the "never wrote anything" guard must not swallow
+  // a withdrawal of an opinion the adapter did state.
   it('clears the override when the prop becomes undefined', () => {
     const { rerender } = renderHook(
       ({ value }: { value: BackdropConfig | false | undefined }) =>
@@ -217,6 +219,61 @@ describe('useAdapterBackdrop', () => {
 
     rerender({ value: undefined });
     expect(backdropOf('a')).toBeUndefined();
+  });
+
+  // The cleanup withdraws this adapter's opinion; it must not clear a value
+  // the adapter never set (the deprecated `open({ backdrop })` option's).
+  it('does not clear on unmount when the prop was never set', () => {
+    applyDeprecatedBackdrop('a', false, store().setBackdrop);
+
+    const { unmount } = renderHook(() => useAdapterBackdrop('a', undefined));
+    unmount();
+
+    expect(backdropOf('a')).toBe(false);
+  });
+});
+
+describe('deprecated open({ backdrop }) option', () => {
+  // The option is a back-compat shim: it must survive an adapter that declares
+  // no `backdrop` prop of its own, which is the common case for a v2 consumer.
+  it('is not cleared by an adapter that never sets the prop', () => {
+    store().open(portal('a'));
+    applyDeprecatedBackdrop('a', false, store().setBackdrop);
+    expect(backdropOf('a')).toBe(false);
+
+    renderHook(() => useAdapterBackdrop('a', undefined));
+
+    expect(backdropOf('a')).toBe(false);
+  });
+
+  // An explicit adapter prop is the more specific declaration and wins.
+  it('is overridden by an adapter that does set the prop', () => {
+    store().open(portal('a'));
+    applyDeprecatedBackdrop('a', false, store().setBackdrop);
+
+    const config = styled('red');
+    renderHook(() => useAdapterBackdrop('a', config));
+
+    expect(backdropOf('a')).toBe(config);
+  });
+
+  // `true` meant "the default backdrop" in v2, which is the cleared state now.
+  it('maps true onto clearing the override', () => {
+    store().open(portal('a'));
+    setBackdrop('a', false);
+
+    applyDeprecatedBackdrop('a', true, store().setBackdrop);
+
+    expect(backdropOf('a')).toBeUndefined();
+  });
+
+  it('does nothing when the option is absent', () => {
+    store().open(portal('a'));
+    setBackdrop('a', styled('red'));
+
+    applyDeprecatedBackdrop('a', undefined, store().setBackdrop);
+
+    expect(backdropOf('a')).toMatchObject({ kind: 'styled' });
   });
 });
 
