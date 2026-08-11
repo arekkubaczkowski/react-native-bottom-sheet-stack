@@ -5,7 +5,10 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { getAnimatedIndex, HIDDEN_ANIMATED_INDEX } from './animatedRegistry';
+import { resolveBackdrop } from './backdrop.resolve';
+import { useBottomSheetManagerContext } from './BottomSheetManager.context';
 import { requestClose } from './bottomSheetCoordinator';
+import { useSheetBackdrop } from './store';
 
 interface BottomSheetBackdropProps {
   sheetId: string;
@@ -13,6 +16,8 @@ interface BottomSheetBackdropProps {
 
 export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
   const animatedIndex = getAnimatedIndex(sheetId);
+  const { backdrop: groupBackdrop } = useBottomSheetManagerContext();
+  const storedBackdrop = useSheetBackdrop(sheetId);
 
   if (!animatedIndex) {
     throw new Error('animatedIndex must be defined in BottomSheetBackdrop');
@@ -32,14 +37,38 @@ export function BottomSheetBackdrop({ sheetId }: BottomSheetBackdropProps) {
     return { opacity };
   });
 
+  const backdrop = resolveBackdrop(storedBackdrop, groupBackdrop);
+  const close = () => requestClose(sheetId);
+
+  // The Pressable stays even with tap-to-dismiss off — a backdrop blocks
+  // touches from reaching the content beneath it either way. (`backdrop={false}`
+  // removes the shield too; that is the difference between the two.)
   return (
     <Pressable
+      testID={`bottom-sheet-backdrop-${sheetId}`}
       style={StyleSheet.absoluteFill}
-      onPress={() => requestClose(sheetId)}
+      onPress={backdrop.pressToDismiss ? close : undefined}
     >
-      <Animated.View
-        style={[StyleSheet.absoluteFill, animatedStyle, styles.backdrop]}
-      />
+      {backdrop.kind === 'custom' ? (
+        // A custom component owns its own fade off `animatedIndex`; applying
+        // the built-in opacity on top would double-fade it.
+        <backdrop.component
+          sheetId={sheetId}
+          animatedIndex={animatedIndex}
+          close={close}
+        />
+      ) : (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.backdrop,
+            ...backdrop.styles,
+            // Last, so a `style` carrying its own `opacity` restyles the scrim
+            // without silently replacing the fade the manager drives.
+            animatedStyle,
+          ]}
+        />
+      )}
     </Pressable>
   );
 }

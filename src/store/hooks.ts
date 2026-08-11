@@ -1,4 +1,5 @@
 import { shallow } from 'zustand/shallow';
+import { backdropOverrideOf } from '../backdrop.resolve';
 import { getGroupStack } from './helpers';
 import { useBottomSheetStore } from './store';
 
@@ -22,8 +23,29 @@ export const useSheetUsePortal = (id: string) =>
 export const useSheetKeepMounted = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.keepMounted);
 
+/**
+ * The sheet's backdrop override, for resolving what to render.
+ *
+ * Returns an object without `shallow` on purpose: `setBackdrop` bails on
+ * value-equal writes, so the stored config's identity is already stable across
+ * the re-applications an adapter's effect performs.
+ */
 export const useSheetBackdrop = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.backdrop);
+
+/**
+ * What the sheet's own record says about its backdrop, as a stable primitive.
+ *
+ * Separate from {@link useSheetBackdrop} so `QueueItem` — memoized precisely
+ * because every host render rebuilds its children — never subscribes to the
+ * config object, and so re-renders only when the backdrop is switched on or
+ * off, not whenever it is restyled. Pair it with the group's `backdrop` via
+ * `isBackdropEnabled`, since `'inherit'` is answered by the group.
+ */
+export const useSheetBackdropOverride = (id: string) =>
+  useBottomSheetStore((state) =>
+    backdropOverrideOf(state.sheetsById[id]?.backdrop)
+  );
 
 export const useSheetPortalSession = (id: string) =>
   useBottomSheetStore((state) => state.sheetsById[id]?.portalSession);

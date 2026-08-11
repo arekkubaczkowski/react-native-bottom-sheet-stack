@@ -10,6 +10,7 @@ import { DemoCard, FeatureItem } from '../components';
 import {
   ActionsSheetDemoContent,
   AdapterComparisonContent,
+  BackdropDemo,
   ContextComparisonSheet,
   ContextSheetPortal,
   ForceCloseDemo,
@@ -202,8 +203,15 @@ export function HomeScreen() {
           <Text style={styles.sectionTitle}>Lifecycle &amp; Groups</Text>
 
           <DemoCard
+            title="Backdrop"
+            description="Default scrim vs styled tint vs a custom blur, and pressToDismiss"
+            color={colors.cyan}
+            onPress={() => open(<BackdropDemo />, { scaleBackground: true })}
+          />
+
+          <DemoCard
             title="Force Close & Teardown"
-            description="close() vs forceClose() vs destroyAll() against a refusing interceptor, plus backdrop: false"
+            description="close() vs forceClose() vs destroyAll() against a refusing interceptor, plus backdrop={false}"
             color={colors.error}
             onPress={() => open(<ForceCloseDemo />, { scaleBackground: true })}
           />

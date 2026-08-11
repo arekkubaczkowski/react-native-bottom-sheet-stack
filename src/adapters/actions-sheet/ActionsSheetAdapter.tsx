@@ -6,9 +6,13 @@ import type {
   ActionSheetRef,
 } from 'react-native-actions-sheet';
 
-import type { SheetAdapterRef } from '../../adapter.types';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
 import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
+import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
@@ -35,14 +39,15 @@ const ActionSheet = require('react-native-actions-sheet')
  */
 export interface ActionsSheetAdapterProps
   extends Omit<
-    ActionSheetProps,
-    | 'isModal'
-    | 'defaultOverlayOpacity'
-    | 'onOpen'
-    | 'onClose'
-    | 'onBeforeClose'
-    | 'children'
-  > {
+      ActionSheetProps,
+      | 'isModal'
+      | 'defaultOverlayOpacity'
+      | 'onOpen'
+      | 'onClose'
+      | 'onBeforeClose'
+      | 'children'
+    >,
+    AdapterBackdropProps {
   children: React.ReactNode;
 }
 
@@ -62,13 +67,20 @@ export const ActionsSheetAdapter = React.forwardRef<
   ActionsSheetAdapterProps
 >(
   (
-    { children, openAnimationConfig, closeAnimationConfig, ...sheetProps },
+    {
+      children,
+      openAnimationConfig,
+      closeAnimationConfig,
+      backdrop,
+      ...sheetProps
+    },
     forwardedRef
   ) => {
     const { id } = useBottomSheetContext();
     const ref = useAdapterRef(forwardedRef);
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
+    useAdapterBackdrop(id, backdrop);
 
     const actionSheetRef = useRef<ActionSheetRef>(null);
 

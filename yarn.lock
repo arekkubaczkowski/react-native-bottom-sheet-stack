@@ -7112,6 +7112,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-blur@npm:~15.0.8":
+  version: 15.0.8
+  resolution: "expo-blur@npm:15.0.8"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 3ddffcfb65692d52f63abf7bff247fcc85ead491f148e4b28aac02c0c04cb6b28f03933906f34c783a5d5ea41fde5959dabf9bee53dac54328fb70662cfca72e
+  languageName: node
+  linkType: hard
+
 "expo-constants@npm:~18.0.12, expo-constants@npm:~18.0.13":
   version: 18.0.13
   resolution: "expo-constants@npm:18.0.13"
@@ -12339,6 +12350,7 @@ __metadata:
     "@swmansion/react-native-bottom-sheet": 0.16.2
     babel-plugin-module-resolver: ^5.0.2
     expo: ^54.0.31
+    expo-blur: ~15.0.8
     expo-dev-client: ~6.0.13
     expo-linking: ~8.0.11
     expo-status-bar: ~2.0.1

@@ -22,10 +22,14 @@ import type {
   PositionChangeEventData,
 } from '@swmansion/react-native-bottom-sheet';
 
-import type { SheetAdapterRef } from '../../adapter.types';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
 import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
+import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
@@ -88,8 +92,8 @@ export interface SwmansionHandleConfig {
  * `BottomSheetBackdrop`, faded from the sheet's live native position. The native
  * swmansion scrim is not an option here: it is gated on `modal` sheets, and the
  * manager always renders inline inside its `QueueItem` layer so the sheet's
- * z-index participates in the stack. Use `backdrop: false` on `open()` if you
- * want no backdrop at all.
+ * z-index participates in the stack. Use the {@link backdrop} prop to restyle
+ * or replace it, or `backdrop={false}` for no backdrop at all.
  *
  * On top of the native surface the adapter layers a set of **opt-in
  * conveniences** ({@link handle}, {@link fullHeight}, {@link fillContent},
@@ -98,14 +102,15 @@ export interface SwmansionHandleConfig {
  * `<SwmansionSheetAdapter>` behaves like the raw native sheet.
  */
 export interface SwmansionSheetAdapterProps
-  extends Omit<
-    BottomSheetProps,
-    | 'index'
-    | 'animateIn'
-    | 'onPositionChange'
-    | 'wrapNativeView'
-    | 'onIndexChange'
-  > {
+  extends AdapterBackdropProps,
+    Omit<
+      BottomSheetProps,
+      | 'index'
+      | 'animateIn'
+      | 'onPositionChange'
+      | 'wrapNativeView'
+      | 'onIndexChange'
+    > {
   /**
    * Index into `detents` the sheet expands to when opened.
    *
@@ -339,6 +344,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
   (
     {
       children,
+      backdrop,
       detents: detentsProp,
       expandedIndex,
       onIndexChange,
@@ -363,6 +369,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
     const insets = useSafeAreaInsets();
+    useAdapterBackdrop(id, backdrop);
 
     // Forced on natively and compensated here instead: the native subtraction
     // is derived from where the host sits in the window, so an ancestor

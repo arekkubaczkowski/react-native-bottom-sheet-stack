@@ -76,8 +76,8 @@ to the `Pick` semver-locks it.
 
 ```ts
 type OpenPayload =
-  | { kind: 'inline'; id; groupId; content: ReactNode; scaleBackground?; backdrop?; params? }
-  | { kind: 'portal'; id; groupId; scaleBackground?; backdrop?; params? };
+  | { kind: 'inline'; id; groupId; content: ReactNode; scaleBackground?; params? }
+  | { kind: 'portal'; id; groupId; scaleBackground?; params? };
 ```
 
 `kind` is what callers reason about, `usePortal` is what the renderer checks;
@@ -94,6 +94,13 @@ Key actions:
   group's top and the one below is `hidden` — undoing a `switch`.
 - `finishClosing(id)` hides if `keepMounted`, removes otherwise.
 - `clearGroup` / `clearAll` are teardown: no animation, interceptors skipped.
+- `setBackdrop(id, false | true | BackdropConfig)` is the **only** writer of the
+  record's `backdrop` field — `open()` never touches it, which is what lets a
+  persistent sheet's config survive re-open cycles. `true` means *clear the
+  override*, not a stored flag. The action bails on value-equal writes
+  (`backdropValuesEqual`): adapters re-apply their `backdrop` prop with a fresh
+  object literal on every consumer render, and without the bail each render
+  would wake every store subscriber.
 
 **Modes:** `push` keeps the previous sheet visible, `switch` hides it (restored
 on close), `replace` closes it.
@@ -195,6 +202,31 @@ whole stack above arbitrary app chrome — without it any host view with a modes
 `animatedIndex`. Do not add a timer or delay gate: deferring the mount drops the
 opening frames the adapter already drove, and the backdrop pops in mid-fade.
 
+The backdrop's *look* is configurable (`BackdropConfig`, a `kind: 'styled' |
+'custom'` union): group default via `backdrop` on the provider, per sheet
+via the `backdrop` prop on the adapter (routed through `useAdapterBackdrop` →
+`setBackdrop`). Resolution is **atomic for the visual choice** — a sheet-level
+config replaces the group's rendering entirely; only `pressToDismiss` resolves
+per field, and styles compose (`[default, group, sheet]`) when both levels are
+`styled`. The adapter prop lands via effect a beat after the backdrop first
+mounts, so it is applied in a *layout* effect: `animatedIndex` starts at `-1`,
+which holds a `styled` backdrop at zero opacity for that frame, but a `custom`
+one owns its own fade and would otherwise paint at full strength before the
+sheet's config replaced it. The guarantee is structural for `styled` and
+contractual for `custom`. A `kind: 'custom'` component owns its own fade
+off `animatedIndex` — the built-in opacity is deliberately not applied on top.
+
+Two selectors read the field, and the split is deliberate: `QueueItem` takes
+`useSheetBackdropEnabled` (a boolean — "render one at all") so restyling does
+not re-render the memoized sheet layer, and only `BottomSheetBackdrop` takes the
+config through `useSheetBackdrop`.
+
+Every shipped adapter exposes `backdrop?: BackdropConfig | false` (via the
+shared `AdapterBackdropProps`) and, where its library draws an overlay of its
+own, forces that overlay off. Re-exposing the underlying prop (gorhom's
+`backdropComponent`, actions-sheet's overlay) would let a second, non-stack-aware
+overlay paint over the manager's.
+
 `useSheetRenderData` orders hidden persistent sheets before active ones so React
 does not unmount and remount across transitions.
 
@@ -237,7 +269,8 @@ Public so a third-party adapter reaches parity with the shipped ones:
 | `useAdapterRef(forwardedRef)` | resolves the ref context (portal/persistent) or the forwarded one (inline) |
 | `useAnimatedIndex()` | the sheet's shared value, `-1` hidden → `0` visible |
 | `useBackHandler(id, onBackPress)` | registered only while the sheet is open **and** topmost in its own group |
-| `useSetBackdrop()` | suppress the manager's shared backdrop when the adapter draws its own |
+| `useAdapterBackdrop(id, backdrop)` | applies the adapter's `backdrop?: BackdropConfig \| false` prop; two effects on purpose — value-sync (store bails on equal) and unmount-clear — so fresh JSX literals don't clear-and-rewrite every render |
+| `useSetBackdrop()` | imperative form: `false` suppresses the shared backdrop (adapter draws its own), config restyles it, `true` clears |
 | `useSheetPreventDismiss(id)` | whether an interceptor is blocking, so native gestures can be disabled |
 
 **Drive `animatedIndex` continuously.** Setting it discretely in expand/close
@@ -250,7 +283,7 @@ when the show animation ends and `handleClosed` when the hide animation ends.
 
 - Native `scrimColor` / `scrimOpacities` are gated on `modal` sheets on both
   platforms. The manager always renders inline, so they can never paint — the
-  adapter does not accept them. Use `backdrop: false`.
+  adapter does not accept them. Use the `backdrop` prop (`false` to disable).
 - `fullHeight` passes a detent taller than any screen and lets native clamp it.
   Do **not** recompute `windowHeight - insets.top` in JS: since 0.16 there is no
   JS-provided cap, and a JS estimate ignores that the sheet lives inside the
@@ -333,36 +366,6 @@ Consumer apps need nothing — Metro reads `exports` from package.json.
 
 ---
 
-## File map
-
-```
-src/
-├── index.tsx                    # public exports (no 3rd-party adapter deps)
-├── testing.ts                   # → '…/testing'
-├── store/                       # store · hooks · helpers · types
-├── bottomSheetCoordinator.ts    # store ↔ adapter
-├── refsMap · animatedRegistry · onBeforeCloseRegistry · portalSessionRegistry
-├── adapter.types.ts · portal.types.ts
-│
-├── BottomSheetManager.provider.tsx / .context.tsx
-├── BottomSheet.context.ts · BottomSheetRef.context.ts
-├── BottomSheetDefaultIndex.context.ts   # 0 for portal, -1 for persistent
-│
-├── BottomSheetHost · QueueItem · BottomSheetBackdrop · BottomSheetScaleView
-├── BottomSheetPortal ('use no memo') · BottomSheetPersistent
-│
-├── useBottomSheetManager · useBottomSheetControl · useBottomSheetContext
-├── useBottomSheetStatus · useOnBeforeClose · useSheetRenderData
-├── useScaleAnimation · useStableCallback
-├── useAdapterRef · useAnimatedIndex · useBackHandler
-│
-└── adapters/                    # one directory per subpath export, no barrel
-    ├── gorhom-sheet · custom-modal · react-native-modal · actions-sheet
-    └── swmansion/               # + SwmansionKeyboardInset (optional peer)
-```
-
----
-
 ## Pitfalls
 
 1. Do not memoize by hand — three sanctioned exceptions, listed above.
@@ -377,3 +380,8 @@ src/
 8. Do not set `animatedIndex` discretely in an adapter.
 9. Do not branch on `isOpen` for "is it on screen" — use `isVisible`.
 10. Do not read `params` without `?.`.
+11. Do not drop `setBackdrop`'s value-equality bail, and do not subscribe
+    `QueueItem` to the backdrop *config* — both turn one consumer render into a
+    store write that re-renders the whole sheet layer.
+12. An adapter must never expose its library's own backdrop prop. The manager
+    renders the one backdrop; a second overlay stacks and is not stack-aware.

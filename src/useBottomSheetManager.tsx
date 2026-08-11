@@ -27,7 +27,6 @@ export const useBottomSheetManager = () => {
       groupId?: string;
       mode?: OpenMode;
       scaleBackground?: boolean;
-      backdrop?: boolean;
       params?: Record<string, unknown>;
     } = {}
   ): string | null => {
@@ -48,7 +47,6 @@ export const useBottomSheetManager = () => {
         groupId,
         content: contentWithRef,
         scaleBackground: options.scaleBackground,
-        backdrop: options.backdrop,
         params: options.params,
       },
       options.mode

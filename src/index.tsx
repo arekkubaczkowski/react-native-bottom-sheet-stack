@@ -13,6 +13,7 @@ export {
 
 // Adapter types
 export type {
+  AdapterBackdropProps,
   SheetAdapterRef,
   SheetAdapterEvents,
   SheetRef,
@@ -29,16 +30,25 @@ export {
   requestClose,
   closeAllAnimated,
 } from './bottomSheetCoordinator';
+export { useAdapterBackdrop } from './useAdapterBackdrop';
 export { useAdapterRef } from './useAdapterRef';
 export { useAnimatedIndex } from './useAnimatedIndex';
 export { useBackHandler } from './useBackHandler';
 /**
- * `useSetBackdrop` suppresses the manager's shared backdrop for a sheet — for
- * adapters that render their own and would otherwise stack two.
+ * `useSetBackdrop` sets a sheet's backdrop override imperatively: `false`
+ * suppresses the manager's shared backdrop (for adapters that render their
+ * own and would otherwise stack two), a `BackdropConfig` restyles or replaces
+ * it, `true` clears the override. Adapters exposing a `backdrop` prop should
+ * prefer `useAdapterBackdrop`, which handles the effect plumbing.
  * `useSheetPreventDismiss` reports whether an `onBeforeClose` interceptor is
  * blocking dismissal, so the adapter can disable its native gestures.
  */
 export { useSetBackdrop, useSheetPreventDismiss } from './store';
+/**
+ * The animated index of a fully hidden sheet (`-1`) — the low end of the
+ * interpolation range a custom backdrop component fades across.
+ */
+export { HIDDEN_ANIMATED_INDEX } from './animatedRegistry';
 
 // Hooks
 export { useBottomSheetManager } from './useBottomSheetManager';
@@ -57,6 +67,7 @@ export {
 export { useOnBeforeClose } from './useOnBeforeClose';
 
 // Types
+export type { BackdropConfig, BackdropComponentProps } from './backdrop.types';
 export type { ScaleConfig, ScaleAnimationConfig } from './useScaleAnimation';
 export type {
   BottomSheetStatus,

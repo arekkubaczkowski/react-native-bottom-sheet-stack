@@ -9,8 +9,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import type { SheetAdapterRef } from '../../adapter.types';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
+import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
@@ -20,7 +24,7 @@ const ANIMATION_DURATION = 300;
 
 const ZOOM_INITIAL_SCALE = 0.85;
 
-export interface ModalAdapterProps {
+export interface ModalAdapterProps extends AdapterBackdropProps {
   children: React.ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
 }
@@ -28,10 +32,11 @@ export interface ModalAdapterProps {
 export const CustomModalAdapter = React.forwardRef<
   SheetAdapterRef,
   ModalAdapterProps
->(({ children, contentContainerStyle }, forwardedRef) => {
+>(({ children, contentContainerStyle, backdrop }, forwardedRef) => {
   const { id } = useBottomSheetContext();
   const ref = useAdapterRef(forwardedRef);
   const animatedIndex = useAnimatedIndex();
+  useAdapterBackdrop(id, backdrop);
   const [rendered, setRendered] = useState(false);
   const [open, setOpen] = useState(false);
 

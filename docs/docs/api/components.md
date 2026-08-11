@@ -23,6 +23,7 @@ Root provider that manages the bottom sheet stack.
 |------|------|----------|-------------|
 | `id` | `string` | Yes | Unique identifier for this stack group |
 | `scaleConfig` | `ScaleConfig` | No | Scale animation configuration |
+| `backdrop` | `BackdropConfig \| false` | No | The group's default backdrop; `false` disables it for the whole group. A sheet overrides it with the `backdrop` prop on its adapter. See [Backdrop](/backdrop) |
 | `children` | `ReactNode` | Yes | App content |
 
 ---

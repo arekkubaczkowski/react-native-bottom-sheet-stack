@@ -80,11 +80,9 @@ export const ForceCloseDemo = forwardRef<BottomSheetMethods>((_, ref) => {
           onPress={destroyAll}
         />
         <Button
-          title="Push a sheet with backdrop: false"
+          title="Push a sheet with backdrop={false}"
           style={{ backgroundColor: colors.purpleDark }}
-          onPress={() =>
-            open(<NoBackdropSheet />, { mode: 'push', backdrop: false })
-          }
+          onPress={() => open(<NoBackdropSheet />, { mode: 'push' })}
         />
         <SecondaryButton
           title="Push another blocking sheet"
@@ -101,12 +99,12 @@ export const NoBackdropSheet = forwardRef<BottomSheetMethods>((_, ref) => {
   const { close } = useBottomSheetContext();
 
   return (
-    <Sheet ref={ref}>
-      <Badge label="backdrop: false" color={colors.purple} />
+    <Sheet ref={ref} backdrop={false}>
+      <Badge label="backdrop={false}" color={colors.purple} />
       <Text style={sharedStyles.h1}>No backdrop</Text>
       <Text style={sharedStyles.text}>
-        The manager rendered no dim layer for this sheet, so the one below stays
-        at full brightness. Everything else — stacking, scale, close — is
+        The adapter opted out of the manager's dim layer, so the sheet below
+        stays at full brightness. Everything else — stacking, scale, close — is
         unchanged.
       </Text>
       <SecondaryButton title="Close" onPress={close} />

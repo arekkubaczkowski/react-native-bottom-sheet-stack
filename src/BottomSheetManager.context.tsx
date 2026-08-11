@@ -1,9 +1,11 @@
 import React from 'react';
+import type { BackdropConfig } from './backdrop.types';
 import type { ScaleConfig } from './useScaleAnimation';
 
 export interface BottomSheetManagerContextValue {
   groupId: string;
   scaleConfig?: ScaleConfig;
+  backdrop?: BackdropConfig | false;
 }
 
 export const BottomSheetManagerContext =

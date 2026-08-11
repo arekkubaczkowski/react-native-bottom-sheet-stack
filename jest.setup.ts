@@ -12,6 +12,9 @@
  * narrower scope instead of relying on this.
  */
 jest.mock('react-native-reanimated', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
   const makeMutable = <T>(initial: T) => {
     let current = initial;
     return {
@@ -33,7 +36,13 @@ jest.mock('react-native-reanimated', () => {
 
   return {
     __esModule: true,
-    default: {},
+    // `Animated.View` passes through to a plain RN `View`, so a component that
+    // renders one (the backdrop, `ScaleWrapper`) can be rendered in a test and
+    // its resolved styles asserted on.
+    default: {
+      View: (props: Record<string, unknown>) =>
+        React.createElement(View, props),
+    },
     makeMutable,
     // Timing/spring helpers resolve to their target value: tests assert where a
     // value lands, not how it travels.

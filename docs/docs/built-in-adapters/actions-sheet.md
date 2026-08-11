@@ -64,3 +64,7 @@ and backdrop tap stay enabled, because they route through `onBeforeClose` into
 the manager's interceptor — which is what produces the confirmation prompt.
 Disabling them natively would make the sheet silently undismissable.
 :::
+
+### Backdrop
+
+`backdrop` (`BackdropConfig | false`) configures the manager-rendered backdrop for this sheet — a config overrides the group's `backdrop` default, `false` disables it. The library's own overlay stays forced off either way. See [Backdrop](/backdrop).

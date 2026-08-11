@@ -3,20 +3,35 @@ import BottomSheetOriginal, {
   type BottomSheetProps,
 } from '@gorhom/bottom-sheet';
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
-import React, { useEffect, useImperativeHandle, useRef } from 'react';
+import React, { useImperativeHandle, useRef } from 'react';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import type { SheetAdapterRef } from '../../adapter.types';
-import { useSetBackdrop, useSheetPreventDismiss } from '../../store';
+import type {
+  AdapterBackdropProps,
+  SheetAdapterRef,
+} from '../../adapter.types';
+import { useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
+import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 
-export interface GorhomSheetAdapterProps extends BottomSheetProps {}
+/**
+ * Props for {@link GorhomSheetAdapter}.
+ *
+ * Forwards the full prop surface of `@gorhom/bottom-sheet`, except the props
+ * the stack manager owns — among them `backdropComponent`, which is forced to
+ * render nothing: the manager draws the one shared, stack-aware backdrop for
+ * every sheet, and a per-sheet gorhom backdrop would stack a second overlay on
+ * top of it. Configure it through {@link backdrop} instead.
+ */
+export interface GorhomSheetAdapterProps
+  extends Omit<BottomSheetProps, 'backdropComponent'>,
+    AdapterBackdropProps {}
 
 const nullBackdrop = () => null;
 
@@ -31,7 +46,7 @@ export const GorhomSheetAdapter = React.forwardRef<
       onChange,
       onClose,
       enablePanDownToClose = true,
-      backdropComponent = nullBackdrop,
+      backdrop,
       animatedIndex: externalAnimatedIndex,
       ...props
     },
@@ -42,18 +57,9 @@ export const GorhomSheetAdapter = React.forwardRef<
     const contextAnimatedIndex = useAnimatedIndex();
     const defaultIndex = useBottomSheetDefaultIndex();
     const preventDismiss = useSheetPreventDismiss(id);
-    const setBackdrop = useSetBackdrop();
+    useAdapterBackdrop(id, backdrop);
 
     const gorhomRef = useRef<BottomSheetMethods | null>(null);
-
-    // Passing a custom backdrop means this sheet owns its backdrop, so suppress
-    // the manager's shared one to avoid stacking two into a double-dark overlay.
-    const usesCustomBackdrop = backdropComponent !== nullBackdrop;
-    useEffect(() => {
-      if (!usesCustomBackdrop) return;
-      setBackdrop(id, false);
-      return () => setBackdrop(id, true);
-    }, [id, usesCustomBackdrop, setBackdrop]);
 
     const { handleDismiss, handleOpened, handleClosed } =
       createSheetEventHandlers(id);
@@ -128,7 +134,9 @@ export const GorhomSheetAdapter = React.forwardRef<
         onChange={wrappedOnChange}
         onClose={wrappedOnClose}
         onAnimate={wrappedOnAnimate}
-        backdropComponent={backdropComponent}
+        // The manager owns the backdrop; gorhom's own must render nothing so
+        // the two never stack into a double-dark overlay.
+        backdropComponent={nullBackdrop}
         enablePanDownToClose={preventDismiss ? false : enablePanDownToClose}
       >
         {children}

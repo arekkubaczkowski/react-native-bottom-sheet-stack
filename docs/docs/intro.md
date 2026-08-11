@@ -18,6 +18,7 @@ A **library-agnostic** stack manager for bottom sheets and modals in React Nativ
 - **Library-Agnostic** — Pluggable [adapter architecture](/adapters) works with any bottom sheet or modal library
 - **Stack Navigation** — `push`, `switch`, and `replace` modes for managing multiple sheets
 - **Scale Animation** — iOS-style background scaling effect when sheets are stacked
+- **Configurable Backdrop** - Theme the shared stack-aware backdrop per group or per sheet, or replace it with a custom component (e.g. blur)
 - **Context Preservation** — Portal-based API that preserves React context in bottom sheets
 - **Close Interception** — [`useOnBeforeClose`](/close-interception) to confirm or prevent sheet dismissal
 - **Cascading Close** — `closeAll()` with staggered animation, respecting interceptors
