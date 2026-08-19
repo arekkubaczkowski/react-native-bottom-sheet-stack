@@ -431,7 +431,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // Last index seen, mirrored on every move — supplies `prevIndex` to
     // `onIndexChange`. The `index` state only swings between 0 and `openIndex`,
     // so it can't track snaps between non-zero detents.
-    const lastIndexRef = useRef(index);
+    // Starts at 0, not at `index`: a portal/inline sheet mounts with `index`
+    // already at `openIndex`, so seeding from state would report the open as
+    // `(openIndex, openIndex)`.
+    const lastIndexRef = useRef(0);
 
     if (__DEV__ && resolveDetentValue(detents[0] ?? 0) !== 0) {
       console.warn(
