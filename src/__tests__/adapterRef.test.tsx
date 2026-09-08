@@ -1,0 +1,52 @@
+import { renderHook } from '@testing-library/react-native';
+
+import { BottomSheetRefContext } from '../BottomSheetRef.context';
+import { useAdapterRef } from '../useAdapterRef';
+import { inSheet, makeRef, portal, setupSheetTest, store } from './testUtils';
+
+setupSheetTest();
+
+describe('useAdapterRef', () => {
+  it('prefers the ref from context over the forwarded one', () => {
+    const contextRef = makeRef();
+    const forwarded = makeRef();
+    const { result } = renderHook(() => useAdapterRef(forwarded), {
+      wrapper: ({ children }) => (
+        <BottomSheetRefContext.Provider value={contextRef}>
+          {children}
+        </BottomSheetRefContext.Provider>
+      ),
+    });
+    expect(result.current).toBe(contextRef);
+  });
+
+  it('expands on mount when the sheet is already open', () => {
+    store().open(portal('a'));
+    store().markOpen('a');
+    const ref = makeRef();
+
+    renderHook(() => useAdapterRef(ref), { wrapper: inSheet('a') });
+
+    expect(ref.current.expand).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves an opening sheet to the coordinator', () => {
+    store().open(portal('a'));
+    const ref = makeRef();
+
+    renderHook(() => useAdapterRef(ref), { wrapper: inSheet('a') });
+
+    expect(ref.current.expand).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for a hidden persistent sheet or outside a sheet context', () => {
+    store().mount({ id: 'p', groupId: 'g1' });
+    const hiddenRef = makeRef();
+    renderHook(() => useAdapterRef(hiddenRef), { wrapper: inSheet('p') });
+    expect(hiddenRef.current.expand).not.toHaveBeenCalled();
+
+    const bareRef = makeRef();
+    renderHook(() => useAdapterRef(bareRef));
+    expect(bareRef.current.expand).not.toHaveBeenCalled();
+  });
+});
