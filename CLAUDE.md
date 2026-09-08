@@ -224,8 +224,8 @@ it. An inline id is minted per open and the item's unmount cleanup removes it,
 so the value cannot change while the item is mounted; the read is guarded on
 `usePortal` because a persistent id *can* be re-registered under a
 still-mounted item. A caller-supplied inline id re-opened in the same tick as
-its removal hands the wrapper the previous ref; the coordinator reads the
-registry fresh, so the sheet still closes via the give-up path. The prop *value*
+its removal keeps one ref object: `open()` reuses whatever is registered for the
+id, so the wrapper and the coordinator hold the same ref. The prop *value*
 must be stable for the life of the host: it is the element type, so a new value
 remounts every inline sheet (replayed open animation, a stateful wrapper's state
 gone). A derived value (`flag ? Wrapper : undefined`) breaks it even under the
