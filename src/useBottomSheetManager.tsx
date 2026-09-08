@@ -6,7 +6,7 @@ import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import type { SheetAdapterRef } from './adapter.types';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
-import { setSheetRef } from './refsMap';
+import { getSheetRef, setSheetRef } from './refsMap';
 
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
@@ -44,7 +44,11 @@ export const useBottomSheetManager = () => {
       options.groupId || bottomSheetManagerContext?.groupId || 'default';
 
     const id = options.id || Math.random().toString(36);
-    const ref = React.createRef<SheetAdapterRef>();
+    // One registered id must map to one ref object: QueueItem's render-time
+    // read is cached for the item's life, and a persistent sheet registers its
+    // own ref on mount.
+    const existing = getSheetRef(id);
+    const ref = existing ?? React.createRef<SheetAdapterRef>();
 
     const contentWithRef = React.cloneElement(content, {
       ref,
