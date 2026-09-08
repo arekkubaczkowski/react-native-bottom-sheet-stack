@@ -67,6 +67,7 @@ export {
 export { useOnBeforeClose } from './useOnBeforeClose';
 
 // Types
+export type { SheetWrapperProps } from './BottomSheetHost';
 export type { BackdropConfig, BackdropComponentProps } from './backdrop.types';
 export type { ScaleConfig, ScaleAnimationConfig } from './useScaleAnimation';
 export type {

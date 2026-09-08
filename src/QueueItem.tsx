@@ -1,4 +1,9 @@
-import { memo, useEffect, type PropsWithChildren } from 'react';
+import {
+  memo,
+  useEffect,
+  type ComponentType,
+  type PropsWithChildren,
+} from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
@@ -15,20 +20,23 @@ import {
   useSheetUsePortal,
 } from './store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
+import type { SheetWrapperProps } from './BottomSheetHost';
 import { removeOnBeforeClose } from './onBeforeCloseRegistry';
-import { cleanupSheetRef } from './refsMap';
+import { cleanupSheetRef, getSheetRef } from './refsMap';
 import { useSheetScaleAnimatedStyle } from './useScaleAnimation';
 
 interface QueueItemProps {
   id: string;
   stackIndex: number;
   isActive: boolean;
+  SheetWrapper?: ComponentType<SheetWrapperProps>;
 }
 
 export const QueueItem = memo(function QueueItem({
   id,
   stackIndex,
   isActive,
+  SheetWrapper,
 }: QueueItemProps) {
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
@@ -42,6 +50,20 @@ export const QueueItem = memo(function QueueItem({
   const { width, height } = useSafeAreaFrame();
 
   const animatedIndex = getAnimatedIndex(id);
+
+  // Safe to read during render: `open()` registers the ref before the store
+  // write that schedules this render, and the entry outlives the item. A
+  // persistent id can be re-registered under a mounted item, hence the guard.
+  const sheetRef = usePortal ? undefined : getSheetRef(id);
+
+  const inlineContent =
+    SheetWrapper && sheetRef ? (
+      <SheetWrapper id={id} sheetRef={sheetRef}>
+        {content}
+      </SheetWrapper>
+    ) : (
+      content
+    );
 
   useEffect(() => {
     return () => {
@@ -82,7 +104,7 @@ export const QueueItem = memo(function QueueItem({
           />
         ) : (
           <BottomSheetContext.Provider value={{ id }}>
-            {content}
+            {inlineContent}
           </BottomSheetContext.Provider>
         )}
       </ScaleWrapper>

@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, type ComponentType, type ReactNode } from 'react';
 
+import type { SheetRef } from './adapter.types';
 import { useBottomSheetStore, useClearGroup } from './store';
 import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
 import { useBottomSheetManagerContext } from './BottomSheetManager.context';
@@ -77,7 +78,24 @@ function reconcilePendingTransitions(groupId: string): () => void {
   };
 }
 
-export function BottomSheetHost() {
+export interface SheetWrapperProps {
+  id: string;
+  /** The ref the coordinator drives; a fallback adapter binds to it so expand/close keep reaching the sheet. */
+  sheetRef: SheetRef;
+  children: ReactNode;
+}
+
+interface BottomSheetHostProps {
+  /**
+   * Wraps each inline sheet's content inside its context — the place for a
+   * per-sheet error boundary whose fallback is an adapter bound to `sheetRef`.
+   * Portal and persistent sheets render where they are declared and are not
+   * wrapped. Must be a module-scope component: `QueueItem` is memoized.
+   */
+  SheetWrapper?: ComponentType<SheetWrapperProps>;
+}
+
+export function BottomSheetHost({ SheetWrapper }: BottomSheetHostProps) {
   const sheetRenderData = useSheetRenderData();
   const clearGroup = useClearGroup();
   const { groupId } = useBottomSheetManagerContext();
@@ -105,6 +123,7 @@ export function BottomSheetHost() {
           id={id}
           stackIndex={stackIndex}
           isActive={isActive}
+          SheetWrapper={SheetWrapper}
         />
       ))}
     </>
