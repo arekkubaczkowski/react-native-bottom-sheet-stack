@@ -44,9 +44,8 @@ export const useBottomSheetManager = () => {
       options.groupId || bottomSheetManagerContext?.groupId || 'default';
 
     const id = options.id || Math.random().toString(36);
-    // One registered id must map to one ref object: QueueItem's render-time
-    // read is cached for the item's life, and a persistent sheet registers its
-    // own ref on mount.
+    // One id, one ref object: QueueItem caches its render-time read, and a
+    // persistent sheet registers its own ref on mount.
     const existing = getSheetRef(id);
     const ref = existing ?? React.createRef<SheetAdapterRef>();
 
@@ -54,8 +53,8 @@ export const useBottomSheetManager = () => {
       ref,
     } as { ref: typeof ref });
 
-    // QueueItem reads this map during its first render, and the store write
-    // below is what schedules that render — so register before writing.
+    // Before the store write: QueueItem reads the map in the render that
+    // write schedules.
     setSheetRef(id, ref);
 
     const result = storeOpen(
@@ -70,11 +69,8 @@ export const useBottomSheetManager = () => {
       options.mode
     );
 
-    // A rejected open reclaims only the entry it created: inline IDs are
-    // random and nothing but QueueItem's unmount cleans the map, so an orphan
-    // leaks per rejected call — but deleting a ref registered before this call
-    // strips a live explicit id or a persistent sheet of the one the
-    // coordinator drives.
+    // Reclaim only what this call registered (random inline ids would leak one
+    // entry per rejection); a pre-existing ref belongs to a live sheet.
     if (!result.opened) {
       if (!existing) {
         cleanupSheetRef(id);

@@ -3,7 +3,6 @@ import {
   createRef,
   useEffect,
   useImperativeHandle,
-  useState,
   type ReactElement,
   type Ref,
 } from 'react';
@@ -44,15 +43,17 @@ const ManagerProbe = () => {
   return null;
 };
 
+const hostTree = (SheetWrapper?: React.ComponentType<SheetWrapperProps>) => (
+  <SafeAreaProvider initialMetrics={initialMetrics}>
+    <BottomSheetManagerProvider id="g1">
+      <ManagerProbe />
+      <BottomSheetHost SheetWrapper={SheetWrapper} />
+    </BottomSheetManagerProvider>
+  </SafeAreaProvider>
+);
+
 const renderHost = (SheetWrapper?: React.ComponentType<SheetWrapperProps>) =>
-  render(
-    <SafeAreaProvider initialMetrics={initialMetrics}>
-      <BottomSheetManagerProvider id="g1">
-        <ManagerProbe />
-        <BottomSheetHost SheetWrapper={SheetWrapper} />
-      </BottomSheetManagerProvider>
-    </SafeAreaProvider>
-  );
+  render(hostTree(SheetWrapper));
 
 const seenSheetRefs: unknown[] = [];
 const lastSeenSheetRef = () => seenSheetRefs[seenSheetRefs.length - 1];
@@ -369,41 +370,7 @@ describe('registered ref identity', () => {
 
 const StableWrapper = ({ children }: SheetWrapperProps) => <>{children}</>;
 
-const TickWrapperBody = ({
-  children,
-}: SheetWrapperProps & { tick: number }) => <>{children}</>;
-
-let forceHostRender: (() => void) | undefined;
-
-const inProviders = (children: ReactElement) => (
-  <SafeAreaProvider initialMetrics={initialMetrics}>
-    <BottomSheetManagerProvider id="g1">{children}</BottomSheetManagerProvider>
-  </SafeAreaProvider>
-);
-
-// The closure captures `tick`, so the compiler cannot outline it to module
-// scope — the prop value really is new on every parent render.
-const UnstableWrapperHost = () => {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    forceHostRender = () => setTick((value) => value + 1);
-  }, []);
-  return inProviders(
-    <BottomSheetHost
-      SheetWrapper={(props: SheetWrapperProps) => (
-        <TickWrapperBody tick={tick} {...props} />
-      )}
-    />
-  );
-};
-
-const StableWrapperHost = () => {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    forceHostRender = () => setTick((value) => value + 1);
-  }, []);
-  return inProviders(<BottomSheetHost SheetWrapper={StableWrapper} />);
-};
+const freshWrapper = () => (props: SheetWrapperProps) => <>{props.children}</>;
 
 const identityWarnings = () =>
   (console.warn as jest.Mock).mock.calls.filter(([message]) =>
@@ -412,19 +379,19 @@ const identityWarnings = () =>
 
 describe('SheetWrapper identity warning', () => {
   it('warns once when the prop value changes between renders', () => {
-    render(<UnstableWrapperHost />);
+    const { rerender } = render(hostTree(freshWrapper()));
 
-    act(() => forceHostRender?.());
-    act(() => forceHostRender?.());
+    rerender(hostTree(freshWrapper()));
+    rerender(hostTree(freshWrapper()));
 
     expect(identityWarnings()).toHaveLength(1);
   });
 
-  it('stays quiet for a module-scope wrapper across the same re-renders', () => {
-    render(<StableWrapperHost />);
+  it('stays quiet for a stable wrapper across the same re-renders', () => {
+    const { rerender } = render(hostTree(StableWrapper));
 
-    act(() => forceHostRender?.());
-    act(() => forceHostRender?.());
+    rerender(hostTree(StableWrapper));
+    rerender(hostTree(StableWrapper));
 
     expect(identityWarnings()).toHaveLength(0);
   });
