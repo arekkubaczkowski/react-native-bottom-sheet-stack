@@ -21,7 +21,7 @@ function FallbackSheet({
   const { close } = useBottomSheetContext();
 
   return (
-    <CustomModalAdapter ref={sheetRef} contentContainerStyle={styles.overlay}>
+    <CustomModalAdapter ref={sheetRef} contentContainerStyle={styles.content}>
       <View style={styles.card}>
         <Badge label="Fallback" color={colors.error} />
         <Text style={sharedStyles.h1}>This sheet could not be shown</Text>
@@ -64,8 +64,7 @@ export class SheetErrorBoundary extends Component<
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  content: {
     paddingHorizontal: 24,
   },
   card: {

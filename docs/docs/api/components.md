@@ -82,6 +82,8 @@ class SheetErrorBoundary extends React.Component<
 
 An adapter that mounts while its sheet is already `open` is expanded on mount, so the fallback appears in place without extra wiring. If it mounts while the sheet is `closing`, the sheet is ended instead — a crash mid-dismissal finishes the close rather than popping the error card back up.
 
+Give the fallback no scrim of its own — the manager's backdrop is still mounted behind it, and a second dim stacks on the first. Expect one visual artefact instead: a fallback adapter that seeds its position from zero rewinds the sheet's shared `animatedIndex` to -1 on its first render, so under an open sheet the manager backdrop fades out and back in behind the fallback. Seed the adapter from the sheet's current status to avoid it. Note too that the crashed adapter's unmount re-enables the manager scrim through its backdrop cleanup, so a sheet that passed `backdrop={false}` gets the group backdrop back for its fallback.
+
 ---
 
 ## BottomSheetScaleView
