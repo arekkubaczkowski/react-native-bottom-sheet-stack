@@ -75,7 +75,16 @@ const BodyAdapter = ({
   return <Text>{label}</Text>;
 };
 
+// The coordinator queues its ref calls on requestAnimationFrame, which RN's
+// jest setup polyfills with a timeout. A frame still pending when the file ends
+// runs against a torn-down environment and fails the whole run.
+const flushFrame = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
 const fallbackExpand = jest.fn();
+const fallbackClose = jest.fn();
 
 // Module scope: the compiler outlines the `useImperativeHandle` factory there,
 // so a spy declared inside a test would be out of its reach.
@@ -87,9 +96,17 @@ const FallbackAdapter = ({
   const ref = useAdapterRef(sheetRef);
   useImperativeHandle(ref, () => ({
     expand: fallbackExpand,
-    close: jest.fn(),
+    close: fallbackClose,
   }));
   return <Text>fallback</Text>;
+};
+
+const Crashable = () => {
+  const { params } = useBottomSheetContext();
+  if ((params as { crash?: boolean } | undefined)?.crash) {
+    throw new Error('boom');
+  }
+  return <Text>alive</Text>;
 };
 
 class FallbackBoundary extends Component<
@@ -200,14 +217,6 @@ describe('BottomSheetHost SheetWrapper', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     fallbackExpand.mockClear();
 
-    const Crashable = () => {
-      const { params } = useBottomSheetContext();
-      if ((params as { crash?: boolean } | undefined)?.crash) {
-        throw new Error('boom');
-      }
-      return <Text>alive</Text>;
-    };
-
     const screen = renderHost(FallbackBoundary);
     act(() => {
       store().open({
@@ -227,20 +236,63 @@ describe('BottomSheetHost SheetWrapper', () => {
     expect(getSheetRef('a')?.current?.expand).toBe(fallbackExpand);
     expect(fallbackExpand).toHaveBeenCalledTimes(1);
   });
+
+  it('ends a sheet whose fallback adapter mounts while it is closing', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    fallbackExpand.mockClear();
+    fallbackClose.mockClear();
+
+    const bodyClose = jest.fn();
+    const bodyRef = createRef<SheetAdapterRef>() as {
+      current: SheetAdapterRef | null;
+    };
+
+    renderHost(FallbackBoundary);
+    act(() => {
+      store().open({
+        kind: 'inline',
+        id: 'a',
+        groupId: 'g1',
+        content: <Crashable />,
+      });
+      setSheetRef('a', bodyRef);
+      bodyRef.current = { expand: jest.fn(), close: bodyClose };
+      store().markOpen('a');
+    });
+
+    await act(async () => {
+      store().startClosing('a');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(bodyClose).toHaveBeenCalledTimes(1);
+    expect(store().sheetsById.a?.status).toBe('closing');
+
+    act(() => store().updateParams('a', { crash: true }));
+
+    expect(store().sheetsById.a).toBeUndefined();
+    expect(store().stackOrderByGroup.g1).toBeUndefined();
+    expect(fallbackClose).not.toHaveBeenCalled();
+    expect(fallbackExpand).not.toHaveBeenCalled();
+    expect(
+      store().open({
+        kind: 'inline',
+        id: 'a',
+        groupId: 'g1',
+        content: <Text>again</Text>,
+      })
+    ).toEqual({ opened: true, id: 'a' });
+
+    // That re-open has no adapter, so leaving it would keep the coordinator
+    // retrying past teardown.
+    act(() => store().clearGroup('g1'));
+    await flushFrame();
+  });
 });
 
 describe('registered ref identity', () => {
   beforeEach(() => {
     seenSheetRefs.length = 0;
   });
-
-  // The coordinator queues its ref calls on requestAnimationFrame, which RN's
-  // jest setup polyfills with a timeout. A frame still pending when the file
-  // ends runs against a torn-down environment and fails the whole run.
-  const flushFrame = () =>
-    act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
 
   it('hands the wrapper the registered ref on its first render', async () => {
     const screen = renderHost(RecordingWrapper);

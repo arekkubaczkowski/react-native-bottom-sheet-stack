@@ -2,7 +2,15 @@ import { renderHook } from '@testing-library/react-native';
 
 import { BottomSheetRefContext } from '../BottomSheetRef.context';
 import { useAdapterRef } from '../useAdapterRef';
-import { inSheet, makeRef, portal, setupSheetTest, store } from './testUtils';
+import {
+  inSheet,
+  makeRef,
+  portal,
+  setupSheetTest,
+  stackOf,
+  statusOf,
+  store,
+} from './testUtils';
 
 setupSheetTest();
 
@@ -37,6 +45,36 @@ describe('useAdapterRef', () => {
     renderHook(() => useAdapterRef(ref), { wrapper: inSheet('a') });
 
     expect(ref.current.expand).not.toHaveBeenCalled();
+  });
+
+  it('ends a sheet whose adapter mounts while it is closing', () => {
+    store().open(portal('a'));
+    store().markOpen('a');
+    store().startClosing('a');
+    const ref = makeRef();
+
+    renderHook(() => useAdapterRef(ref), { wrapper: inSheet('a') });
+
+    expect(ref.current.close).not.toHaveBeenCalled();
+    expect(store().sheetsById.a).toBeUndefined();
+    expect(stackOf('g1')).toEqual([]);
+  });
+
+  it('leaves a sheet parked as hidden by switch for the store to restore', () => {
+    store().open(portal('a'));
+    store().markOpen('a');
+    store().open(portal('b'), 'switch');
+    store().markOpen('b');
+    expect(statusOf('a')).toBe('hidden');
+    const ref = makeRef();
+
+    renderHook(() => useAdapterRef(ref), { wrapper: inSheet('a') });
+
+    expect(statusOf('a')).toBe('hidden');
+    expect(stackOf('g1')).toEqual(['a', 'b']);
+
+    store().startClosing('b');
+    expect(statusOf('a')).toBe('opening');
   });
 
   it('does nothing for a hidden persistent sheet or outside a sheet context', () => {

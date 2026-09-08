@@ -29,17 +29,23 @@ export function useAdapterRef(
   const ref = contextRef ?? forwardedRef;
   const id = useMaybeBottomSheetContext()?.id;
 
-  // The coordinator drives status *changes* only, so an adapter mounted under
-  // an already-open sheet (a wrapper's fallback) has nobody else to open it.
-  // Passive effect: the imperative handle is attached by then.
+  // The coordinator drives status *changes* only, so an adapter that mounts
+  // under a live status has nobody to drive it. Under `open` it opens itself;
+  // under `closing` a fresh adapter cannot animate a close it never opened, so
+  // the sheet is ended in the store instead (same as `driveSheetRef`'s give-up
+  // path) — a mid-close remount ends the sheet without re-animating. `hidden`
+  // is deliberately left alone: nothing is stuck there and the store owns the
+  // restore. Passive effect: the imperative handle is attached by then.
   useEffect(() => {
     if (!id || typeof ref !== 'object') {
       return;
     }
-    if (useBottomSheetStore.getState().sheetsById[id]?.status !== 'open') {
-      return;
+    const status = useBottomSheetStore.getState().sheetsById[id]?.status;
+    if (status === 'open') {
+      ref?.current?.expand();
+    } else if (status === 'closing') {
+      useBottomSheetStore.getState().finishClosing(id);
     }
-    ref?.current?.expand();
   }, [id, ref]);
 
   return ref;

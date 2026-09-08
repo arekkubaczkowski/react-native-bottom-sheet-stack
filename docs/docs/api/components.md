@@ -51,7 +51,7 @@ Place `BottomSheetHost` **outside** of `BottomSheetScaleView` to prevent sheets 
 |------|------|-------------|
 | `SheetWrapper` | `React.ComponentType<SheetWrapperProps>` | Rendered around every **inline** sheet's content, inside that sheet's context. Receives `{ id, sheetRef, children }`. Portal and persistent sheets render where they are declared and are not wrapped. Define it at module scope. |
 
-Use it to put an error boundary around each sheet, so one sheet failing never takes the host down. The fallback renders an adapter bound to `sheetRef`, and the manager keeps driving the sheet — `useBottomSheetContext().close()` still closes it:
+Use it to put an error boundary around each sheet, so one sheet failing never takes the host down. The fallback **must** render an adapter bound to `sheetRef`, so the manager keeps driving the sheet — `useBottomSheetContext().close()` still closes it. A fallback without an adapter leaves a sheet that crashes mid-close stuck at `closing`: `closeAll` skips it, `close()` answers `not-closable`, the Android back button is dead for the group, and its id is unusable until `destroyAll()`.
 
 ```tsx
 class SheetErrorBoundary extends React.Component<
@@ -78,7 +78,7 @@ class SheetErrorBoundary extends React.Component<
 <BottomSheetHost SheetWrapper={SheetErrorBoundary} />;
 ```
 
-An adapter that mounts while its sheet is already `open` is expanded on mount, so the fallback appears in place without extra wiring.
+An adapter that mounts while its sheet is already `open` is expanded on mount, so the fallback appears in place without extra wiring. If it mounts while the sheet is `closing`, the sheet is ended instead — a crash mid-dismissal finishes the close rather than popping the error card back up.
 
 ---
 

@@ -123,16 +123,23 @@ is what makes a user gesture honour the interceptor — do not simplify it back.
 `driveSheetRef` retries a ref call across up to 10 `requestAnimationFrame`s,
 re-checking status each time. The store can reach a terminal status before the
 adapter mounts (a portal sheet must teleport first); a single attempt silently
-no-ops and wedges the sheet — and for `'closing'`, wedges every later open in the
-group on the `group-busy` guard.
+no-ops and wedges the sheet. A sheet stuck at `'closing'` does **not** wedge
+later opens in the group — `group-busy` is `'opening'`-only. It costs
+`closeAllAnimated` skipping it, `requestClose` answering `not-closable`, no back
+handler at all (`useIsTopmostAndOpen` needs `'open'` *and* top) and its own id
+answering `already-active` for the rest of the session.
 
-`useAdapterRef` catches up once on mount when the sheet is already `open`
-(`ref.current.expand()`): the coordinator drives status *changes*, so an adapter
-that replaces another under an open status has nobody else to open it.
-`opening` is left to `driveSheetRef`; `closing`/`hidden` are not caught up — an
-adapter that never opened cannot animate a close; the honest action would be
-`finishClosing(id)` as in `driveSheetRef`'s give-up path, deliberately not done
-yet.
+`useAdapterRef` catches up once on mount off the sheet's live status: `'open'` →
+`ref.current.expand()`, `'closing'` → `finishClosing(id)`. The coordinator
+drives status *changes*, so an adapter that replaces another under a live status
+has nobody else to drive it. `'opening'` is left to `driveSheetRef`. A fresh
+adapter cannot animate a close it never opened, so `'closing'` is ended in the
+store as in `driveSheetRef`'s give-up path — a mid-close remount ends the sheet
+without re-animating it out. `'hidden'` is deliberately excluded: a
+`switch`-parked sheet sits there *on* the stack and is restored by
+`detachFromGroup`, and `mount()` parks every persistent sheet there with its
+adapter rendered, so `finishClosing` would delete a live sheet on every
+persistent mount.
 
 Also exported publicly for adapter authors: `requestClose(id)` and
 `closeAllAnimated(groupId, opts)`.
