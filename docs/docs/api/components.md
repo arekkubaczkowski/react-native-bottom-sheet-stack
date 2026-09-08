@@ -45,6 +45,41 @@ Renders the bottom sheet stack. Must be placed inside `BottomSheetManagerProvide
 Place `BottomSheetHost` **outside** of `BottomSheetScaleView` to prevent sheets from scaling.
 :::
 
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `SheetWrapper` | `React.ComponentType<SheetWrapperProps>` | Rendered around every **inline** sheet's content, inside that sheet's context. Receives `{ id, sheetRef, children }`. Portal and persistent sheets render where they are declared and are not wrapped. Define it at module scope. |
+
+Use it to put an error boundary around each sheet, so one sheet failing never takes the host down. The fallback renders an adapter bound to `sheetRef`, and the manager keeps driving the sheet — `useBottomSheetContext().close()` still closes it:
+
+```tsx
+class SheetErrorBoundary extends React.Component<
+  SheetWrapperProps,
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (!this.state.failed) {
+      return this.props.children;
+    }
+    return (
+      <CustomModalAdapter ref={this.props.sheetRef}>
+        <Text>This sheet could not be shown.</Text>
+        <CloseButton />
+      </CustomModalAdapter>
+    );
+  }
+}
+
+<BottomSheetHost SheetWrapper={SheetErrorBoundary} />;
+```
+
+An adapter that mounts while its sheet is already `open` is expanded on mount, so the fallback appears in place without extra wiring.
+
 ---
 
 ## BottomSheetScaleView

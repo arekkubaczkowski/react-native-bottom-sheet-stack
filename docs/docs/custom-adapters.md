@@ -292,6 +292,8 @@ const ref = useAdapterRef(forwardedRef);
 useImperativeHandle(ref, () => ({ expand: ..., close: ... }));
 ```
 
+An adapter that mounts while its sheet is already `open` is expanded once on mount. The coordinator only reacts to status changes, so this is what lets an adapter rendered *in place of* another — an error-boundary fallback under `BottomSheetHost`'s `SheetWrapper` — come up open. Your adapter needs nothing extra for it beyond `useAdapterRef` + `useImperativeHandle`.
+
 ### Prop-Controlled vs Ref-Controlled Libraries
 
 **Ref-controlled** (e.g., TrueSheet with `present()`/`dismiss()`):

@@ -126,6 +126,14 @@ adapter mounts (a portal sheet must teleport first); a single attempt silently
 no-ops and wedges the sheet — and for `'closing'`, wedges every later open in the
 group on the `group-busy` guard.
 
+`useAdapterRef` catches up once on mount when the sheet is already `open`
+(`ref.current.expand()`): the coordinator drives status *changes*, so an adapter
+that replaces another under an open status has nobody else to open it.
+`opening` is left to `driveSheetRef`; `closing`/`hidden` are not caught up — an
+adapter that never opened cannot animate a close; the honest action would be
+`finishClosing(id)` as in `driveSheetRef`'s give-up path, deliberately not done
+yet.
+
 Also exported publicly for adapter authors: `requestClose(id)` and
 `closeAllAnimated(groupId, opts)`.
 
@@ -197,6 +205,21 @@ the app content and must be its **sibling**, not its parent.
 backdrop below its own sheet but above the one beneath. The offset lifts the
 whole stack above arbitrary app chrome — without it any host view with a modest
 `zIndex` paints over the sheets.
+
+`BottomSheetHost` takes `SheetWrapper?: ComponentType<SheetWrapperProps>`;
+`QueueItem` renders it around an inline sheet's `content`, inside
+`BottomSheetContext`, with `getSheetRef(id)` as `sheetRef`. The render-time
+registry read is sound because `open()` writes the store and registers the ref
+in the same synchronous call, and the store write only *schedules* the render
+that mounts the item — the item's first render already sees the final entry,
+which it must, because the compiler caches the read on `id` and never re-runs
+it. An inline id is minted per open and the item's unmount cleanup removes it,
+so the value cannot change while the item is mounted; the read is guarded on
+`usePortal` because a persistent id *can* be re-registered under a
+still-mounted item. A caller-supplied inline id re-opened in the same tick as
+its removal hands the wrapper the previous ref; the coordinator reads the
+registry fresh, so the sheet still closes via the give-up path. The prop must be
+a module-scope component — `QueueItem` is `memo`.
 
 `BottomSheetBackdrop` is mounted from the sheet's first frame and faded purely by
 `animatedIndex`. Do not add a timer or delay gate: deferring the mount drops the

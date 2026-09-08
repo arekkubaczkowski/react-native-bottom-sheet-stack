@@ -195,6 +195,20 @@ type SheetRef = RefObject<SheetAdapterRef | null>;
 
 ---
 
+### SheetWrapperProps
+
+```ts
+interface SheetWrapperProps {
+  id: string; // same as useBottomSheetContext().id
+  sheetRef: SheetRef; // the ref the coordinator drives; bind a fallback adapter to it
+  children: ReactNode;
+}
+```
+
+Props of the component passed to `BottomSheetHost`'s `SheetWrapper`.
+
+---
+
 ## Configuration Types
 
 ### ScaleConfig
