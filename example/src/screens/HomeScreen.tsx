@@ -13,6 +13,7 @@ import {
   BackdropDemo,
   ContextComparisonSheet,
   ContextSheetPortal,
+  ErrorBoundaryDemoSheet,
   ForceCloseDemo,
   GroupASheet,
   HeavySheet,
@@ -214,6 +215,15 @@ export function HomeScreen() {
             description="close() vs forceClose() vs destroyAll() against a refusing interceptor, plus backdrop={false}"
             color={colors.error}
             onPress={() => open(<ForceCloseDemo />, { scaleBackground: true })}
+          />
+
+          <DemoCard
+            title="Sheet error boundary"
+            description="Crash one inline sheet's body — a fallback sheet replaces it, the host stays up"
+            color={colors.error}
+            onPress={() =>
+              open(<ErrorBoundaryDemoSheet />, { scaleBackground: true })
+            }
           />
 
           <DemoCard

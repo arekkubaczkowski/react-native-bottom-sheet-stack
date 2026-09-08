@@ -9,6 +9,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { BottomSheetDebugMonitor } from './components/BottomSheetDebugMonitor';
+import { SheetErrorBoundary } from './components/SheetErrorBoundary';
 import { UserProvider } from './context/UserContext';
 import { HomeScreen } from './screens';
 import {
@@ -37,7 +38,12 @@ export default function App() {
                 <HomeScreen />
               </UserProvider>
             </BottomSheetScaleView>
-            <BottomSheetHost />
+            {/*
+              Every inline sheet in this group renders inside
+              SheetErrorBoundary, so a sheet whose body throws is replaced by a
+              fallback sheet instead of taking the host down with it.
+            */}
+            <BottomSheetHost SheetWrapper={SheetErrorBoundary} />
             {/* Persistent sheet - always mounted, opens instantly */}
             <BottomSheetPersistent id="scanner-sheet">
               <ScannerSheet />
