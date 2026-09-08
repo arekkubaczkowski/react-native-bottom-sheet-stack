@@ -3,6 +3,7 @@ import {
   createRef,
   useEffect,
   useImperativeHandle,
+  useState,
   type ReactElement,
   type Ref,
 } from 'react';
@@ -363,5 +364,68 @@ describe('registered ref identity', () => {
     expect(getSheetRef('persistent-notepad')).toBe(persistentRef);
 
     await flushFrame();
+  });
+});
+
+const StableWrapper = ({ children }: SheetWrapperProps) => <>{children}</>;
+
+const TickWrapperBody = ({
+  children,
+}: SheetWrapperProps & { tick: number }) => <>{children}</>;
+
+let forceHostRender: (() => void) | undefined;
+
+const inProviders = (children: ReactElement) => (
+  <SafeAreaProvider initialMetrics={initialMetrics}>
+    <BottomSheetManagerProvider id="g1">{children}</BottomSheetManagerProvider>
+  </SafeAreaProvider>
+);
+
+// The closure captures `tick`, so the compiler cannot outline it to module
+// scope — the prop value really is new on every parent render.
+const UnstableWrapperHost = () => {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    forceHostRender = () => setTick((value) => value + 1);
+  }, []);
+  return inProviders(
+    <BottomSheetHost
+      SheetWrapper={(props: SheetWrapperProps) => (
+        <TickWrapperBody tick={tick} {...props} />
+      )}
+    />
+  );
+};
+
+const StableWrapperHost = () => {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    forceHostRender = () => setTick((value) => value + 1);
+  }, []);
+  return inProviders(<BottomSheetHost SheetWrapper={StableWrapper} />);
+};
+
+const identityWarnings = () =>
+  (console.warn as jest.Mock).mock.calls.filter(([message]) =>
+    /changed between renders/.test(String(message))
+  );
+
+describe('SheetWrapper identity warning', () => {
+  it('warns once when the prop value changes between renders', () => {
+    render(<UnstableWrapperHost />);
+
+    act(() => forceHostRender?.());
+    act(() => forceHostRender?.());
+
+    expect(identityWarnings()).toHaveLength(1);
+  });
+
+  it('stays quiet for a module-scope wrapper across the same re-renders', () => {
+    render(<StableWrapperHost />);
+
+    act(() => forceHostRender?.());
+    act(() => forceHostRender?.());
+
+    expect(identityWarnings()).toHaveLength(0);
   });
 });

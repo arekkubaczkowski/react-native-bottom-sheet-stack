@@ -1,4 +1,4 @@
-import { useEffect, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useRef, type ComponentType, type ReactNode } from 'react';
 
 import type { SheetRef } from './adapter.types';
 import { useBottomSheetStore, useClearGroup } from './store';
@@ -91,12 +91,52 @@ export interface SheetWrapperProps {
   children: ReactNode;
 }
 
+/**
+ * Warns once per host when the `SheetWrapper` prop value changes.
+ *
+ * The wrapper is used as an element type, so a new value remounts every inline
+ * sheet. Compares the value rather than skipping the first run: StrictMode
+ * replays effects with the same ref object, and a run-counting flag would warn
+ * on a wrapper that never changed.
+ */
+function useSheetWrapperIdentityWarning(
+  SheetWrapper?: ComponentType<SheetWrapperProps>
+) {
+  const seen = useRef({ last: SheetWrapper, warned: false });
+
+  useEffect(() => {
+    const state = seen.current;
+    if (state.last === SheetWrapper) {
+      return;
+    }
+    state.last = SheetWrapper;
+
+    if (__DEV__ && !state.warned) {
+      state.warned = true;
+      console.warn(
+        '[BottomSheet] `SheetWrapper` changed between renders, which remounts ' +
+          'every inline sheet: the adapter replays its open animation and a ' +
+          'stateful wrapper (an error boundary) loses its state. Keep the prop ' +
+          'value stable for the life of the host — a module-scope component, ' +
+          'not an inline arrow or a branch on a flag.'
+      );
+    }
+  }, [SheetWrapper]);
+}
+
 interface BottomSheetHostProps {
   /**
    * Wraps each inline sheet's content inside its context — the place for a
    * per-sheet error boundary whose fallback is an adapter bound to `sheetRef`.
    * Portal and persistent sheets render where they are declared and are not
-   * wrapped. Must be a module-scope component: `QueueItem` is memoized.
+   * wrapped.
+   *
+   * The prop *value* must stay stable for the life of the host: it is used as
+   * an element type, so a new value remounts every inline sheet — the adapter
+   * replays its open animation and a stateful wrapper loses its state. Pass a
+   * module-scope component, not an inline arrow and not a branch on a flag
+   * (`flag ? Wrapper : undefined` remounts on the frame the flag resolves).
+   * Changing it warns in dev.
    */
   SheetWrapper?: ComponentType<SheetWrapperProps>;
 }
@@ -105,6 +145,8 @@ export function BottomSheetHost({ SheetWrapper }: BottomSheetHostProps) {
   const sheetRenderData = useSheetRenderData();
   const clearGroup = useClearGroup();
   const { groupId } = useBottomSheetManagerContext();
+
+  useSheetWrapperIdentityWarning(SheetWrapper);
 
   useEffect(() => {
     const unsubscribe = initBottomSheetCoordinator(groupId);

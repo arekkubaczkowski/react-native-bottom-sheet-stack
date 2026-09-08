@@ -49,7 +49,9 @@ Place `BottomSheetHost` **outside** of `BottomSheetScaleView` to prevent sheets 
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `SheetWrapper` | `React.ComponentType<SheetWrapperProps>` | Rendered around every **inline** sheet's content, inside that sheet's context. Receives `{ id, sheetRef, children }`. Portal and persistent sheets render where they are declared and are not wrapped. Define it at module scope. |
+| `SheetWrapper` | `React.ComponentType<SheetWrapperProps>` | Rendered around every **inline** sheet's content, inside that sheet's context. Receives `{ id, sheetRef, children }`. Portal and persistent sheets render where they are declared and are not wrapped. The prop **value** must stay stable for the life of the host — see below. |
+
+The wrapper is used as an element **type**, so a new prop value remounts every inline sheet: the adapter replays its open animation (its fresh shared value rewinds `animatedIndex`, so the backdrop blanks first) and a stateful wrapper loses its state — an error boundary forgets that it already failed. Pass a module-scope component; an inline arrow and a derived value (`flag ? SheetErrorBoundary : undefined`, or swapping one module-scope wrapper for another) both break it, the latter on the frame the flag resolves, typically while a sheet is open. Changing the value warns once per host in dev.
 
 Use it to put an error boundary around each sheet, so one sheet failing never takes the host down. The fallback **must** render an adapter bound to `sheetRef`, so the manager keeps driving the sheet — `useBottomSheetContext().close()` still closes it. A fallback without an adapter leaves a sheet that crashes mid-close stuck at `closing`: `closeAll` skips it, `close()` answers `not-closable`, the Android back button is dead for the group, and its id is unusable until `destroyAll()`.
 
