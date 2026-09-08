@@ -80,8 +80,14 @@ function reconcilePendingTransitions(groupId: string): () => void {
 
 export interface SheetWrapperProps {
   id: string;
-  /** The ref the coordinator drives; a fallback adapter binds to it so expand/close keep reaching the sheet. */
-  sheetRef: SheetRef;
+  /**
+   * The ref the coordinator drives; a fallback adapter binds to it so
+   * expand/close keep reaching the sheet. `undefined` when no ref is registered
+   * for the id — the wrapper still renders, but the coordinator cannot drive a
+   * fallback adapter, so a programmatic close removes the sheet with no exit
+   * animation.
+   */
+  sheetRef: SheetRef | undefined;
   children: ReactNode;
 }
 

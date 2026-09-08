@@ -200,12 +200,14 @@ type SheetRef = RefObject<SheetAdapterRef | null>;
 ```ts
 interface SheetWrapperProps {
   id: string; // same as useBottomSheetContext().id
-  sheetRef: SheetRef; // the ref the coordinator drives; bind a fallback adapter to it
+  sheetRef: SheetRef | undefined; // the ref the coordinator drives; bind a fallback adapter to it
   children: ReactNode;
 }
 ```
 
 Props of the component passed to `BottomSheetHost`'s `SheetWrapper`.
+
+`sheetRef` is `undefined` when no ref is registered for the id — the wrapper still renders, but the coordinator cannot drive a fallback adapter, so a programmatic close removes the sheet with no exit animation.
 
 ---
 

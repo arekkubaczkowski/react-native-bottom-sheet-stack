@@ -137,6 +137,27 @@ describe('BottomSheetHost SheetWrapper', () => {
     });
   });
 
+  it('wraps an inline sheet with no registered ref, handing the wrapper undefined', () => {
+    const seen: Array<{ id: string; sheetRef: unknown }> = [];
+    const Wrapper = ({ id, sheetRef, children }: SheetWrapperProps) => {
+      seen.push({ id, sheetRef });
+      return <>{children}</>;
+    };
+    const screen = renderHost(Wrapper);
+
+    act(() =>
+      store().open({
+        kind: 'inline',
+        id: 'a',
+        groupId: 'g1',
+        content: <Text>body</Text>,
+      })
+    );
+
+    expect(seen).toStrictEqual([{ id: 'a', sheetRef: undefined }]);
+    expect(screen.getByText('body')).toBeTruthy();
+  });
+
   it('does not wrap portal sheets', () => {
     const Wrapper = jest.fn(({ children }: SheetWrapperProps) => (
       <>{children}</>

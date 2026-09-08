@@ -58,14 +58,13 @@ export const QueueItem = memo(function QueueItem({
   // because a persistent id can be re-registered under a still-mounted item.
   const sheetRef = usePortal ? undefined : getSheetRef(id);
 
-  const inlineContent =
-    SheetWrapper && sheetRef ? (
-      <SheetWrapper id={id} sheetRef={sheetRef}>
-        {content}
-      </SheetWrapper>
-    ) : (
-      content
-    );
+  const inlineContent = SheetWrapper ? (
+    <SheetWrapper id={id} sheetRef={sheetRef}>
+      {content}
+    </SheetWrapper>
+  ) : (
+    content
+  );
 
   useEffect(() => {
     return () => {

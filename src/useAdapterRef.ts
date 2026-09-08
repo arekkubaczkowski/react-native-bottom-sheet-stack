@@ -23,8 +23,8 @@ import { useBottomSheetStore } from './store';
  * ```
  */
 export function useAdapterRef(
-  forwardedRef: ForwardedRef<SheetAdapterRef>
-): SheetRef | ForwardedRef<SheetAdapterRef> {
+  forwardedRef: ForwardedRef<SheetAdapterRef> | undefined
+): SheetRef | ForwardedRef<SheetAdapterRef> | undefined {
   const contextRef = useMaybeBottomSheetRef();
   const ref = contextRef ?? forwardedRef;
   const id = useMaybeBottomSheetContext()?.id;
