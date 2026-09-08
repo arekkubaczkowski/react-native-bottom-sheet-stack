@@ -43,16 +43,21 @@ describe('useBottomSheetManager', () => {
       store().markOpen('a');
     });
 
+    const registered = getSheetRef('a');
+
     let second: string | null = 'unset';
     act(() => {
       second = result.current.open(<Sheet />, { id: 'a' });
     });
 
     expect(second).toBeNull();
+    // The live sheet keeps the ref the coordinator drives: a rejected open
+    // reclaims only an entry it registered itself.
+    expect(getSheetRef('a')).toBe(registered);
   });
 
-  // The ref map is only cleaned up by QueueItem's unmount, which never happens
-  // for a rejected open — so registering early leaked an unreclaimable entry.
+  // Inline IDs are random and QueueItem's unmount is the map's only other
+  // cleanup, so an entry a rejected open leaves behind is unreclaimable.
   it('does not leak a ref when the open is declined', () => {
     const { result } = renderHook(() => useBottomSheetManager(), { wrapper });
 

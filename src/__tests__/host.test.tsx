@@ -221,6 +221,23 @@ describe('registered ref identity', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
+  it('hands the wrapper the registered ref on its first render', async () => {
+    const screen = renderHost(RecordingWrapper);
+
+    act(() => {
+      managerHolder.api.open(<BodyAdapter label="first" />, { id: 'x' });
+      store().markOpen('x');
+    });
+
+    expect(screen.getByText('first')).toBeTruthy();
+    expect(getSheetRef('x')).toBeDefined();
+    // The compiler caches the read on the item's id, so a first render that
+    // misses the entry misses it for the item's whole life.
+    expect(seenSheetRefs[0]).toBe(getSheetRef('x'));
+
+    await flushFrame();
+  });
+
   it('hands the wrapper the registered ref when an id is re-opened in one tick', async () => {
     const screen = renderHost(RecordingWrapper);
 

@@ -145,7 +145,7 @@ Four maps that outlive React, which is why `resetBottomSheetRegistries()` exists
 
 | Registry | Holds | Non-obvious part |
 |---|---|---|
-| `refsMap` | adapter refs | Refs are not serializable, so they cannot live in the store. Registered **only after** the store accepts the open, or a rejected open leaks an entry nothing can reclaim. Cleaned up by `QueueItem`'s unmount. |
+| `refsMap` | adapter refs | Refs are not serializable, so they cannot live in the store. Registered **before** the store write, because that write is what schedules the `QueueItem` render which reads the map. A rejected open reclaims only the entry it created — an orphan is unreclaimable, and deleting a pre-existing one strips a live sheet. Cleaned up by `QueueItem`'s unmount. |
 | `animatedRegistry` | `SharedValue<number>` per sheet | Created **eagerly** in `open()` / `mount()` so the backdrop always finds one. `resetAnimatedIndex` rewinds to `-1` on open, so a re-opened persistent sheet does not carry last cycle's value. `getAnimatedIndex` is a pure read and never creates. |
 | `onBeforeCloseRegistry` | close interceptors | Found from outside React by `requestClose` / `handleDismiss`. Its presence also flips `preventDismiss` on the store record. |
 | `portalSessionRegistry` | monotonic counter per id | Feeds the `Portal`/`PortalHost` name. **Persists across sheet deletion on purpose** — reusing a name after a replace hits a react-native-teleport connection bug. |
@@ -209,8 +209,8 @@ whole stack above arbitrary app chrome — without it any host view with a modes
 `BottomSheetHost` takes `SheetWrapper?: ComponentType<SheetWrapperProps>`;
 `QueueItem` renders it around an inline sheet's `content`, inside
 `BottomSheetContext`, with `getSheetRef(id)` as `sheetRef`. The render-time
-registry read is sound because `open()` writes the store and registers the ref
-in the same synchronous call, and the store write only *schedules* the render
+registry read is sound because `open()` registers the ref and then writes the
+store in one synchronous call, and the store write only *schedules* the render
 that mounts the item — the item's first render already sees the final entry,
 which it must, because the compiler caches the read on `id` and never re-runs
 it. An inline id is minted per open and the item's unmount cleanup removes it,

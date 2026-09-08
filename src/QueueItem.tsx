@@ -51,9 +51,11 @@ export const QueueItem = memo(function QueueItem({
 
   const animatedIndex = getAnimatedIndex(id);
 
-  // Safe to read during render: `open()` registers the ref before the store
-  // write that schedules this render, and the entry outlives the item. A
-  // persistent id can be re-registered under a mounted item, hence the guard.
+  // `open()` registers the ref, then writes the store; React only schedules the
+  // render that write causes, so this first — and, with the compiler's
+  // `[id, usePortal]` cache, only — read sees the entry. Nothing async or
+  // render-flushing may go between those two calls. Guarded on `usePortal`
+  // because a persistent id can be re-registered under a still-mounted item.
   const sheetRef = usePortal ? undefined : getSheetRef(id);
 
   const inlineContent =

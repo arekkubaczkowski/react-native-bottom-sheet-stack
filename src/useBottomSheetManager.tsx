@@ -6,7 +6,7 @@ import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import type { SheetAdapterRef } from './adapter.types';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
-import { getSheetRef, setSheetRef } from './refsMap';
+import { cleanupSheetRef, getSheetRef, setSheetRef } from './refsMap';
 
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
@@ -54,6 +54,10 @@ export const useBottomSheetManager = () => {
       ref,
     } as { ref: typeof ref });
 
+    // QueueItem reads this map during its first render, and the store write
+    // below is what schedules that render — so register before writing.
+    setSheetRef(id, ref);
+
     const result = storeOpen(
       {
         kind: 'inline',
@@ -66,15 +70,17 @@ export const useBottomSheetManager = () => {
       options.mode
     );
 
-    // Registered only after the store accepts the sheet. The ref map is
-    // module-global and is only ever cleaned up by QueueItem's unmount — so
-    // registering before a rejected open would leak an entry that nothing can
-    // reclaim, once per rejected call, since inline IDs are random.
+    // A rejected open reclaims only the entry it created: inline IDs are
+    // random and nothing but QueueItem's unmount cleans the map, so an orphan
+    // leaks per rejected call — but deleting a ref registered before this call
+    // strips a live explicit id or a persistent sheet of the one the
+    // coordinator drives.
     if (!result.opened) {
+      if (!existing) {
+        cleanupSheetRef(id);
+      }
       return null;
     }
-
-    setSheetRef(id, ref);
 
     applyDeprecatedBackdrop(id, options.backdrop, setBackdrop);
 
