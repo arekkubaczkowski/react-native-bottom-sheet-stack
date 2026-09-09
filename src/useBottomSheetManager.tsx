@@ -6,7 +6,7 @@ import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
 import { useMaybeBottomSheetManagerContext } from './BottomSheetManager.context';
 import type { SheetAdapterRef } from './adapter.types';
 import { closeAllAnimated, requestClose } from './bottomSheetCoordinator';
-import { setSheetRef } from './refsMap';
+import { cleanupSheetRef, getSheetRef, setSheetRef } from './refsMap';
 
 export const useBottomSheetManager = () => {
   const bottomSheetManagerContext = useMaybeBottomSheetManagerContext();
@@ -44,11 +44,18 @@ export const useBottomSheetManager = () => {
       options.groupId || bottomSheetManagerContext?.groupId || 'default';
 
     const id = options.id || Math.random().toString(36);
-    const ref = React.createRef<SheetAdapterRef>();
+    // One id, one ref object: QueueItem caches its render-time read, and a
+    // persistent sheet registers its own ref on mount.
+    const existing = getSheetRef(id);
+    const ref = existing ?? React.createRef<SheetAdapterRef>();
 
     const contentWithRef = React.cloneElement(content, {
       ref,
     } as { ref: typeof ref });
+
+    // Before the store write: QueueItem reads the map in the render that
+    // write schedules.
+    setSheetRef(id, ref);
 
     const result = storeOpen(
       {
@@ -62,15 +69,14 @@ export const useBottomSheetManager = () => {
       options.mode
     );
 
-    // Registered only after the store accepts the sheet. The ref map is
-    // module-global and is only ever cleaned up by QueueItem's unmount — so
-    // registering before a rejected open would leak an entry that nothing can
-    // reclaim, once per rejected call, since inline IDs are random.
+    // Reclaim only what this call registered (random inline ids would leak one
+    // entry per rejection); a pre-existing ref belongs to a live sheet.
     if (!result.opened) {
+      if (!existing) {
+        cleanupSheetRef(id);
+      }
       return null;
     }
-
-    setSheetRef(id, ref);
 
     applyDeprecatedBackdrop(id, options.backdrop, setBackdrop);
 

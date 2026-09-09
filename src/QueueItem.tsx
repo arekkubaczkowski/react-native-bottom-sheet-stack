@@ -1,4 +1,9 @@
-import { memo, useEffect, type PropsWithChildren } from 'react';
+import {
+  memo,
+  useEffect,
+  type ComponentType,
+  type PropsWithChildren,
+} from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
@@ -15,20 +20,23 @@ import {
   useSheetUsePortal,
 } from './store';
 import { BottomSheetBackdrop } from './BottomSheetBackdrop';
+import type { SheetWrapperProps } from './BottomSheetHost';
 import { removeOnBeforeClose } from './onBeforeCloseRegistry';
-import { cleanupSheetRef } from './refsMap';
+import { cleanupSheetRef, getSheetRef } from './refsMap';
 import { useSheetScaleAnimatedStyle } from './useScaleAnimation';
 
 interface QueueItemProps {
   id: string;
   stackIndex: number;
   isActive: boolean;
+  SheetWrapper?: ComponentType<SheetWrapperProps>;
 }
 
 export const QueueItem = memo(function QueueItem({
   id,
   stackIndex,
   isActive,
+  SheetWrapper,
 }: QueueItemProps) {
   const content = useSheetContent(id);
   const usePortal = useSheetUsePortal(id);
@@ -42,6 +50,19 @@ export const QueueItem = memo(function QueueItem({
   const { width, height } = useSafeAreaFrame();
 
   const animatedIndex = getAnimatedIndex(id);
+
+  // `open()` registers the ref, then writes the store, and React only schedules
+  // the render that write causes — so this cached first read sees the entry.
+  // Guarded: a persistent id can be re-registered under a still-mounted item.
+  const sheetRef = usePortal ? undefined : getSheetRef(id);
+
+  const inlineContent = SheetWrapper ? (
+    <SheetWrapper id={id} sheetRef={sheetRef}>
+      {content}
+    </SheetWrapper>
+  ) : (
+    content
+  );
 
   useEffect(() => {
     return () => {
@@ -82,7 +103,7 @@ export const QueueItem = memo(function QueueItem({
           />
         ) : (
           <BottomSheetContext.Provider value={{ id }}>
-            {content}
+            {inlineContent}
           </BottomSheetContext.Provider>
         )}
       </ScaleWrapper>

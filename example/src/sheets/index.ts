@@ -38,3 +38,4 @@ export {
 } from './BackdropSheets';
 export { GroupASheet, GroupBSheet } from './GroupIsolationSheets';
 export { StatusDemoPanel, StatusDemoSheet } from './SheetStatusSheets';
+export { ErrorBoundaryDemoSheet } from './ErrorBoundarySheets';

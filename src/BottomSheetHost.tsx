@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, type ComponentType, type ReactNode } from 'react';
 
+import type { SheetRef } from './adapter.types';
 import { useBottomSheetStore, useClearGroup } from './store';
 import { initBottomSheetCoordinator } from './bottomSheetCoordinator';
 import { useBottomSheetManagerContext } from './BottomSheetManager.context';
@@ -77,10 +78,60 @@ function reconcilePendingTransitions(groupId: string): () => void {
   };
 }
 
-export function BottomSheetHost() {
+export interface SheetWrapperProps {
+  id: string;
+  /**
+   * The ref the coordinator drives; bind a fallback adapter to it. `undefined`
+   * when nothing is registered for the id: the wrapper still renders, but no
+   * catch-up or programmatic close reaches its fallback adapter.
+   */
+  sheetRef: SheetRef | undefined;
+  children: ReactNode;
+}
+
+function useSheetWrapperIdentityWarning(
+  SheetWrapper?: ComponentType<SheetWrapperProps>
+) {
+  const seen = useRef({ last: SheetWrapper, warned: false });
+
+  // Compares the value instead of skipping the first run: StrictMode replays
+  // effects with the same ref object.
+  useEffect(() => {
+    const state = seen.current;
+    if (state.last === SheetWrapper) {
+      return;
+    }
+    state.last = SheetWrapper;
+
+    if (__DEV__ && !state.warned) {
+      state.warned = true;
+      console.warn(
+        '[BottomSheet] `SheetWrapper` changed between renders, which remounts ' +
+          'every inline sheet (open animation replays, a stateful wrapper loses ' +
+          'its state). Keep the value stable: a module-scope component, not an ' +
+          'inline arrow or a branch on a flag.'
+      );
+    }
+  }, [SheetWrapper]);
+}
+
+interface BottomSheetHostProps {
+  /**
+   * Wraps each inline sheet's content inside its context — the place for a
+   * per-sheet error boundary whose fallback is an adapter bound to `sheetRef`.
+   * Portal and persistent sheets are not wrapped. Keep the value stable for the
+   * life of the host: it is the element type, so a new value (an inline arrow,
+   * `flag ? Wrapper : undefined`) remounts every inline sheet; dev warns.
+   */
+  SheetWrapper?: ComponentType<SheetWrapperProps>;
+}
+
+export function BottomSheetHost({ SheetWrapper }: BottomSheetHostProps) {
   const sheetRenderData = useSheetRenderData();
   const clearGroup = useClearGroup();
   const { groupId } = useBottomSheetManagerContext();
+
+  useSheetWrapperIdentityWarning(SheetWrapper);
 
   useEffect(() => {
     const unsubscribe = initBottomSheetCoordinator(groupId);
@@ -105,6 +156,7 @@ export function BottomSheetHost() {
           id={id}
           stackIndex={stackIndex}
           isActive={isActive}
+          SheetWrapper={SheetWrapper}
         />
       ))}
     </>

@@ -123,8 +123,23 @@ is what makes a user gesture honour the interceptor — do not simplify it back.
 `driveSheetRef` retries a ref call across up to 10 `requestAnimationFrame`s,
 re-checking status each time. The store can reach a terminal status before the
 adapter mounts (a portal sheet must teleport first); a single attempt silently
-no-ops and wedges the sheet — and for `'closing'`, wedges every later open in the
-group on the `group-busy` guard.
+no-ops and wedges the sheet. A sheet stuck at `'closing'` does **not** wedge
+later opens in the group — `group-busy` is `'opening'`-only. It costs
+`closeAllAnimated` skipping it, `requestClose` answering `not-closable`, no back
+handler at all (`useIsTopmostAndOpen` needs `'open'` *and* top) and its own id
+answering `already-active` for the rest of the session.
+
+`useAdapterRef` catches up once on mount off the sheet's live status: `'open'` →
+`ref.current.expand()`, `'closing'` → `finishClosing(id)`. The coordinator
+drives status *changes*, so an adapter that replaces another under a live status
+has nobody else to drive it. `'opening'` is left to `driveSheetRef`. A fresh
+adapter cannot animate a close it never opened, so `'closing'` is ended in the
+store as in `driveSheetRef`'s give-up path — a mid-close remount ends the sheet
+without re-animating it out. `'hidden'` is deliberately excluded: a
+`switch`-parked sheet sits there *on* the stack and is restored by
+`detachFromGroup`, and `mount()` parks every persistent sheet there with its
+adapter rendered, so `finishClosing` would delete a live sheet on every
+persistent mount.
 
 Also exported publicly for adapter authors: `requestClose(id)` and
 `closeAllAnimated(groupId, opts)`.
@@ -137,7 +152,7 @@ Four maps that outlive React, which is why `resetBottomSheetRegistries()` exists
 
 | Registry | Holds | Non-obvious part |
 |---|---|---|
-| `refsMap` | adapter refs | Refs are not serializable, so they cannot live in the store. Registered **only after** the store accepts the open, or a rejected open leaks an entry nothing can reclaim. Cleaned up by `QueueItem`'s unmount. |
+| `refsMap` | adapter refs | Refs are not serializable, so they cannot live in the store. Registered **before** the store write, because that write is what schedules the `QueueItem` render which reads the map. A rejected open reclaims only the entry it created — an orphan is unreclaimable, and deleting a pre-existing one strips a live sheet. Cleaned up by `QueueItem`'s unmount. |
 | `animatedRegistry` | `SharedValue<number>` per sheet | Created **eagerly** in `open()` / `mount()` so the backdrop always finds one. `resetAnimatedIndex` rewinds to `-1` on open, so a re-opened persistent sheet does not carry last cycle's value. `getAnimatedIndex` is a pure read and never creates. |
 | `onBeforeCloseRegistry` | close interceptors | Found from outside React by `requestClose` / `handleDismiss`. Its presence also flips `preventDismiss` on the store record. |
 | `portalSessionRegistry` | monotonic counter per id | Feeds the `Portal`/`PortalHost` name. **Persists across sheet deletion on purpose** — reusing a name after a replace hits a react-native-teleport connection bug. |
@@ -197,6 +212,25 @@ the app content and must be its **sibling**, not its parent.
 backdrop below its own sheet but above the one beneath. The offset lifts the
 whole stack above arbitrary app chrome — without it any host view with a modest
 `zIndex` paints over the sheets.
+
+`BottomSheetHost` takes `SheetWrapper?: ComponentType<SheetWrapperProps>`;
+`QueueItem` renders it around an inline sheet's `content`, inside
+`BottomSheetContext`, with `getSheetRef(id)` as `sheetRef`. The render-time
+registry read is sound because `open()` registers the ref and then writes the
+store in one synchronous call, and the store write only *schedules* the render
+that mounts the item — the item's first render already sees the final entry,
+which it must, because the compiler caches the read on `id` and never re-runs
+it. An inline id is minted per open and the item's unmount cleanup removes it,
+so the value cannot change while the item is mounted; the read is guarded on
+`usePortal` because a persistent id *can* be re-registered under a
+still-mounted item. A caller-supplied inline id re-opened in the same tick as
+its removal keeps one ref object: `open()` reuses whatever is registered for the
+id, so the wrapper and the coordinator hold the same ref. The prop *value*
+must be stable for the life of the host: it is the element type, so a new value
+remounts every inline sheet (replayed open animation, a stateful wrapper's state
+gone). A derived value (`flag ? Wrapper : undefined`) breaks it even under the
+compiler, which outlines a capture-free inline arrow — hence a dev warning on
+change, not just a "module scope" line in the JSDoc.
 
 `BottomSheetBackdrop` is mounted from the sheet's first frame and faded purely by
 `animatedIndex`. Do not add a timer or delay gate: deferring the mount drops the

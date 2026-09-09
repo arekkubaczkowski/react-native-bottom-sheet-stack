@@ -45,6 +45,45 @@ Renders the bottom sheet stack. Must be placed inside `BottomSheetManagerProvide
 Place `BottomSheetHost` **outside** of `BottomSheetScaleView` to prevent sheets from scaling.
 :::
 
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `SheetWrapper` | `React.ComponentType<SheetWrapperProps>` | Rendered around every **inline** sheet's content, inside that sheet's context. Receives `{ id, sheetRef, children }`. Portal and persistent sheets render where they are declared and are not wrapped. The prop **value** must stay stable for the life of the host — see below. |
+
+The wrapper is used as an element **type**, so a new prop value remounts every inline sheet: the adapter replays its open animation and a stateful wrapper loses its state — an error boundary forgets that it already failed. Pass a module-scope component; an inline arrow and a derived value (`flag ? SheetErrorBoundary : undefined`, or swapping one module-scope wrapper for another) both break it, the latter on the frame the flag resolves, typically while a sheet is open. Changing the value warns once per host in dev.
+
+Use it to put an error boundary around each sheet, so one sheet failing never takes the host down. The fallback **must** render an adapter bound to `sheetRef`, so the manager keeps driving the sheet — `useBottomSheetContext().close()` still closes it. A fallback without an adapter leaves a sheet that crashes mid-close stuck at `closing`: `closeAll` skips it, `close()` answers `not-closable`, the Android back button is dead for the group, and its id is unusable until `destroyAll()`.
+
+```tsx
+class SheetErrorBoundary extends React.Component<
+  SheetWrapperProps,
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (!this.state.failed) {
+      return this.props.children;
+    }
+    return (
+      <CustomModalAdapter ref={this.props.sheetRef}>
+        <Text>This sheet could not be shown.</Text>
+        <CloseButton />
+      </CustomModalAdapter>
+    );
+  }
+}
+
+<BottomSheetHost SheetWrapper={SheetErrorBoundary} />;
+```
+
+An adapter that mounts while its sheet is already `open` is expanded on mount, so the fallback appears in place without extra wiring. If it mounts while the sheet is `closing`, the sheet is ended instead — a crash mid-dismissal finishes the close rather than popping the error card back up.
+
+Give the fallback no scrim of its own — the manager's backdrop is still mounted behind it, and a second dim stacks on the first. Expect one visual artefact instead: a fallback adapter that seeds its position from zero rewinds the sheet's shared `animatedIndex` to -1 on its first render, so under an open sheet the manager backdrop blanks and fades back in behind the fallback. Seed the adapter from the sheet's current status to avoid it. Note too that the crashed adapter's unmount re-enables the manager scrim through its backdrop cleanup, so a sheet that passed `backdrop={false}` gets the group backdrop back for its fallback.
+
 ---
 
 ## BottomSheetScaleView

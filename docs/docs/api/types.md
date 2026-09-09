@@ -195,6 +195,22 @@ type SheetRef = RefObject<SheetAdapterRef | null>;
 
 ---
 
+### SheetWrapperProps
+
+```ts
+interface SheetWrapperProps {
+  id: string; // same as useBottomSheetContext().id
+  sheetRef: SheetRef | undefined; // the ref the coordinator drives; bind a fallback adapter to it
+  children: ReactNode;
+}
+```
+
+Props of the component passed to `BottomSheetHost`'s `SheetWrapper`.
+
+`sheetRef` is `undefined` when no ref is registered for the id — the wrapper still renders, but nothing drives a fallback adapter: the mount catch-up is skipped (it neither opens under `open` nor ends the sheet under `closing`) and a programmatic close removes the sheet with no exit animation.
+
+---
+
 ## Configuration Types
 
 ### ScaleConfig
