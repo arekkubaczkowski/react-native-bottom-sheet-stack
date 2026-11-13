@@ -537,3 +537,27 @@ describe('props handed to the native sheet', () => {
     expect(native().detents).toEqual([0, 400]);
   });
 });
+
+describe('handle', () => {
+  it('hides the handle and its content inset while dismissal is blocked', () => {
+    const view = renderOpening({
+      handle: <View testID="custom-handle" />,
+    });
+    expect(view.queryByTestId('custom-handle')).toBeTruthy();
+    expect(JSON.stringify(view.toJSON())).toContain('paddingTop');
+
+    act(() => store().setPreventDismiss('a', true));
+
+    expect(view.queryByTestId('custom-handle')).toBeNull();
+    expect(JSON.stringify(view.toJSON())).not.toContain('paddingTop');
+  });
+
+  it('renders a custom handle above the content so it can take touches', () => {
+    renderOpening({ handle: <View testID="custom-handle" /> });
+
+    const inSurface = render(<>{native().surface}</>);
+    expect(inSurface.queryByTestId('custom-handle')).toBeNull();
+    const inContent = render(<>{native().children}</>);
+    expect(inContent.queryByTestId('custom-handle')).toBeTruthy();
+  });
+});

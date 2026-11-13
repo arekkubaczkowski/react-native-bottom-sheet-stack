@@ -156,9 +156,10 @@ export interface SwmansionSheetAdapterProps
    *
    * - `true` — the default pill.
    * - `{ color, width, height }` — the default pill with style overrides.
-   * - a React element — rendered as-is at the top of the surface (full control);
-   *   the content is given a default top inset, override it with your own
-   *   padding if your handle is taller.
+   * - a React element — rendered as-is at the top of the sheet, above the
+   *   content, so it can take touches (a close button, say). The content is
+   *   given a default top inset of `32`; override it with your own padding if
+   *   your handle is taller.
    *
    * Automatically hidden when dismissal is blocked (`useOnBeforeClose`) — a
    * non-draggable sheet showing a grab handle would mislead. Defaults to off
@@ -320,12 +321,20 @@ function resolveOpenIndex(
 }
 
 function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
-  overlay: ReactNode;
+  surfaceOverlay: ReactNode;
+  contentOverlay: ReactNode;
   contentInset: number;
 } {
   if (isValidElement(handle)) {
     return {
-      overlay: <View style={stylesheet.customHandleContainer}>{handle}</View>,
+      surfaceOverlay: null,
+      // Above the content, not in the surface beneath it: the content covers
+      // the surface, so a pressable in the surface never gets a touch.
+      contentOverlay: (
+        <View pointerEvents="box-none" style={stylesheet.customHandleContainer}>
+          {handle}
+        </View>
+      ),
       contentInset: CUSTOM_HANDLE_CONTENT_INSET,
     };
   }
@@ -337,7 +346,7 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
   const color = config.color ?? DEFAULT_HANDLE_COLOR;
 
   return {
-    overlay: (
+    surfaceOverlay: (
       <View pointerEvents="none" style={stylesheet.handleContainer}>
         <View
           style={[
@@ -347,6 +356,7 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
         />
       </View>
     ),
+    contentOverlay: null,
     contentInset:
       HANDLE_CHROME_TOP + height + HANDLE_CHROME_BOTTOM + HANDLE_CHROME_GAP,
   };
@@ -471,10 +481,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
       <View style={[StyleSheet.absoluteFill, stylesheet.surface]} />
     );
 
-    const composedSurface = handleResult ? (
+    const composedSurface = handleResult?.surfaceOverlay ? (
       <View style={StyleSheet.absoluteFill}>
         {baseSurface}
-        {handleResult.overlay}
+        {handleResult.surfaceOverlay}
       </View>
     ) : (
       baseSurface
@@ -662,9 +672,13 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const inner = needsKeyboardInset ? (
       <SwmansionKeyboardInset style={innerStyle}>
         {children}
+        {handleResult?.contentOverlay}
       </SwmansionKeyboardInset>
     ) : needsInnerWrapper ? (
-      <View style={innerStyle}>{children}</View>
+      <View style={innerStyle}>
+        {children}
+        {handleResult?.contentOverlay}
+      </View>
     ) : (
       children
     );
