@@ -205,7 +205,7 @@ library closes the sheet without ever asking the interceptor.
 | `GorhomSheetAdapter` | Forces `enablePanDownToClose={false}` |
 | `ReactNativeModalAdapter` | Clears `swipeDirection` and `onSwipeComplete`, so swipe-to-dismiss is inert. Back button still routes through the interceptor |
 | `ActionsSheetAdapter` | Sets `gestureEnabled={false}`. Back button and backdrop tap stay enabled — they route through `onBeforeClose` into the interceptor, which is what produces the prompt |
-| `SwmansionSheetAdapter` | Rewrites detent `0` to `programmatic()` so the user cannot swipe to it, re-snaps up if the sheet reaches the collapsed detent anyway, and hides the grab handle |
+| `SwmansionSheetAdapter` | Rewrites detent `0` to `{ programmatic: true }` so the user cannot drag to it, and hides the grab handle. If the sheet reaches the closed detent anyway and the interceptor declines, the sheet goes back up |
 | `CustomModalAdapter` | **Nothing** — see below |
 
 :::warning `CustomModalAdapter` does not block gestures

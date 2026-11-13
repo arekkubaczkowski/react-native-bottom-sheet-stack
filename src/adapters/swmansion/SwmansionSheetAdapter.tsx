@@ -78,7 +78,7 @@ export interface SwmansionHandleConfig {
 /**
  * Props for {@link SwmansionSheetAdapter}.
  *
- * Forwards the full prop surface of `@swmansion/react-native-bottom-sheet`'s
+ * Forwards the props of `@swmansion/react-native-bottom-sheet`'s inline
  * `BottomSheet` component, except for the props the stack manager owns:
  *
  * - `index` — the adapter is the source of truth for the snap index because the
@@ -102,24 +102,28 @@ export interface SwmansionHandleConfig {
  * milliseconds) is forwarded. The `onIndexChange` / `onSettle` callbacks are
  * wrapped by the adapter and your handlers are still invoked afterwards.
  *
- * **`onIndexChange`.** Wider than the native prop: the adapter also fires it for
- * the programmatic open it drives (at animation start), so you get an immediate
- * open signal (e.g. haptics) — `onSettle` only reports the end. It also receives
- * the previous index as a second argument — `(nextIndex, prevIndex)` — while the
- * first argument keeps the native meaning (the index being moved to).
+ * **`onIndexChange`.** Wider than the native prop: the adapter also fires it,
+ * once per open, for the programmatic open it drives (at animation start), so
+ * you get an immediate open signal (e.g. haptics) — `onSettle` only reports
+ * the end. It also receives the previous index as a second argument —
+ * `(nextIndex, prevIndex)` — while the first argument keeps the native meaning
+ * (the index being moved to).
  *
  * **Backdrop.** The manager renders its own shared, stack-aware
  * `BottomSheetBackdrop`, faded from the sheet's live native position. The native
- * swmansion scrim is not an option here: it is gated on `modal` sheets, and the
- * manager always renders inline inside its `QueueItem` layer so the sheet's
- * z-index participates in the stack. Use the {@link backdrop} prop to restyle
- * or replace it, or `backdrop={false}` for no backdrop at all.
+ * swmansion scrim is not an option here: `scrimColor` and a detent's
+ * `scrimOpacity` are modal-only, and the manager always renders inline inside
+ * its `QueueItem` layer so the sheet's z-index participates in the stack. Use
+ * the {@link backdrop} prop to restyle or replace it, or `backdrop={false}` for
+ * no backdrop at all.
  *
- * On top of the native surface the adapter layers a set of **opt-in
+ * On top of the native sheet the adapter layers a set of **opt-in
  * conveniences** ({@link handle}, {@link fullHeight}, {@link fillContent},
- * {@link detached}, {@link keyboardBehavior}, {@link cornerRadius}). Each
- * defaults to off (or to the native default), so a bare
- * `<SwmansionSheetAdapter>` behaves like the raw native sheet.
+ * {@link detached}, {@link keyboardBehavior}, {@link cornerRadius},
+ * {@link animatedPosition}). A bare `<SwmansionSheetAdapter>` is still not the
+ * raw native sheet: it paints a `#151521` surface with a 20-point top corner
+ * radius, offsets its host by the top safe-area inset, forces `animateIn` and
+ * owns `index`.
  */
 export interface SwmansionSheetAdapterProps
   extends AdapterBackdropProps,
@@ -171,10 +175,11 @@ export interface SwmansionSheetAdapterProps
    */
   animatedPosition?: SharedValue<number>;
   /**
-   * Renders a grab handle as a chrome layer on top of the `surface`, and insets
-   * the content so it clears the handle. Accepts:
+   * Renders a grab handle at the top of the sheet, and insets the content so
+   * it clears the handle. Accepts:
    *
-   * - `true` — the default pill.
+   * - `true` — the default pill, drawn on the surface. Translucent white, made
+   *   for a dark surface.
    * - `{ color, width, height }` — the default pill with style overrides.
    * - a React element — rendered as-is at the top of the sheet, above the
    *   content, so it can take touches (a close button, say). The content is
@@ -189,16 +194,14 @@ export interface SwmansionSheetAdapterProps
   /**
    * Expands the sheet to the full height available to it.
    *
-   * Why this exists when `detents` already sets height: swmansion detents are
-   * `number | 'content'`, and neither expresses "as tall as you can go" — a
-   * `'content'` detent sizes to the content, and a fixed number is a magic
-   * value that has to be recomputed per device. This passes a detent taller
-   * than any screen, which the native side clamps to the height it actually
-   * measured for the sheet, so you express intent instead of arithmetic.
+   * A shorthand for "as tall as the sheet can be". It passes a detent taller
+   * than any screen, which the native side caps to the space it measured for
+   * the sheet, so you express intent instead of arithmetic. A `'100%'` detent
+   * resolves to the same height.
    *
    * The cap keeps the sheet below the status bar unless you also pass
-   * `topInset={0}`. Combined with {@link detached}, "full height" means
-   * the detached frame's height — the insets are subtracted first.
+   * `topInset={0}`. Combined with {@link detached}, "full height" is the space
+   * the insets leave.
    *
    * Ignored when explicit `detents` are passed — those win. Defaults to off.
    */
@@ -213,7 +216,8 @@ export interface SwmansionSheetAdapterProps
    * scrollables expand and footers pin to the bottom.
    *
    * Auto by default and rarely set by hand: `true` for fixed-height sheets
-   * (numeric `detents` or {@link fullHeight}), `false` for content-sized sheets
+   * (numeric or percentage `detents`, or {@link fullHeight}), `false` for
+   * content-sized sheets
    * (the `'content'` detent) — which must not fill, or they couldn't size to
    * their content. Pass a boolean only to override this.
    */
@@ -235,7 +239,7 @@ export interface SwmansionSheetAdapterProps
    */
   detached?: boolean;
   /**
-   * Gap between the bottom of the sheet and the bottom of the screen, in px.
+   * Gap between the bottom of the card and the bottom of the screen, in px.
    *
    * Only meaningful with {@link detached}. Defaults to the bottom safe-area
    * inset, but at least `16`.
@@ -279,12 +283,16 @@ export interface SwmansionSheetAdapterProps
    * Called when the sheet's snap index changes.
    *
    * Wider than the native prop in two ways:
-   * - It also fires for the programmatic open the manager drives (at animation
-   *   start), so you get an immediate open signal (e.g. haptics) — native
-   *   `onIndexChange` skips programmatic changes and `onSettle` only reports the
-   *   end of the animation.
+   * - It also fires, once per open, for the programmatic open the manager
+   *   drives (at animation start, as `(openIndex, 0)`), so you get an immediate
+   *   open signal (e.g. haptics) — native `onIndexChange` skips programmatic
+   *   changes and `onSettle` only reports the end of the animation.
    * - It receives the **previous** index as a second argument, so you can tell
    *   the direction of a change without tracking it yourself.
+   *
+   * It does not fire for a manager-driven close or an {@link expandedIndex}
+   * move; `useBottomSheetStatus` reports a close, and `onSettle` the end of
+   * every movement.
    *
    * The first argument keeps the native semantics (the index the sheet is moving
    * to), so handlers that read only it are unaffected.
@@ -395,19 +403,23 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * imperative `SheetAdapterRef` contract:
  *
  * - `expand()` → moves `index` to {@link SwmansionSheetAdapterProps.expandedIndex}.
- * - `close()`  → moves `index` back to the collapsed detent.
- * - `onSettle` reports completed animations → `handleOpened` / `handleClosed`.
- * - `onIndexChange` (user-driven) reaching a zero-height detent → `handleDismiss`;
- *   the adapter also emits `onIndexChange(openIndex, prevIndex)` for the
- *   programmatic open it drives, and forwards the previous index as the second
- *   argument on every call.
+ * - `close()`  → moves `index` back to the closed detent.
+ * - Either one, aimed at the detent the sheet already rests on, is answered by
+ *   the adapter: native emits no settle for it.
+ * - `onSettle` on an open detent → `handleOpened`. On the closed detent →
+ *   `handleClosed` only while the store says `closing`; otherwise the store
+ *   never agreed to close, and the sheet goes back to its open detent.
+ * - `onIndexChange` (user-driven) → the `index` prop follows it; reaching the
+ *   closed detent → `handleDismiss`. The adapter also emits
+ *   `onIndexChange(openIndex, 0)` once per programmatic open, and forwards the
+ *   previous index as the second argument on every call.
  * - `onPositionChange` drives the shared `animatedIndex` straight from the native
  *   fractional detent `index`, so the backdrop fades with the sheet on open,
  *   close, and drag-to-dismiss — no JS-side position normalization.
  *
  * It also layers opt-in conveniences over the native sheet — a grab handle,
- * full-height/fill-content sizing, a detached (floating) presentation, and
- * keyboard avoidance — each off by default so raw usage is unchanged. See
+ * full-height/fill-content sizing, a detached (floating) presentation, keyboard
+ * avoidance and a position stream — each off by default. See
  * {@link SwmansionSheetAdapterProps}.
  *
  * Requires the New Architecture, `@swmansion/react-native-bottom-sheet >= 1.0`

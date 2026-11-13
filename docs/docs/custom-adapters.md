@@ -228,8 +228,10 @@ const animatedIndex = useAnimatedIndex();
 <BottomSheet animatedIndex={animatedIndex} />
 ```
 
-If it reports position through a callback instead, map that into `[-1, 0]`.
-`SwmansionSheetAdapter` does this from the native sheet's `onPositionChange`:
+If it reports position through a callback instead, map that onto the same
+scale: `-1` hidden, `0` at the first open position. `SwmansionSheetAdapter` does
+this from the native sheet's `onPositionChange`. With several open detents the
+value goes above `0`; the backdrop clamps it, so that is fine:
 
 ```tsx
 // useEvent here is Reanimated's native-event hook, not the useEvent RFC
@@ -321,28 +323,50 @@ useImperativeHandle(ref, () => ({
 Some libraries have no boolean visibility and no imperative ref at all — the position is a controlled value (an index into snap points). Map "open" to an expanded index and "close" to the collapsed index (`0`), then translate the library's *user-driven* change callback into `handleDismiss()`:
 
 ```tsx
+import Animated, { useEvent } from 'react-native-reanimated';
+
 const [index, setIndex] = useState(0); // 0 = collapsed
 const openIndex = detents.length - 1;
 
 useImperativeHandle(ref, () => ({
   expand: () => setIndex(openIndex),
   close: () => setIndex(0),
-}), [openIndex]);
+}));
 
 // Settle = animation finished → opened/closed
 const onSettle = (i: number) => (i > 0 ? handleOpened() : handleClosed());
 
-// Index change = user-driven snap → reaching collapsed means dismiss
+// Index change = user-driven snap. The controlled prop follows every one, or
+// a later write of the old value is swallowed as "no change". Reaching
+// collapsed means dismiss.
 const onIndexChange = (i: number) => {
+  setIndex(i);
   if (i <= 0) handleDismiss();
 };
 
-// Position change = continuous native position → drives the backdrop fade
-const onPositionChange = (event) => {
+// Position change = continuous native position → drives the backdrop fade,
+// on the UI thread. A plain function would receive `event.nativeEvent`.
+const onPositionChange = useEvent((event) => {
   'worklet';
   animatedIndex.set(event.index - 1);
-};
+}, ['onPositionChange']);
+
+<Sheet
+  index={index}
+  wrapNativeView={Animated.createAnimatedComponent}
+  onPositionChange={onPositionChange}
+  onSettle={onSettle}
+  onIndexChange={onIndexChange}
+/>
 ```
+
+A controlled library usually stays silent when it is told to go where it
+already is: no animation, so no settle. The manager can ask exactly that — an
+`expand()` for a sheet a `switch` parked but never moved, a `close()` for a
+persistent sheet already resting closed — and then waits for a settle that
+never comes, leaving the sheet stuck in `opening` or `closing`. Track the
+position the library last settled on, and when a drive targets it, report
+`handleOpened()` / `handleClosed()` yourself.
 
 This is the shape [`SwmansionSheetAdapter`](/built-in-adapters/swmansion) uses to
 bridge Software Mansion's native sheet. Note that `animatedIndex` is driven
