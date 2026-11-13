@@ -357,7 +357,10 @@ holds these rules:
    refs — the target native was last told or told us, and the detent it last
    settled on — decided synchronously, because an `expand()` and a `close()`
    in one React batch collapse to no prop change.
-4. A settle on an open detent reports opened.
+4. A settle on an open detent reports opened — unless the store is already
+   `closing` or `hidden`, when the user caught the sheet mid-close and flung it
+   back up. The adapter then sends it back to the closed detent: left there it
+   stays on screen, and with an interceptor blocking drags nothing closes it.
 5. A settle on the closed detent finishes the sheet **only under `closing`**.
    Under `open` or `opening` the store never agreed to close — an interceptor
    declined or is still deciding, or the settle predates a later open — so the

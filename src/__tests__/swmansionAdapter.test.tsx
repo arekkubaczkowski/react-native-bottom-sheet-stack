@@ -284,6 +284,28 @@ describe('lifecycle', () => {
     expect(statusOf('p')).toBe('open');
   });
 
+  it('finishes a close the user flung back open', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    renderOpening();
+    await flushFrames();
+    settle(1);
+
+    act(() => {
+      store().startClosing('a');
+    });
+    await flushFrames();
+    expect(native().index).toBe(0);
+
+    await userSnap(1);
+    settle(1);
+    expect(statusOf('a')).toBe('closing');
+    expect(native().index).toBe(0);
+
+    settle(0);
+    expect(statusOf('a')).toBeUndefined();
+    expect(stackOf('g1')).toEqual([]);
+  });
+
   it('leaves a sheet parked by switch alone when its closed settle arrives', async () => {
     unsubscribe = initBottomSheetCoordinator('g1');
     renderOpening();
@@ -354,6 +376,18 @@ describe('controlled index', () => {
 
     expect(native().index).toBe(2);
     expect(onIndexChange).not.toHaveBeenCalled();
+  });
+
+  it('moves an open sheet to the last detent when expandedIndex is unset', () => {
+    const { rerender } = renderOpening({
+      detents: [0, 300, 600],
+      expandedIndex: 1,
+    });
+    settle(1);
+
+    rerender({ detents: [0, 300, 600] });
+
+    expect(native().index).toBe(2);
   });
 
   it('keeps a closed sheet closed when expandedIndex changes', () => {
@@ -482,6 +516,16 @@ describe('props handed to the native sheet', () => {
     expect(native().surfaceStyle).toEqual([null, surfaceStyle]);
   });
 
+  it('keeps its corners when surfaceStyle only adds a shadow', () => {
+    const surfaceStyle = { shadowOpacity: 0.3, shadowRadius: 12 };
+    renderOpening({ surfaceStyle });
+
+    expect(native().surfaceStyle).toEqual([
+      { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+      surfaceStyle,
+    ]);
+  });
+
   it('leaves clipping to the native surface shape', () => {
     const view = renderOpening({ handle: true, fullHeight: true });
 
@@ -570,6 +614,14 @@ describe('keyboard inset', () => {
 
     rerender({ keyboardBehavior: 'inset', detached: true, bottomInset: 48 });
     expect(inset().bottomGap).toBe(48);
+
+    rerender({
+      keyboardBehavior: 'inset',
+      detached: true,
+      bottomInset: 48,
+      detents: [0, { value: 300, insets: { bottom: 4 } }],
+    });
+    expect(inset().bottomGap).toBe(4);
   });
 });
 

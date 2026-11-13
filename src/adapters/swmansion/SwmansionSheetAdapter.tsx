@@ -140,7 +140,8 @@ export interface SwmansionSheetAdapterProps
    * Index into `detents` the sheet expands to when opened.
    *
    * Defaults to the last detent. An integer from `1` through the last index;
-   * anything else is clamped into that range, with a dev warning. The detent
+   * an integer outside that range is clamped into it, and a non-integer falls
+   * back to the last detent, either way with a dev warning. The detent
    * at index `0` must be closed (`0` or `'0%'`) — this matches the library's
    * default `detents` of `[0, 'content']` and is what the manager snaps back
    * to when closing.
@@ -160,8 +161,8 @@ export interface SwmansionSheetAdapterProps
   /**
    * Stops nested scrollables from negotiating gestures with the sheet.
    *
-   * @deprecated Use `scrollCoordination="none"`. Upstream removed this prop in
-   * 0.17.
+   * @deprecated Use `scrollCoordination="none"`. Upstream deprecated this prop
+   * in 0.17 and removed it in 0.18.
    */
   disableScrollableNegotiation?: boolean;
   /**
@@ -422,7 +423,7 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * avoidance and a position stream — each off by default. See
  * {@link SwmansionSheetAdapterProps}.
  *
- * Requires the New Architecture, `@swmansion/react-native-bottom-sheet >= 1.0`
+ * Requires the New Architecture, `@swmansion/react-native-bottom-sheet` 1.x
  * (React Native >= 0.82, React >= 19.1.1), and the peer dependencies:
  * ```bash
  * npm install @swmansion/react-native-bottom-sheet react-native-safe-area-context
@@ -493,7 +494,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // Upstream resolves a specific corner ahead of `borderRadius`, so mixing
     // ours into a style that sets its own would win where it should lose.
     const consumerSetsRadius = flatSurfaceStyle
-      ? Object.keys(flatSurfaceStyle).some((key) => key.endsWith('Radius'))
+      ? Object.entries(flatSurfaceStyle).some(
+          ([key, value]) =>
+            key.startsWith('border') && key.endsWith('Radius') && value != null
+        )
       : false;
     const radiusStyle: SurfaceStyle | null =
       consumerSetsRadius || surfaceRadius <= 0
@@ -549,7 +553,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const [seenExpandedIndex, setSeenExpandedIndex] = useState(expandedIndex);
     if (expandedIndex !== seenExpandedIndex) {
       setSeenExpandedIndex(expandedIndex);
-      if (expandedIndex !== undefined && safeIndex !== CLOSED_INDEX) {
+      if (safeIndex !== CLOSED_INDEX) {
         setIndex(openIndex);
       }
     }
@@ -602,13 +606,20 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     const reportSettled = (settledIndex: number) => {
       settledIndexRef.current = settledIndex;
+      const status = useBottomSheetStore.getState().sheetsById[id]?.status;
 
       if (!isClosedDetent(detents[settledIndex])) {
+        if (status === 'closing' || status === 'hidden') {
+          // Up, but the store already committed to the close: the user caught
+          // the sheet mid-close and flung it back. Left there it stays on
+          // screen with no way to close it while an interceptor blocks drags.
+          setIndex(CLOSED_INDEX);
+          return;
+        }
         handleOpened();
         return;
       }
 
-      const status = useBottomSheetStore.getState().sheetsById[id]?.status;
       if (status === 'closing') {
         handleClosed();
       } else if (status === 'open' || status === 'opening') {
@@ -719,7 +730,11 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const inner = needsKeyboardInset ? (
       <SwmansionKeyboardInset
         style={innerStyle}
-        bottomGap={detached ? resolvedBottomInset : 0}
+        bottomGap={
+          toDetentConfig(
+            detents[safeIndex === CLOSED_INDEX ? openIndex : safeIndex] ?? 0
+          ).insets?.bottom ?? (detached ? resolvedBottomInset : 0)
+        }
       >
         {children}
         {handleResult?.contentOverlay}
