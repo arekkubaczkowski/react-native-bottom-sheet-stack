@@ -2,7 +2,9 @@ import React, {
   isValidElement,
   type ReactElement,
   type ReactNode,
+  useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -29,7 +31,7 @@ import type {
   SheetAdapterRef,
 } from '../../adapter.types';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
-import { useSheetPreventDismiss } from '../../store';
+import { useBottomSheetStore, useSheetPreventDismiss } from '../../store';
 import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
 import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
@@ -275,6 +277,8 @@ const CUSTOM_HANDLE_CONTENT_INSET = 32;
 
 const DEFAULT_DETACHED_INSET = 16;
 
+const CLOSED_INDEX = 0;
+
 // Taller than any screen. Native clamps `points` detents to the height it
 // measured, so this resolves to the available height on any device.
 const FULL_HEIGHT_DETENT = 1_000_000;
@@ -285,20 +289,27 @@ function toDetentConfig(detent: Detent): DetentConfig {
     : { value: detent };
 }
 
-/**
- * Whether the detent at `index` is the collapsed one. Mirrors upstream: zero
- * points or `'0%'` is closed, `'content'` never is.
- */
-function isClosedDetent(detents: Detent[], index: number): boolean {
-  const detent = detents[index];
+/** Mirrors upstream: zero points or `'0%'` is closed, `'content'` never is. */
+function isClosedDetent(detent: Detent | undefined): boolean {
   if (detent === undefined) {
-    return index <= 0;
+    return false;
   }
   const { value } = toDetentConfig(detent);
   if (value === 'content') {
     return false;
   }
   return (typeof value === 'number' ? value : Number.parseFloat(value)) === 0;
+}
+
+/** The detent to open onto: an integer in `1..last`, the last by default. */
+function resolveOpenIndex(
+  expandedIndex: number | undefined,
+  lastIndex: number
+): number {
+  if (expandedIndex === undefined || !Number.isInteger(expandedIndex)) {
+    return lastIndex;
+  }
+  return Math.min(Math.max(expandedIndex, 1), lastIndex);
 }
 
 function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
@@ -409,7 +420,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const detents =
       detentsProp ?? (fullHeight ? [0, FULL_HEIGHT_DETENT] : DEFAULT_DETENTS);
 
-    const openIndex = expandedIndex ?? Math.max(0, detents.length - 1);
+    const lastIndex = Math.max(detents.length - 1, 0);
+    const openIndex = resolveOpenIndex(expandedIndex, lastIndex);
+    const canClose = detents.length > 1 && isClosedDetent(detents[0]);
     const expandedDetentValue = toDetentConfig(detents[openIndex] ?? 0).value;
 
     const handleResult =
@@ -455,65 +468,128 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     const defaultIndex = useBottomSheetDefaultIndex();
     const [index, setIndex] = useState(() =>
-      defaultIndex < 0 ? 0 : openIndex
+      defaultIndex < 0 ? CLOSED_INDEX : openIndex
     );
 
-    // Last index seen, mirrored on every move — supplies `prevIndex` to
-    // `onIndexChange`. The `index` state only swings between 0 and `openIndex`,
-    // so it can't track snaps between non-zero detents.
-    // Starts at 0, not at `index`: a portal/inline sheet mounts with `index`
-    // already at `openIndex`, so seeding from state would report the open as
-    // `(openIndex, openIndex)`.
-    const lastIndexRef = useRef(0);
-
-    if (__DEV__ && !isClosedDetent(detents, 0)) {
-      console.warn(
-        '[SwmansionSheetAdapter] The first detent should resolve to 0 ' +
-          '(collapsed) so the sheet can close. Received: ' +
-          JSON.stringify(detents[0])
-      );
+    // Upstream throws on an index its detents do not cover, so a `detents`
+    // prop that shrinks under an open sheet must take the index with it.
+    const safeIndex = Math.min(index, lastIndex);
+    if (safeIndex !== index) {
+      setIndex(safeIndex);
     }
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        expand: () => {
-          // Native onIndexChange skips programmatic changes; surface the open at
-          // animation start (onSettle only reports the end).
-          const prevIndex = lastIndexRef.current;
-          lastIndexRef.current = openIndex;
-          onIndexChange?.(openIndex, prevIndex);
-          setIndex(openIndex);
-        },
-        close: () => {
-          // No emission (native is silent for programmatic moves), but keep the
-          // tracker in sync so the next open sees 0 as its previous index.
-          lastIndexRef.current = 0;
-          setIndex(0);
-        },
-      }),
-      [openIndex, onIndexChange]
-    );
+    // What native was last told, or told us: the index it is at or heading to.
+    const nativeTargetRef = useRef(safeIndex);
+    // The index native is resting on; null while it moves.
+    const settledIndexRef = useRef<number | null>(null);
+    // Whether the consumer has been told about the current open.
+    const openReportedRef = useRef(false);
+
+    useLayoutEffect(() => {
+      // Native clamps its own target when `detents` shrink under it, and
+      // settles nothing for that.
+      if (nativeTargetRef.current > lastIndex) {
+        nativeTargetRef.current = lastIndex;
+        if (settledIndexRef.current !== null) {
+          settledIndexRef.current = Math.min(
+            settledIndexRef.current,
+            lastIndex
+          );
+        }
+      }
+      // A changed index prop is a move native will make and report.
+      if (nativeTargetRef.current !== safeIndex) {
+        nativeTargetRef.current = safeIndex;
+        settledIndexRef.current = null;
+      }
+    }, [safeIndex, lastIndex]);
+
+    useEffect(() => {
+      if (!__DEV__) {
+        return;
+      }
+      if (!canClose) {
+        console.warn(
+          '[SwmansionSheetAdapter] `detents` needs a closed first detent ' +
+            '(`0`) followed by at least one open one, or the sheet cannot ' +
+            'close.'
+        );
+      }
+      if (expandedIndex !== undefined && expandedIndex !== openIndex) {
+        console.warn(
+          `[SwmansionSheetAdapter] \`expandedIndex\` must be an integer from ` +
+            `1 through ${lastIndex}. Received ${String(expandedIndex)}; ` +
+            `using ${openIndex}.`
+        );
+      }
+    }, [canClose, expandedIndex, openIndex, lastIndex]);
+
+    const reportSettled = (settledIndex: number) => {
+      settledIndexRef.current = settledIndex;
+
+      if (!isClosedDetent(detents[settledIndex])) {
+        handleOpened();
+        return;
+      }
+
+      const status = useBottomSheetStore.getState().sheetsById[id]?.status;
+      if (status === 'closing') {
+        handleClosed();
+      } else if (status === 'open' || status === 'opening') {
+        // Down, but the store never agreed to a close: an interceptor declined
+        // or is still deciding, or this settle is older than the open that
+        // followed it. Put the sheet back where the store says it is.
+        setIndex(openIndex);
+      }
+    };
+
+    // Native reports a settle only for an index change it actually makes.
+    // Asked for the index it already rests on, it stays silent, and the store
+    // would wait on that settle forever. Decided from refs, not state: an
+    // expand() and a close() in one React batch collapse to no prop change.
+    const drive = (target: number) => {
+      setIndex(target);
+      if (
+        nativeTargetRef.current === target &&
+        settledIndexRef.current === target
+      ) {
+        reportSettled(target);
+      }
+    };
+
+    // No dependency list: the handle closes over this render's detents and
+    // callbacks, and the coordinator reads `ref.current` at call time.
+    useImperativeHandle(ref, () => ({
+      expand: () => {
+        // Native onIndexChange skips programmatic changes; surface the open at
+        // animation start (onSettle only reports the end).
+        if (!openReportedRef.current) {
+          openReportedRef.current = true;
+          onIndexChange?.(openIndex, CLOSED_INDEX);
+        }
+        drive(openIndex);
+      },
+      close: () => {
+        openReportedRef.current = false;
+        drive(CLOSED_INDEX);
+      },
+    }));
 
     const handleNativeSettle = (settledIndex: number) => {
-      if (isClosedDetent(detents, settledIndex)) {
-        handleClosed();
-      } else {
-        handleOpened();
-      }
+      reportSettled(settledIndex);
       onSettle?.(settledIndex);
     };
 
     const handleNativeIndexChange = (nextIndex: number) => {
-      const prevIndex = lastIndexRef.current;
-      lastIndexRef.current = nextIndex;
-      if (isClosedDetent(detents, nextIndex)) {
-        if (preventDismiss) {
-          setIndex(openIndex);
-        } else {
-          setIndex(0);
-          handleDismiss();
-        }
+      const prevIndex = nativeTargetRef.current;
+      nativeTargetRef.current = nextIndex;
+      settledIndexRef.current = null;
+      // Native already moved; the controlled prop follows, or a later write of
+      // the old value would be swallowed as "no change".
+      setIndex(nextIndex);
+      if (isClosedDetent(detents[nextIndex])) {
+        openReportedRef.current = false;
+        handleDismiss();
       }
       onIndexChange?.(nextIndex, prevIndex);
     };
@@ -530,7 +606,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     const resolvedDetents = preventDismiss
       ? detents.map((detent, detentIndex) =>
-          detentIndex === 0
+          detentIndex === CLOSED_INDEX
             ? { ...toDetentConfig(detent), programmatic: true }
             : detent
         )
@@ -598,7 +674,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
         // Managed by the adapter (not overridable):
         lazy={false}
         topInset={0}
-        index={index}
+        index={safeIndex}
         animateIn
         wrapNativeView={Animated.createAnimatedComponent}
         onIndexChange={handleNativeIndexChange}

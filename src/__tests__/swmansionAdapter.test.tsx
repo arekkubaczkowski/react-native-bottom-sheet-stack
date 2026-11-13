@@ -11,6 +11,7 @@ import { BottomSheetRefContext } from '../BottomSheetRef.context';
 import { SwmansionSheetAdapter, programmatic } from '../adapters/swmansion';
 import type { SheetAdapterRef } from '../adapter.types';
 import { initBottomSheetCoordinator } from '../bottomSheetCoordinator';
+import { setOnBeforeClose } from '../onBeforeCloseRegistry';
 import { setSheetRef } from '../refsMap';
 import { portal, setupSheetTest, stackOf, statusOf, store } from './testUtils';
 
@@ -166,6 +167,23 @@ describe('lifecycle', () => {
     expect(statusOf('a')).toBe('open');
   });
 
+  it('reports closed itself when asked to close a sheet that already rests closed', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    renderPersistent();
+    settle(0);
+
+    act(() => {
+      store().open(portal('p'));
+      store().startClosing('p');
+    });
+    await flushFrames(2);
+
+    expect(native().index).toBe(0);
+    expect(statusOf('p')).toBe('hidden');
+    expect(stackOf('g1')).toEqual([]);
+    expect(store().open(portal('p'))).toMatchObject({ opened: true });
+  });
+
   it('waits for the native settle when asked to close a sheet that is still moving', async () => {
     unsubscribe = initBottomSheetCoordinator('g1');
     renderPersistent();
@@ -179,6 +197,78 @@ describe('lifecycle', () => {
 
     settle(0);
     expect(statusOf('p')).toBe('hidden');
+  });
+
+  it('reports open itself when asked to expand a sheet that already rests open', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    renderOpening();
+    await flushFrames();
+    settle(1);
+    expect(statusOf('a')).toBe('open');
+
+    setSheetRef('b', { current: { expand: jest.fn(), close: jest.fn() } });
+    act(() => {
+      store().open(portal('b'), 'switch');
+      store().startClosing('b');
+    });
+    expect(statusOf('a')).toBe('opening');
+    await flushFrames(2);
+
+    expect(native().index).toBe(1);
+    expect(statusOf('a')).toBe('open');
+    // `b`'s stub adapter never reports its own close.
+    expect(stackOf('g1')).toEqual(['a', 'b']);
+    expect(statusOf('b')).toBe('closing');
+  });
+
+  it('still reports open itself after detents shrank under the resting sheet', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    const { rerender } = renderOpening({ detents: [0, 300, 600] });
+    await flushFrames();
+    settle(2);
+    // Native clamps to the last detent on its own and settles nothing.
+    rerender({ detents: [0, 300] });
+    expect(native().index).toBe(1);
+
+    setSheetRef('b', { current: { expand: jest.fn(), close: jest.fn() } });
+    act(() => {
+      store().open(portal('b'), 'switch');
+      store().startClosing('b');
+    });
+    await flushFrames(2);
+
+    expect(statusOf('a')).toBe('open');
+  });
+
+  it('restores a sheet the user dragged closed when an interceptor declines the close', async () => {
+    renderOpening();
+    settle(1);
+    // The registry alone, without useOnBeforeClose: detent 0 stays draggable.
+    setOnBeforeClose('a', () => false);
+
+    await userSnap(0);
+    expect(statusOf('a')).toBe('open');
+    expect(native().index).toBe(0);
+
+    settle(0);
+    expect(statusOf('a')).toBe('open');
+    expect(stackOf('g1')).toEqual(['a']);
+    expect(native().index).toBe(1);
+  });
+
+  it('ignores a closed settle that is older than the open that followed it', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    renderPersistent();
+
+    expect(store().open(portal('p'))).toMatchObject({ opened: true });
+    settle(0);
+    expect(statusOf('p')).toBe('opening');
+    expect(stackOf('g1')).toEqual(['p']);
+
+    await flushFrames();
+    expect(native().index).toBe(1);
+    settle(1);
+    expect(statusOf('p')).toBe('open');
   });
 
   it('leaves a sheet parked by switch alone when its closed settle arrives', async () => {
@@ -201,6 +291,43 @@ describe('lifecycle', () => {
 });
 
 describe('controlled index', () => {
+  it('follows a user snap between open detents', async () => {
+    const onIndexChange = jest.fn();
+    renderOpening({ detents: [0, 300, 600], onIndexChange });
+    settle(2);
+
+    await userSnap(1);
+
+    expect(native().index).toBe(1);
+    expect(onIndexChange).toHaveBeenLastCalledWith(1, 2);
+    expect(statusOf('a')).toBe('open');
+  });
+
+  it('never hands native an index its detents do not cover', () => {
+    const { rerender } = renderOpening({ detents: [0, 300, 600] });
+    expect(native().index).toBe(2);
+
+    rerender({ detents: [0, 300] });
+
+    for (const props of mockNativeProps) {
+      expect(props.index).toBeLessThan(props.detents.length);
+    }
+    expect(native().index).toBe(1);
+  });
+
+  it.each([
+    [0, 1],
+    [5, 2],
+    [1.5, 2],
+  ])('clamps expandedIndex %p to %p and warns', (expandedIndex, expected) => {
+    renderOpening({ detents: [0, 300, 600], expandedIndex });
+
+    expect(native().index).toBe(expected);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('expandedIndex')
+    );
+  });
+
   it('keeps a closed sheet closed when expandedIndex changes', () => {
     const { rerender, ref } = renderPersistent({
       detents: [0, 300, 600],
@@ -221,6 +348,28 @@ describe('controlled index', () => {
     rerender({ detents: [0, 300, 600] });
 
     expect(native().index).toBe(1);
+  });
+
+  it('warns once, not on every render, when the first detent cannot close the sheet', () => {
+    const { rerender } = renderOpening({ detents: [200, 400] });
+    rerender({ detents: [200, 400], cornerRadius: 4 });
+    rerender({ detents: [200, 400], cornerRadius: 8 });
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('closed first detent')
+    );
+  });
+
+  it('announces a programmatic open once, from the closed index', () => {
+    const onIndexChange = jest.fn();
+    const { ref } = renderOpening({ detents: [0, 300, 600], onIndexChange });
+
+    act(() => ref.current!.expand());
+    act(() => ref.current!.expand());
+
+    expect(onIndexChange).toHaveBeenCalledTimes(1);
+    expect(onIndexChange).toHaveBeenCalledWith(2, 0);
   });
 
   it('treats a 0% detent as closed', async () => {
