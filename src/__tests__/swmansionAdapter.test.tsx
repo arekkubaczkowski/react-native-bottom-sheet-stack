@@ -34,6 +34,17 @@ jest.mock('@swmansion/react-native-bottom-sheet', () => ({
   },
 }));
 
+const mockKeyboardInsetProps: Record<string, any>[] = [];
+
+// The keyboard peer is not installed at the repo root; its own suite covers
+// the inset. Here only what the adapter hands it matters.
+jest.mock('../adapters/swmansion/SwmansionKeyboardInset', () => ({
+  SwmansionKeyboardInset: (props: Record<string, any>) => {
+    mockKeyboardInsetProps.push(props);
+    return props.children;
+  },
+}));
+
 const INSETS = { top: 47, left: 0, right: 0, bottom: 34 };
 const initialMetrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
@@ -127,6 +138,7 @@ setupSheetTest();
 
 beforeEach(() => {
   mockNativeProps.length = 0;
+  mockKeyboardInsetProps.length = 0;
   frameQueue = [];
   (useEvent as jest.Mock).mockClear();
   jest
@@ -536,6 +548,28 @@ describe('props handed to the native sheet', () => {
 
     rerender({ fullHeight: true, detents: [0, 400] });
     expect(native().detents).toEqual([0, 400]);
+  });
+});
+
+describe('keyboard inset', () => {
+  const inset = () =>
+    mockKeyboardInsetProps[mockKeyboardInsetProps.length - 1]!;
+
+  it('is only mounted for keyboardBehavior="inset"', () => {
+    renderOpening();
+
+    expect(mockKeyboardInsetProps).toHaveLength(0);
+  });
+
+  it('discounts the gap a detached sheet already keeps below itself', () => {
+    const { rerender } = renderOpening({ keyboardBehavior: 'inset' });
+    expect(inset().bottomGap).toBe(0);
+
+    rerender({ keyboardBehavior: 'inset', detached: true });
+    expect(inset().bottomGap).toBe(INSETS.bottom);
+
+    rerender({ keyboardBehavior: 'inset', detached: true, bottomInset: 48 });
+    expect(inset().bottomGap).toBe(48);
   });
 });
 

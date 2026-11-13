@@ -252,12 +252,16 @@ export interface SwmansionSheetAdapterProps
    *
    * - `'none'` (default) — the content owns the keyboard (use a keyboard-aware
    *   scrollable inside).
-   * - `'inset'` — the sheet insets its content by the keyboard height (content
-   *   must be a plain scrollable/view; don't also nest a keyboard-aware one).
+   * - `'inset'` — the sheet insets its content by the keyboard height, for
+   *   every sheet size (content must be a plain scrollable/view; don't also
+   *   nest a keyboard-aware one). The inset follows the keyboard from the start
+   *   of its show and hide animations. With {@link detached}, the gap below the
+   *   card counts towards it.
    *
-   * `'inset'` needs the optional peer `react-native-keyboard-controller`; without
-   * it the sheet renders without avoidance. See the
-   * Keyboard avoidance guide for when to use which.
+   * `'inset'` needs the optional peer `react-native-keyboard-controller`
+   * >= 1.18, with its `KeyboardProvider` at the app root. When the peer is
+   * missing or older, the sheet renders without avoidance and warns once in
+   * development. See the Keyboard avoidance guide for when to use which.
    */
   keyboardBehavior?: 'none' | 'inset';
   /**
@@ -701,7 +705,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const needsInnerWrapper = fillStyle || handleInsetStyle;
 
     const inner = needsKeyboardInset ? (
-      <SwmansionKeyboardInset style={innerStyle}>
+      <SwmansionKeyboardInset
+        style={innerStyle}
+        bottomGap={detached ? resolvedBottomInset : 0}
+      >
         {children}
         {handleResult?.contentOverlay}
       </SwmansionKeyboardInset>
