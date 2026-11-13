@@ -2,13 +2,14 @@ import React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   CustomModalAdapter,
+  type SheetAdapterRef,
   useBottomSheetContext,
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionsSheetAdapter } from '../../../src/adapters/actions-sheet';
 import { ReactNativeModalAdapter } from '../../../src/adapters/react-native-modal';
-import { SwmansionSheetAdapter } from '../../../src/adapters/swmansion';
+import { SwmansionSheetAdapter } from 'react-native-bottom-sheet-stack/swmansion';
 
 import {
   Badge,
@@ -19,6 +20,14 @@ import {
 } from '../components';
 import { useUser } from '../context/UserContext';
 import { colors, sharedStyles } from '../styles/theme';
+import {
+  SwmansionCustomHandleSheet,
+  SwmansionDetachedShadowSheet,
+  SwmansionDetentsSheet,
+  SwmansionInterceptedSheet,
+  SwmansionKeyboardDetachedSheet,
+  SwmansionPositionSheet,
+} from './SwmansionFeatureSheets';
 
 // ---------------------------------------------------------------------------
 // Built-in ModalAdapter (View-based zoom+fade centered modal)
@@ -368,8 +377,24 @@ export function GorhomSheetDemoContent() {
  */
 export function SwmansionSheetDemoContent() {
   const { close } = useBottomSheetContext<'swmansion-sheet-demo'>();
-  const { open } = useBottomSheetManager();
+  const { open, close: closeById } = useBottomSheetManager();
   const user = useUser();
+
+  const pushFeature = (sheet: React.ReactElement) => {
+    open(sheet, { mode: 'push', scaleBackground: true });
+  };
+
+  // Stress: this sheet is hidden by the switch and restored by the close in
+  // the same tick, before its own hide animation has started.
+  const handleSwitchThenClose = () => {
+    const id = open(<StackedSwmansionSheet mode="switch" />, {
+      mode: 'switch',
+      scaleBackground: true,
+    });
+    if (id) {
+      closeById(id);
+    }
+  };
 
   const handlePush = () => {
     open(<StackedSwmansionSheet mode="push" />, {
@@ -462,6 +487,46 @@ export function SwmansionSheetDemoContent() {
             title="Keyboard: none (compare)"
             onPress={() => handleKeyboard('none')}
           />
+        </View>
+
+        <View style={sharedStyles.scaleInfo}>
+          <Text style={sharedStyles.scaleInfoTitle}>1.0 features</Text>
+        </View>
+        <View style={styles.actions}>
+          <Button
+            title="Detents"
+            onPress={() => pushFeature(<SwmansionDetentsSheet />)}
+          />
+          <Button
+            title="Intercepted"
+            onPress={() => pushFeature(<SwmansionInterceptedSheet />)}
+          />
+          <Button
+            title="Detached with shadow"
+            onPress={() => pushFeature(<SwmansionDetachedShadowSheet />)}
+          />
+          <Button
+            title="Detached, 48pt gap"
+            onPress={() =>
+              pushFeature(<SwmansionDetachedShadowSheet bottomInset={48} />)
+            }
+          />
+          <Button
+            title="Position follower"
+            onPress={() => pushFeature(<SwmansionPositionSheet />)}
+          />
+          <Button
+            title="Custom handle"
+            onPress={() => pushFeature(<SwmansionCustomHandleSheet />)}
+          />
+          <Button
+            title="Keyboard, detached"
+            onPress={() => pushFeature(<SwmansionKeyboardDetachedSheet />)}
+          />
+          <SecondaryButton
+            title="Stress: switch, then close at once"
+            onPress={handleSwitchThenClose}
+          />
           <SecondaryButton title="Close" onPress={close} />
         </View>
       </View>
@@ -486,14 +551,14 @@ const KeyboardSwmansionSheet = ({
   ref,
 }: {
   behavior: 'none' | 'inset';
-  ref?: React.Ref<unknown>;
+  ref?: React.Ref<SheetAdapterRef>;
 }) => {
   const { close } = useBottomSheetContext();
   const [text, setText] = React.useState('');
 
   return (
     <SwmansionSheetAdapter
-      ref={ref as any}
+      ref={ref}
       detents={[0, 'content']}
       keyboardBehavior={behavior}
       handle
@@ -540,16 +605,15 @@ const KeyboardSwmansionSheet = ({
  * least 16pt), so a bare `detached` already clears the home indicator; both are
  * overridable.
  */
-const DetachedSwmansionSheet = ({ ref }: { ref?: React.Ref<unknown> }) => {
+const DetachedSwmansionSheet = ({
+  ref,
+}: {
+  ref?: React.Ref<SheetAdapterRef>;
+}) => {
   const { close } = useBottomSheetContext();
 
   return (
-    <SwmansionSheetAdapter
-      ref={ref as any}
-      detents={[0, 'content']}
-      detached
-      handle
-    >
+    <SwmansionSheetAdapter ref={ref} detents={[0, 'content']} detached handle>
       <View style={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
@@ -557,9 +621,9 @@ const DetachedSwmansionSheet = ({ ref }: { ref?: React.Ref<unknown> }) => {
         </View>
         <Text style={sharedStyles.h1}>Detached Sheet</Text>
         <Text style={sharedStyles.text}>
-          Floats above the screen edges with every corner rounded. Detent
-          heights are measured against the inset frame, so `content` and
-          `fullHeight` stay correct with no arithmetic.
+          Floats above the screen edges with every corner rounded. The gaps are
+          native detent insets: they are not part of the sheet, so a tap in them
+          reaches the backdrop.
         </Text>
 
         <View style={styles.actions}>
@@ -798,7 +862,11 @@ const StackedSwmansionSheet = ({ mode, ref }: StackedProps) => {
   };
 
   return (
-    <SwmansionSheetAdapter ref={ref as any} detents={[0, 'content']} handle>
+    <SwmansionSheetAdapter
+      ref={ref as React.Ref<SheetAdapterRef>}
+      detents={[0, 'content']}
+      handle
+    >
       <View style={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />

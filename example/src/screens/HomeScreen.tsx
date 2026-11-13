@@ -6,7 +6,7 @@ import {
 } from 'react-native-bottom-sheet-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DemoCard, FeatureItem } from '../components';
+import { DemoCard, FeatureItem, SmallButton } from '../components';
 import {
   ActionsSheetDemoContent,
   AdapterComparisonContent,
@@ -307,6 +307,20 @@ export function HomeScreen() {
               swmansionSheetControl.open({ scaleBackground: true })
             }
           />
+          {/* Stress: the persistent scanner sheet (a swmansion sheet) is
+              opened and closed before its open animation can start. */}
+          <SmallButton
+            title="Swmansion stress: open and close the scanner in one tick"
+            color={colors.surface}
+            style={styles.stressButton}
+            onPress={() => {
+              scannerControl.open({
+                scaleBackground: true,
+                params: { source: 'home', title: 'Scanner from Home' },
+              });
+              scannerControl.close();
+            }}
+          />
         </View>
 
         {/* Features */}
@@ -394,6 +408,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  stressButton: {
+    marginBottom: 12,
   },
   infoBox: {
     backgroundColor: colors.surface,
