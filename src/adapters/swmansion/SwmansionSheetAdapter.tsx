@@ -15,11 +15,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useEvent } from 'react-native-reanimated';
 
-import type {
-  BottomSheetProps,
-  Detent,
-  DetentValue,
-  PositionChangeEventData,
+import {
+  BottomSheet,
+  type BottomSheetProps,
+  type Detent,
+  type DetentConfig,
+  type DetentValue,
+  type PositionChangeEventData,
 } from '@swmansion/react-native-bottom-sheet';
 
 import type {
@@ -36,13 +38,18 @@ import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 import { SwmansionKeyboardInset } from './SwmansionKeyboardInset';
 
-// Lazy require so the main bundle never loads the native module unless this
-// adapter is imported (it's an optional peer dependency).
-const { BottomSheet, programmatic } =
-  require('@swmansion/react-native-bottom-sheet') as typeof import('@swmansion/react-native-bottom-sheet');
-
-export { programmatic } from '@swmansion/react-native-bottom-sheet';
 export type { Detent, DetentValue };
+
+/**
+ * A detent that dragging skips and the sheet only reaches through `index`.
+ *
+ * @deprecated Write the detent as `{ value, programmatic: true }`. Upstream
+ * removed this helper in 0.18; it stays here so existing imports keep working.
+ */
+export const programmatic = (value: DetentValue): DetentConfig => ({
+  value,
+  programmatic: true,
+});
 
 /**
  * Style overrides for the adapter-rendered grab handle (the default pill).
@@ -73,14 +80,18 @@ export interface SwmansionHandleConfig {
  *   the backdrop fade on the UI thread (via a Reanimated worklet), so they are
  *   not forwarded.
  *
- * - `extendUnderStatusBar` — still accepted, but the adapter implements it by
- *   offsetting the sheet host rather than by letting the native side subtract
- *   the status-bar overlap, so a scaled ancestor cannot shift the sheet.
+ * - `lazy` — forced off. It unmounts the content at the closed detent, which is
+ *   where a persistent sheet rests between opens.
  *
- * Every other native prop (`detents`, `style`, `surface`,
- * `animateContentHeight`, `disableScrollableNegotiation`) is forwarded. The
- * `onIndexChange` / `onSettle` callbacks are wrapped by the adapter and your
- * handlers are still invoked afterwards.
+ * - `topInset` — accepted, but applied by offsetting the sheet host rather than
+ *   natively: the native default follows where the host sits in the window, so
+ *   a scaled ancestor (the background scale) would shift the sheet. Defaults to
+ *   the top safe-area inset; pass `0` to go under the status bar.
+ *
+ * Every other native prop (`detents`, `style`, `surface`, `surfaceStyle`,
+ * `animateContentHeight`, `scrollCoordination`, `settleDuration` in
+ * milliseconds) is forwarded. The `onIndexChange` / `onSettle` callbacks are
+ * wrapped by the adapter and your handlers are still invoked afterwards.
  *
  * **`onIndexChange`.** Wider than the native prop: the adapter also fires it for
  * the programmatic open it drives (at animation start), so you get an immediate
@@ -107,6 +118,7 @@ export interface SwmansionSheetAdapterProps
       BottomSheetProps,
       | 'index'
       | 'animateIn'
+      | 'lazy'
       | 'onPositionChange'
       | 'wrapNativeView'
       | 'onIndexChange'
@@ -119,6 +131,19 @@ export interface SwmansionSheetAdapterProps
    * `[0, 'content']` and is what the manager snaps back to when closing.
    */
   expandedIndex?: number;
+  /**
+   * Lets the sheet extend under the status bar.
+   *
+   * @deprecated Use `topInset={0}`. Upstream removed this prop in 0.18.
+   */
+  extendUnderStatusBar?: boolean;
+  /**
+   * Stops nested scrollables from negotiating gestures with the sheet.
+   *
+   * @deprecated Use `scrollCoordination="none"`. Upstream removed this prop in
+   * 0.17.
+   */
+  disableScrollableNegotiation?: boolean;
   /**
    * Renders a grab handle as a chrome layer on top of the `surface`, and insets
    * the content so it clears the handle. Accepts:
@@ -145,7 +170,7 @@ export interface SwmansionSheetAdapterProps
    * measured for the sheet, so you express intent instead of arithmetic.
    *
    * The cap keeps the sheet below the status bar unless you also pass
-   * `extendUnderStatusBar`. Combined with {@link detached}, "full height" means
+   * `topInset={0}`. Combined with {@link detached}, "full height" means
    * the detached frame's height — the insets are subtracted first.
    *
    * Ignored when explicit `detents` are passed — those win. Defaults to off.
@@ -254,24 +279,26 @@ const DEFAULT_DETACHED_INSET = 16;
 // measured, so this resolves to the available height on any device.
 const FULL_HEIGHT_DETENT = 1_000_000;
 
-function resolveDetentValue(detent: Detent): DetentValue {
-  if (typeof detent === 'object' && detent !== null) {
-    return detent.value;
-  }
-  return detent;
+function toDetentConfig(detent: Detent): DetentConfig {
+  return typeof detent === 'object' && detent !== null
+    ? detent
+    : { value: detent };
 }
 
 /**
- * Whether the detent at `index` is the collapsed one.
- *
- * The manager treats "settled on a zero-height detent" as closed.
+ * Whether the detent at `index` is the collapsed one. Mirrors upstream: zero
+ * points or `'0%'` is closed, `'content'` never is.
  */
 function isClosedDetent(detents: Detent[], index: number): boolean {
   const detent = detents[index];
   if (detent === undefined) {
     return index <= 0;
   }
-  return resolveDetentValue(detent) === 0;
+  const { value } = toDetentConfig(detent);
+  if (value === 'content') {
+    return false;
+  }
+  return (typeof value === 'number' ? value : Number.parseFloat(value)) === 0;
 }
 
 function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
@@ -308,7 +335,7 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
 }
 
 /**
- * Adapter for [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansion-labs/react-native-bottom-sheet).
+ * Adapter for [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansion/react-native-bottom-sheet).
  *
  * Software Mansion's bottom sheet is a fully *controlled* Fabric component: it
  * has no imperative ref and its position is driven entirely by the `index`
@@ -331,8 +358,8 @@ function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
  * keyboard avoidance — each off by default so raw usage is unchanged. See
  * {@link SwmansionSheetAdapterProps}.
  *
- * Requires the New Architecture, `@swmansion/react-native-bottom-sheet >= 0.16`,
- * and the peer dependencies:
+ * Requires the New Architecture, `@swmansion/react-native-bottom-sheet >= 1.0`
+ * (React Native >= 0.82, React >= 19.1.1), and the peer dependencies:
  * ```bash
  * npm install @swmansion/react-native-bottom-sheet react-native-safe-area-context
  * ```
@@ -359,7 +386,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
       horizontalInset,
       keyboardBehavior = 'none',
       cornerRadius,
+      topInset,
       extendUnderStatusBar = false,
+      scrollCoordination,
+      disableScrollableNegotiation,
       ...props
     },
     forwardedRef
@@ -371,16 +401,16 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const insets = useSafeAreaInsets();
     useAdapterBackdrop(id, backdrop);
 
-    // Forced on natively and compensated here instead: the native subtraction
+    // Applied as an offset of the host and zeroed natively: the native default
     // is derived from where the host sits in the window, so an ancestor
     // transform (the background scale) would re-anchor the sheet mid-animation.
-    const topOffset = extendUnderStatusBar ? 0 : insets.top;
+    const hostTop = topInset ?? (extendUnderStatusBar ? 0 : insets.top);
 
     const detents =
       detentsProp ?? (fullHeight ? [0, FULL_HEIGHT_DETENT] : DEFAULT_DETENTS);
 
     const openIndex = expandedIndex ?? Math.max(0, detents.length - 1);
-    const expandedDetentValue = resolveDetentValue(detents[openIndex] ?? 0);
+    const expandedDetentValue = toDetentConfig(detents[openIndex] ?? 0).value;
 
     const handleResult =
       handle && !preventDismiss ? renderHandle(handle) : null;
@@ -436,7 +466,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // `(openIndex, openIndex)`.
     const lastIndexRef = useRef(0);
 
-    if (__DEV__ && resolveDetentValue(detents[0] ?? 0) !== 0) {
+    if (__DEV__ && !isClosedDetent(detents, 0)) {
       console.warn(
         '[SwmansionSheetAdapter] The first detent should resolve to 0 ' +
           '(collapsed) so the sheet can close. Received: ' +
@@ -500,7 +530,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     const resolvedDetents = preventDismiss
       ? detents.map((detent, detentIndex) =>
-          detentIndex === 0 ? programmatic(resolveDetentValue(detent)) : detent
+          detentIndex === 0
+            ? { ...toDetentConfig(detent), programmatic: true }
+            : detent
         )
       : detents;
 
@@ -557,10 +589,15 @@ export const SwmansionSheetAdapter = React.forwardRef<
     return (
       <BottomSheet
         {...props}
-        extendUnderStatusBar
         detents={resolvedDetents}
-        style={[{ top: topOffset }, style]}
+        scrollCoordination={
+          scrollCoordination ??
+          (disableScrollableNegotiation ? 'none' : undefined)
+        }
+        style={[{ top: hostTop }, style]}
         // Managed by the adapter (not overridable):
+        lazy={false}
+        topInset={0}
         index={index}
         animateIn
         wrapNativeView={Animated.createAnimatedComponent}

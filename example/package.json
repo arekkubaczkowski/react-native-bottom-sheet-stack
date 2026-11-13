@@ -13,7 +13,7 @@
     "@expo/metro-runtime": "~55.0.12",
     "@gorhom/bottom-sheet": "^5.2.8",
     "@react-native-clipboard/clipboard": "^1.16.3",
-    "@swmansion/react-native-bottom-sheet": "0.16.2",
+    "@swmansion/react-native-bottom-sheet": "1.0.0",
     "expo": "^55.0.32",
     "expo-blur": "~55.0.18",
     "expo-dev-client": "~55.0.41",

@@ -4022,13 +4022,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swmansion/react-native-bottom-sheet@npm:0.16.2":
-  version: 0.16.2
-  resolution: "@swmansion/react-native-bottom-sheet@npm:0.16.2"
+"@swmansion/react-native-bottom-sheet@npm:1.0.0":
+  version: 1.0.0
+  resolution: "@swmansion/react-native-bottom-sheet@npm:1.0.0"
   peerDependencies:
-    react: ">=18.0.0"
-    react-native: ">=0.76.0"
-  checksum: 7722049d6b13d64e9847a818091acd94d41980116d7134901e8d79e2bb16a8bf0111bebd77522fd6a3018cecf7ea080149092306edb6127e4f8383bd1a814da5
+    react: ">=19.1.1"
+    react-dom: ">=19.1.1"
+    react-native: ">=0.82.0"
+    react-native-web: ">=0.21.0"
+  peerDependenciesMeta:
+    react-dom:
+      optional: true
+    react-native-web:
+      optional: true
+  checksum: 847ce82cb1b4858797683089c06e70a8b24625c215725ba12549a64cdc8b3ad6c4fed6ef2562359f26380b1aefc463702b4c623b7a5fa753b17ee6cb203e41e8
   languageName: node
   linkType: hard
 
@@ -12424,7 +12431,7 @@ __metadata:
     "@expo/metro-runtime": ~55.0.12
     "@gorhom/bottom-sheet": ^5.2.8
     "@react-native-clipboard/clipboard": ^1.16.3
-    "@swmansion/react-native-bottom-sheet": 0.16.2
+    "@swmansion/react-native-bottom-sheet": 1.0.0
     babel-plugin-module-resolver: ^5.0.2
     expo: ^55.0.32
     expo-blur: ~55.0.18
@@ -12463,7 +12470,7 @@ __metadata:
     "@react-native/babel-preset": 0.83.10
     "@react-native/eslint-config": ^0.78.0
     "@release-it/conventional-changelog": ^9.0.2
-    "@swmansion/react-native-bottom-sheet": 0.16.2
+    "@swmansion/react-native-bottom-sheet": 1.0.0
     "@testing-library/react-native": ^13.2.0
     "@types/jest": ^29.5.5
     "@types/react": ^19.2.0
@@ -12492,7 +12499,7 @@ __metadata:
     zustand: ^5.0.3
   peerDependencies:
     "@gorhom/bottom-sheet": ">=5.0.0"
-    "@swmansion/react-native-bottom-sheet": ">=0.16.0"
+    "@swmansion/react-native-bottom-sheet": ^1.0.0
     react: "*"
     react-native: "*"
     react-native-actions-sheet: ">=0.9.0"

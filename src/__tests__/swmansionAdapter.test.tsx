@@ -8,7 +8,7 @@ import { BottomSheetContext } from '../BottomSheet.context';
 import { BottomSheetDefaultIndexContext } from '../BottomSheetDefaultIndex.context';
 import { BottomSheetManagerProvider } from '../BottomSheetManager.provider';
 import { BottomSheetRefContext } from '../BottomSheetRef.context';
-import { SwmansionSheetAdapter } from '../adapters/swmansion';
+import { SwmansionSheetAdapter, programmatic } from '../adapters/swmansion';
 import type { SheetAdapterRef } from '../adapter.types';
 import { initBottomSheetCoordinator } from '../bottomSheetCoordinator';
 import { setSheetRef } from '../refsMap';
@@ -30,7 +30,6 @@ jest.mock('@swmansion/react-native-bottom-sheet', () => ({
       </>
     );
   },
-  programmatic: (value: unknown) => ({ value, programmatic: true }),
 }));
 
 const INSETS = { top: 47, left: 0, right: 0, bottom: 34 };
@@ -223,9 +222,74 @@ describe('controlled index', () => {
 
     expect(native().index).toBe(1);
   });
+
+  it('treats a 0% detent as closed', async () => {
+    renderOpening({ detents: ['0%', '50%'] });
+    settle(1);
+    expect(console.warn).not.toHaveBeenCalled();
+
+    await userSnap(0);
+    settle(0);
+
+    expect(store().sheetsById.a).toBeUndefined();
+  });
 });
 
 describe('props handed to the native sheet', () => {
+  it('keeps the sheet below the status bar by offsetting the host, not natively', () => {
+    renderOpening();
+
+    expect(native().style[0]).toEqual({ top: INSETS.top });
+    expect(native().topInset).toBe(0);
+    expect(native()).not.toHaveProperty('extendUnderStatusBar');
+  });
+
+  it('honours topInset, and the deprecated extendUnderStatusBar as topInset 0', () => {
+    const { rerender } = renderOpening({ topInset: 12 });
+    expect(native().style[0]).toEqual({ top: 12 });
+    expect(native().topInset).toBe(0);
+
+    rerender({ extendUnderStatusBar: true });
+    expect(native().style[0]).toEqual({ top: 0 });
+
+    rerender({ extendUnderStatusBar: true, topInset: 8 });
+    expect(native().style[0]).toEqual({ top: 8 });
+  });
+
+  it('maps the deprecated disableScrollableNegotiation onto scrollCoordination', () => {
+    const { rerender } = renderOpening({ disableScrollableNegotiation: true });
+    expect(native().scrollCoordination).toBe('none');
+    expect(native()).not.toHaveProperty('disableScrollableNegotiation');
+
+    rerender({
+      disableScrollableNegotiation: true,
+      scrollCoordination: 'handoff',
+    });
+    expect(native().scrollCoordination).toBe('handoff');
+  });
+
+  it('never lets the native sheet unmount its content at the closed detent', () => {
+    renderPersistent({ lazy: true } as AdapterProps);
+
+    expect(native().lazy).toBe(false);
+  });
+
+  it('makes the closed detent programmatic while dismissal is blocked', () => {
+    renderOpening({ detents: [{ value: 0 }, 'content'], handle: true });
+    expect(native().detents[0]).toEqual({ value: 0 });
+
+    act(() => store().setPreventDismiss('a', true));
+
+    expect(native().detents).toEqual([
+      { value: 0, programmatic: true },
+      'content',
+    ]);
+  });
+
+  it('keeps the deprecated programmatic() helper working', () => {
+    expect(programmatic(320)).toEqual({ value: 320, programmatic: true });
+  });
+
   it('expands to the full height the sheet has, unless detents say otherwise', () => {
     const { rerender } = renderOpening({ fullHeight: true });
     expect(native().detents).toEqual([0, 1_000_000]);
