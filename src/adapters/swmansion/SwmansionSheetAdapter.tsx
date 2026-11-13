@@ -8,12 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {
-  type NativeSyntheticEvent,
-  StyleSheet,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { type NativeSyntheticEvent, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useEvent } from 'react-native-reanimated';
 
@@ -22,6 +17,7 @@ import {
   type BottomSheetProps,
   type Detent,
   type DetentConfig,
+  type DetentInsets,
   type DetentValue,
   type PositionChangeEventData,
   type SurfaceStyle,
@@ -205,12 +201,12 @@ export interface SwmansionSheetAdapterProps
    * Floats the sheet free of the screen edges instead of anchoring it to the
    * bottom — the "detached" presentation from `@gorhom/bottom-sheet`.
    *
-   * The insets become margins on the sheet's own content, so the card hangs off
-   * the sheet's top edge and travels with it: it enters from below the screen
-   * and leaves the same way, rather than growing in place above a fixed gap.
-   * All four corners are rounded rather than just the top two, and a
-   * `'content'` detent measures the card plus its margins, so heights stay
-   * correct without any arithmetic on your side.
+   * The gaps are the native detent `insets` of every open detent, so they are
+   * not part of the sheet: a tap in a gap reaches the backdrop. The card keeps
+   * its shape and slides through the bottom gap on its way in and out. All
+   * four corners are rounded rather than just the top two, through the native
+   * `surfaceStyle`, so a shadow set there falls outside the card. A detent
+   * that states its own `insets` keeps them.
    *
    * Defaults to off. When on, the insets default to `16` horizontally and the
    * bottom safe-area inset (at least `16`) vertically, so a bare `detached`
@@ -452,19 +448,24 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const consumerSetsRadius = flatSurfaceStyle
       ? Object.keys(flatSurfaceStyle).some((key) => key.endsWith('Radius'))
       : false;
-    // A detached sheet rounds its own card instead: a native clip on the
-    // full-width sheet would cut into the inset card's corners.
     const radiusStyle: SurfaceStyle | null =
-      consumerSetsRadius || surfaceRadius <= 0 || detached
+      consumerSetsRadius || surfaceRadius <= 0
         ? null
-        : {
-            borderTopLeftRadius: surfaceRadius,
-            borderTopRightRadius: surfaceRadius,
-          };
+        : detached
+          ? { borderRadius: surfaceRadius }
+          : {
+              borderTopLeftRadius: surfaceRadius,
+              borderTopRightRadius: surfaceRadius,
+            };
 
     const resolvedBottomInset =
       bottomInset ?? Math.max(insets.bottom, DEFAULT_DETACHED_INSET);
     const resolvedHorizontalInset = horizontalInset ?? DEFAULT_DETACHED_INSET;
+    const detachedInsets: DetentInsets = {
+      left: resolvedHorizontalInset,
+      right: resolvedHorizontalInset,
+      bottom: resolvedBottomInset,
+    };
 
     const baseSurface = surface ?? (
       <View style={[StyleSheet.absoluteFill, stylesheet.surface]} />
@@ -632,13 +633,20 @@ export const SwmansionSheetAdapter = React.forwardRef<
       ['onPositionChange']
     );
 
-    const resolvedDetents = preventDismiss
-      ? detents.map((detent, detentIndex) =>
-          detentIndex === CLOSED_INDEX
-            ? { ...toDetentConfig(detent), programmatic: true }
-            : detent
-        )
-      : detents;
+    const resolvedDetents = detents.map((detent, detentIndex) => {
+      if (detentIndex === CLOSED_INDEX) {
+        return preventDismiss
+          ? { ...toDetentConfig(detent), programmatic: true }
+          : detent;
+      }
+      if (!detached) {
+        return detent;
+      }
+      // The gaps are native insets, not margins inside the sheet: space in an
+      // inset is not part of the sheet, so a tap there reaches the backdrop.
+      const config = toDetentConfig(detent);
+      return config.insets ? config : { ...config, insets: detachedInsets };
+    });
 
     const fillStyle = shouldFill ? stylesheet.fill : null;
     const handleInsetStyle = handleResult
@@ -661,29 +669,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
       children
     );
 
-    // The detached card is a margin box inside the sheet's own content region,
-    // not a frame around an inset host. Because it hangs off the sheet's top
-    // edge, its bottom travels with the sheet — so it enters from below the
-    // screen and leaves the same way, with nothing to clip and no gap to
-    // reopen mid-animation.
-    const cardStyle: ViewStyle = {
-      marginLeft: resolvedHorizontalInset,
-      marginRight: resolvedHorizontalInset,
-      marginBottom: resolvedBottomInset,
-      borderRadius: surfaceRadius,
-      overflow: 'hidden',
-    };
-
-    const content = detached ? (
-      <View style={[fillStyle, cardStyle]}>
-        {baseSurface}
-        {handleResult?.overlay}
-        {inner}
-      </View>
-    ) : (
-      inner
-    );
-
     return (
       <BottomSheet
         {...props}
@@ -703,9 +688,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
         onIndexChange={handleNativeIndexChange}
         onSettle={handleNativeSettle}
         onPositionChange={onPositionChange}
-        surface={detached ? undefined : composedSurface}
+        surface={composedSurface}
       >
-        {content}
+        {inner}
       </BottomSheet>
     );
   }

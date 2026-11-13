@@ -476,6 +476,43 @@ describe('props handed to the native sheet', () => {
     expect(JSON.stringify(view.toJSON())).not.toContain('borderTopLeftRadius');
   });
 
+  it('does not wrap a detached sheet in a card of its own', () => {
+    const view = renderOpening({ detached: true });
+
+    const rendered = JSON.stringify(view.toJSON());
+    expect(rendered).not.toContain('marginBottom');
+    expect(rendered).not.toContain('overflow');
+  });
+
+  it('floats a detached sheet on native insets with every corner rounded', () => {
+    renderOpening({ detached: true, detents: [0, 300, 'content'] });
+
+    const gaps = { left: 16, right: 16, bottom: INSETS.bottom };
+    expect(native().detents).toEqual([
+      0,
+      { value: 300, insets: gaps },
+      { value: 'content', insets: gaps },
+    ]);
+    expect(native().surfaceStyle[0]).toEqual({ borderRadius: 20 });
+    expect(native().surface).toBeTruthy();
+  });
+
+  it('keeps insets a detached detent states for itself', () => {
+    const own = { left: 4, right: 4, bottom: 4 };
+    renderOpening({
+      detached: true,
+      horizontalInset: 24,
+      bottomInset: 48,
+      detents: [0, { value: 300, insets: own }, 600],
+    });
+
+    expect(native().detents).toEqual([
+      0,
+      { value: 300, insets: own },
+      { value: 600, insets: { left: 24, right: 24, bottom: 48 } },
+    ]);
+  });
+
   it('makes the closed detent programmatic while dismissal is blocked', () => {
     renderOpening({ detents: [{ value: 0 }, 'content'], handle: true });
     expect(native().detents[0]).toEqual({ value: 0 });
