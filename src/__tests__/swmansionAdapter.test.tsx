@@ -10,6 +10,7 @@ import { BottomSheetManagerProvider } from '../BottomSheetManager.provider';
 import { BottomSheetRefContext } from '../BottomSheetRef.context';
 import { SwmansionSheetAdapter, programmatic } from '../adapters/swmansion';
 import type { SheetAdapterRef } from '../adapter.types';
+import { ensureAnimatedIndex, getAnimatedIndex } from '../animatedRegistry';
 import { initBottomSheetCoordinator } from '../bottomSheetCoordinator';
 import { setOnBeforeClose } from '../onBeforeCloseRegistry';
 import { setSheetRef } from '../refsMap';
@@ -559,5 +560,43 @@ describe('handle', () => {
     expect(inSurface.queryByTestId('custom-handle')).toBeNull();
     const inContent = render(<>{native().children}</>);
     expect(inContent.queryByTestId('custom-handle')).toBeTruthy();
+  });
+});
+
+describe('position stream', () => {
+  const worklet = () => {
+    const calls = (useEvent as jest.Mock).mock.calls;
+    return calls[calls.length - 1]![0] as (event: {
+      index: number;
+      position: number;
+    }) => void;
+  };
+
+  it('drives animatedIndex one below the native detent index, and animatedPosition as reported', () => {
+    const animatedPosition = ensureAnimatedIndex('position-probe');
+    renderOpening({ animatedPosition });
+
+    expect((useEvent as jest.Mock).mock.calls[0]![1]).toEqual([
+      'onPositionChange',
+    ]);
+    worklet()({ index: 0.25, position: 120 });
+
+    expect(getAnimatedIndex('a')!.value).toBe(-0.75);
+    expect(animatedPosition.value).toBe(120);
+  });
+
+  it('rebinds the worklet when animatedPosition is swapped for another value', () => {
+    const before = ensureAnimatedIndex('position-before');
+    const after = ensureAnimatedIndex('position-after');
+    const { rerender } = renderOpening({ animatedPosition: before });
+
+    (useEvent as jest.Mock).mockClear();
+    rerender({ animatedPosition: after });
+
+    const rebuilds = (useEvent as jest.Mock).mock.calls.map((call) => call[2]);
+    expect(rebuilds).toContain(true);
+    worklet()({ index: 1, position: 300 });
+    expect(after.value).toBe(300);
+    expect(before.value).toBe(-1);
   });
 });

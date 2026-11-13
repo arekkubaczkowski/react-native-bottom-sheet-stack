@@ -10,7 +10,7 @@ import React, {
 } from 'react';
 import { type NativeSyntheticEvent, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useEvent } from 'react-native-reanimated';
+import Animated, { type SharedValue, useEvent } from 'react-native-reanimated';
 
 import {
   BottomSheet,
@@ -20,6 +20,8 @@ import {
   type DetentInsets,
   type DetentValue,
   type PositionChangeEventData,
+  type ScrollCoordination,
+  type ScrollCoordinationMode,
   type SurfaceStyle,
 } from '@swmansion/react-native-bottom-sheet';
 
@@ -37,7 +39,15 @@ import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
 import { SwmansionKeyboardInset } from './SwmansionKeyboardInset';
 
-export type { Detent, DetentValue };
+export type {
+  Detent,
+  DetentConfig,
+  DetentInsets,
+  DetentValue,
+  ScrollCoordination,
+  ScrollCoordinationMode,
+  SurfaceStyle,
+};
 
 /**
  * A detent that dragging skips and the sheet only reaches through `index`.
@@ -77,7 +87,7 @@ export interface SwmansionHandleConfig {
  * - `animateIn` — the manager controls the open animation, so this is forced on.
  * - `onPositionChange` / `wrapNativeView` — the adapter consumes these to drive
  *   the backdrop fade on the UI thread (via a Reanimated worklet), so they are
- *   not forwarded.
+ *   not forwarded. Pass {@link animatedPosition} to observe the position.
  *
  * - `lazy` — forced off. It unmounts the content at the closed detent, which is
  *   where a persistent sheet rests between opens.
@@ -150,6 +160,16 @@ export interface SwmansionSheetAdapterProps
    * 0.17.
    */
   disableScrollableNegotiation?: boolean;
+  /**
+   * A shared value the adapter writes the sheet's position to on the UI
+   * thread, as the native sheet reports it: the distance from the bottom of
+   * the sheet's host to the top of the sheet. Use it to drive animations that
+   * follow the sheet, including while it is dragged.
+   *
+   * The adapter consumes the native `onPositionChange` itself, so this is the
+   * way to observe the position.
+   */
+  animatedPosition?: SharedValue<number>;
   /**
    * Renders a grab handle as a chrome layer on top of the `surface`, and insets
    * the content so it clears the handle. Accepts:
@@ -419,6 +439,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
       extendUnderStatusBar = false,
       scrollCoordination,
       disableScrollableNegotiation,
+      animatedPosition,
       ...props
     },
     forwardedRef
@@ -633,14 +654,24 @@ export const SwmansionSheetAdapter = React.forwardRef<
       onIndexChange?.(nextIndex, prevIndex);
     };
 
+    // `useEvent` keeps its first worklet unless told to rebuild, so a caller
+    // who swaps `animatedPosition` would keep feeding the old one.
+    const [boundPosition, setBoundPosition] = useState(animatedPosition);
+    const rebuild = boundPosition !== animatedPosition;
+    if (rebuild) {
+      setBoundPosition(animatedPosition);
+    }
+
     const onPositionChange = useEvent<
       NativeSyntheticEvent<PositionChangeEventData>
     >(
       (event) => {
         'worklet';
         animatedIndex.set(event.index - 1);
+        animatedPosition?.set(event.position);
       },
-      ['onPositionChange']
+      ['onPositionChange'],
+      rebuild
     );
 
     const resolvedDetents = detents.map((detent, detentIndex) => {
