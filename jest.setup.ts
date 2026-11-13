@@ -42,6 +42,9 @@ jest.mock('react-native-reanimated', () => {
     default: {
       View: (props: Record<string, unknown>) =>
         React.createElement(View, props),
+      // An adapter that wraps a native view to bind a worklet event gets the
+      // view back unwrapped.
+      createAnimatedComponent: <T>(component: T) => component,
     },
     makeMutable,
     // Timing/spring helpers resolve to their target value: tests assert where a
