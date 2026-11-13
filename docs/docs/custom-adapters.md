@@ -324,6 +324,7 @@ Some libraries have no boolean visibility and no imperative ref at all — the p
 
 ```tsx
 import Animated, { useEvent } from 'react-native-reanimated';
+import { useBottomSheetStore } from 'react-native-bottom-sheet-stack';
 
 const [index, setIndex] = useState(0); // 0 = collapsed
 const openIndex = detents.length - 1;
@@ -333,8 +334,21 @@ useImperativeHandle(ref, () => ({
   close: () => setIndex(0),
 }));
 
-// Settle = animation finished → opened/closed
-const onSettle = (i: number) => (i > 0 ? handleOpened() : handleClosed());
+// Settle = animation finished. It can disagree with the store: an interceptor
+// may have declined the drag that got the sheet there, or the user may have
+// flung a closing sheet back up. Finish only what the store agreed to, and
+// send the sheet back otherwise.
+const onSettle = (i: number) => {
+  const status = useBottomSheetStore.getState().sheetsById[id]?.status;
+  if (i > 0) {
+    if (status === 'closing' || status === 'hidden') setIndex(0);
+    else handleOpened();
+  } else if (status === 'closing') {
+    handleClosed();
+  } else if (status === 'open' || status === 'opening') {
+    setIndex(openIndex);
+  }
+};
 
 // Index change = user-driven snap. The controlled prop follows every one, or
 // a later write of the old value is swallowed as "no change". Reaching

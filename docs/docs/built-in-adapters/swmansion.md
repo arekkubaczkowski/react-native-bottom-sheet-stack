@@ -12,7 +12,7 @@ Wraps [`@swmansion/react-native-bottom-sheet`](https://github.com/software-mansi
 npm install @swmansion/react-native-bottom-sheet react-native-safe-area-context
 ```
 
-:::caution Requires `@swmansion/react-native-bottom-sheet >= 1.0`
+:::caution Requires `@swmansion/react-native-bottom-sheet` 1.x
 The adapter is built on API that 1.0 has and earlier versions do not: the
 `topInset` prop, the native `surfaceStyle` that rounds and clips the sheet,
 per-detent `insets` for the detached presentation, and `scrollCoordination`.
@@ -48,11 +48,11 @@ Software Mansion's sheet is **fully controlled**: it exposes no imperative ref, 
 | --- | --- |
 | `expand()` | Sets `index` to `expandedIndex` (defaults to the last detent). If the sheet already rests there, the native sheet stays silent, so the adapter reports **opened** itself |
 | `close()` | Sets `index` back to the closed detent. If the sheet already rests there, the adapter reports **closed** itself |
-| `onSettle(i)` on an open detent | Reports **opened** |
+| `onSettle(i)` on an open detent | Reports **opened**. If the manager is already closing the sheet — the user caught it mid-close and flung it back up — the sheet goes back down instead |
 | `onSettle(i)` on the closed detent | Reports **closed** only while the manager is closing the sheet. If the manager never agreed to close it — an `onBeforeClose` interceptor declined or is still deciding — the sheet goes back up to its open detent |
 | `onIndexChange(i)` to the closed detent | The user dragged the sheet closed → asks the manager to **dismiss** it, which runs any `onBeforeClose` interceptor |
 | `onIndexChange(i)` to another open detent | The user snapped between open detents → `index` follows, and the sheet stays open |
-| `expandedIndex` changes | An open sheet moves to the new detent. A closed sheet stays closed and opens there next time |
+| `expandedIndex` changes | An open sheet moves to the new detent (to the last one when `expandedIndex` is unset). A closed sheet stays closed and opens there next time |
 | `onPositionChange` | Drives the shared `animatedIndex` on the UI thread for a smooth backdrop fade |
 
 :::info Closed detent
@@ -105,7 +105,7 @@ A bare `<SwmansionSheetAdapter>` is not quite the raw native sheet, though. It p
 
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
-| `expandedIndex` | `number` | _last detent_ | Index into `detents` the sheet expands to when opened. Replaces the native `index`, which the adapter owns. Clamped to `1 … detents.length - 1`, with a dev warning for anything outside that range or not an integer. Changing it moves an open sheet to the new detent. |
+| `expandedIndex` | `number` | _last detent_ | Index into `detents` the sheet expands to when opened. Replaces the native `index`, which the adapter owns. An integer outside `1 … detents.length - 1` is clamped into that range; a non-integer falls back to the last detent. Either way, with a dev warning. Changing it moves an open sheet to the new detent. |
 | `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle and insets the content to clear it. Pass `true` for the default pill (translucent white, made for a dark surface), an object to restyle it, or a React element for full control. An element renders above the content, so a button inside it takes touches. Auto-hidden when dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. |
 | `fullHeight` | `boolean` | `false` | Expands the sheet to the full height available to it. Upstream has percentage detents now, but this stays a shorthand for "as tall as the sheet can be": it passes a detent taller than any screen, which native caps to the space it has. Stays below the status bar unless `topInset={0}`; with `detached`, the space the insets leave. Ignored when explicit `detents` are passed. |
 | `detached` | `boolean` | `false` | Floats the sheet free of the screen edges — the *detached* presentation from `@gorhom/bottom-sheet`. The gaps are native detent `insets`, so a tap in them reaches the backdrop, and all four corners are rounded. A detent that states its own `insets` keeps them. See [Detached sheets](#detached-sheets). |
@@ -268,7 +268,7 @@ This adapter registers a hardware-back handler automatically (via `useBackHandle
 - **`settleDuration` is in milliseconds** in upstream 1.0.
 - **Corners and shadows go through `surfaceStyle`.** `cornerRadius` is applied natively and clips the content; a radius in `surfaceStyle` wins over it. A shadow drawn by a custom `surface` element is now clipped — move it to `surfaceStyle`.
 - **Detached gaps pass touches.** A tap beside or below a detached card reaches the backdrop and dismisses the sheet.
-- **`expandedIndex` is live.** Changing it moves an open sheet. Out-of-range values are clamped, with a dev warning.
+- **`expandedIndex` is live.** Changing it moves an open sheet. Out-of-range values are clamped and a non-integer falls back to the last detent, with a dev warning. Unsetting it moves an open sheet to the last detent.
 - **A custom `handle` element takes touches.**
 - **`onIndexChange` follows user snaps between open detents**, and the programmatic-open call fires once per open as `(openIndex, 0)`.
 - **Upstream behaviour changes** that are not this adapter's, but that you will notice: Android settles in about 0.45 s instead of about 0.2 s; a gentle swipe can reach the next detent before the midpoint; and an upward drag hands off from the sheet to a nested scrollable without lifting the finger (the default since upstream 0.17; `scrollCoordination` changes it).
