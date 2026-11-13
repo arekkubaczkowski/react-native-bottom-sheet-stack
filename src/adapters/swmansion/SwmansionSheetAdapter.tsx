@@ -24,6 +24,7 @@ import {
   type DetentConfig,
   type DetentValue,
   type PositionChangeEventData,
+  type SurfaceStyle,
 } from '@swmansion/react-native-bottom-sheet';
 
 import type {
@@ -243,11 +244,14 @@ export interface SwmansionSheetAdapterProps
    */
   keyboardBehavior?: 'none' | 'inset';
   /**
-   * Corner radius (px), applied to the default surface and used to clip the
-   * content so opaque top content can't square off the corners. Rounds the top
-   * two corners, or all four when {@link detached}. Pass `0` for flat corners.
-   * Defaults to the built-in surface radius; with a custom `surface`, clipping
-   * is off unless you set this to match its radius.
+   * Corner radius (px) of the sheet. Applied through the native
+   * `surfaceStyle`, which clips both the surface and the content, so opaque
+   * top content can't square off the corners. Rounds the top two corners, or
+   * all four when {@link detached}. Pass `0` for flat corners.
+   *
+   * Defaults to `20` with the built-in surface and `0` with a custom
+   * `surface`. A radius set in `surfaceStyle` wins: the adapter then adds
+   * none of its own.
    */
   cornerRadius?: number;
   /**
@@ -396,6 +400,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
       onSettle,
       style,
       surface,
+      surfaceStyle,
       handle,
       fullHeight,
       fillContent,
@@ -438,25 +443,31 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const isContentSized = expandedDetentValue === 'content';
     const shouldFill = fillContent ?? !isContentSized;
 
-    // Only clip content to a radius we actually know: the default surface's, or
-    // one the consumer states for a custom surface via `cornerRadius`.
     const usingDefaultSurface = surface === undefined || surface === null;
     const surfaceRadius =
       cornerRadius ?? (usingDefaultSurface ? DEFAULT_SURFACE_RADIUS : 0);
-    // Top two only; a detached sheet's bottom corners belong to its frame.
-    const radiusStyle: ViewStyle = {
-      borderTopLeftRadius: surfaceRadius,
-      borderTopRightRadius: surfaceRadius,
-    };
+    const flatSurfaceStyle = StyleSheet.flatten(surfaceStyle);
+    // Upstream resolves a specific corner ahead of `borderRadius`, so mixing
+    // ours into a style that sets its own would win where it should lose.
+    const consumerSetsRadius = flatSurfaceStyle
+      ? Object.keys(flatSurfaceStyle).some((key) => key.endsWith('Radius'))
+      : false;
+    // A detached sheet rounds its own card instead: a native clip on the
+    // full-width sheet would cut into the inset card's corners.
+    const radiusStyle: SurfaceStyle | null =
+      consumerSetsRadius || surfaceRadius <= 0 || detached
+        ? null
+        : {
+            borderTopLeftRadius: surfaceRadius,
+            borderTopRightRadius: surfaceRadius,
+          };
 
     const resolvedBottomInset =
       bottomInset ?? Math.max(insets.bottom, DEFAULT_DETACHED_INSET);
     const resolvedHorizontalInset = horizontalInset ?? DEFAULT_DETACHED_INSET;
 
     const baseSurface = surface ?? (
-      <View
-        style={[StyleSheet.absoluteFill, stylesheet.surface, radiusStyle]}
-      />
+      <View style={[StyleSheet.absoluteFill, stylesheet.surface]} />
     );
 
     const composedSurface = handleResult ? (
@@ -633,18 +644,12 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const handleInsetStyle = handleResult
       ? { paddingTop: handleResult.contentInset }
       : null;
-    // A detached sheet clips to its own card instead, so the inner wrapper
-    // leaves the corners alone.
-    const clipStyle: ViewStyle | null =
-      surfaceRadius > 0 && !detached
-        ? { overflow: 'hidden', ...radiusStyle }
-        : null;
     // Applies to every sheet size: a content-sized sheet re-measures taller, a
     // fixed-height one (carries `fillStyle`) shrinks its scroll area instead.
     const needsKeyboardInset = keyboardBehavior === 'inset';
 
-    const innerStyle = [fillStyle, handleInsetStyle, clipStyle];
-    const needsInnerWrapper = fillStyle || handleInsetStyle || clipStyle;
+    const innerStyle = [fillStyle, handleInsetStyle];
+    const needsInnerWrapper = fillStyle || handleInsetStyle;
 
     const inner = needsKeyboardInset ? (
       <SwmansionKeyboardInset style={innerStyle}>
@@ -683,6 +688,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
       <BottomSheet
         {...props}
         detents={resolvedDetents}
+        surfaceStyle={[radiusStyle, surfaceStyle]}
         scrollCoordination={
           scrollCoordination ??
           (disableScrollableNegotiation ? 'none' : undefined)

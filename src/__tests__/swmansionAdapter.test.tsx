@@ -1,5 +1,5 @@
 import { type ComponentProps, type ReactElement } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, render } from '@testing-library/react-native';
 import { useEvent } from 'react-native-reanimated';
@@ -436,6 +436,44 @@ describe('props handed to the native sheet', () => {
     renderPersistent({ lazy: true } as AdapterProps);
 
     expect(native().lazy).toBe(false);
+  });
+
+  it('rounds the default surface through surfaceStyle', () => {
+    renderOpening();
+
+    expect(native().surfaceStyle).toEqual([
+      { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+      undefined,
+    ]);
+  });
+
+  it('applies cornerRadius to a custom surface and leaves one without it square', () => {
+    const surface = <View testID="custom-surface" />;
+    const { rerender } = renderOpening({ surface });
+    expect(native().surfaceStyle[0]).toBeNull();
+
+    rerender({ surface, cornerRadius: 12 });
+    expect(native().surfaceStyle[0]).toEqual({
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+    });
+
+    rerender({ cornerRadius: 0 });
+    expect(native().surfaceStyle[0]).toBeNull();
+  });
+
+  it('steps aside when surfaceStyle sets a radius of its own', () => {
+    const surfaceStyle = { borderRadius: 32, boxShadow: '0 -4 16 #0003' };
+    renderOpening({ surfaceStyle, cornerRadius: 12 });
+
+    expect(native().surfaceStyle).toEqual([null, surfaceStyle]);
+  });
+
+  it('leaves clipping to the native surface shape', () => {
+    const view = renderOpening({ handle: true, fullHeight: true });
+
+    expect(JSON.stringify(view.toJSON())).not.toContain('overflow');
+    expect(JSON.stringify(view.toJSON())).not.toContain('borderTopLeftRadius');
   });
 
   it('makes the closed detent programmatic while dismissal is blocked', () => {
