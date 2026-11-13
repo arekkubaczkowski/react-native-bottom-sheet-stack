@@ -128,9 +128,16 @@ export interface SwmansionSheetAdapterProps
   /**
    * Index into `detents` the sheet expands to when opened.
    *
-   * Defaults to the last detent. The detent at index `0` must resolve to `0`
-   * (collapsed) — this matches the library's default `detents` of
-   * `[0, 'content']` and is what the manager snaps back to when closing.
+   * Defaults to the last detent. An integer from `1` through the last index;
+   * anything else is clamped into that range, with a dev warning. The detent
+   * at index `0` must be closed (`0` or `'0%'`) — this matches the library's
+   * default `detents` of `[0, 'content']` and is what the manager snaps back
+   * to when closing.
+   *
+   * Changing it while the sheet is open moves the sheet to the new detent.
+   * `onIndexChange` does not fire for that move, since you made it; `onSettle`
+   * reports its end. A closed sheet stays closed and opens onto the new
+   * detent next time.
    */
   expandedIndex?: number;
   /**
@@ -476,6 +483,16 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const safeIndex = Math.min(index, lastIndex);
     if (safeIndex !== index) {
       setIndex(safeIndex);
+    }
+
+    // Keyed on the prop, not on `openIndex`: adding a detent must not drag a
+    // sheet that never asked to move.
+    const [seenExpandedIndex, setSeenExpandedIndex] = useState(expandedIndex);
+    if (expandedIndex !== seenExpandedIndex) {
+      setSeenExpandedIndex(expandedIndex);
+      if (expandedIndex !== undefined && safeIndex !== CLOSED_INDEX) {
+        setIndex(openIndex);
+      }
     }
 
     // What native was last told, or told us: the index it is at or heading to.

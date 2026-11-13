@@ -328,6 +328,21 @@ describe('controlled index', () => {
     );
   });
 
+  it('moves an open sheet when expandedIndex changes', () => {
+    const onIndexChange = jest.fn();
+    const { rerender } = renderOpening({
+      detents: [0, 300, 600],
+      expandedIndex: 1,
+      onIndexChange,
+    });
+    settle(1);
+
+    rerender({ detents: [0, 300, 600], expandedIndex: 2, onIndexChange });
+
+    expect(native().index).toBe(2);
+    expect(onIndexChange).not.toHaveBeenCalled();
+  });
+
   it('keeps a closed sheet closed when expandedIndex changes', () => {
     const { rerender, ref } = renderPersistent({
       detents: [0, 300, 600],
