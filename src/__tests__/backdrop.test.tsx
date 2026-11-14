@@ -335,7 +335,8 @@ describe('BottomSheetBackdrop rendering', () => {
   /** The resolved style of the scrim itself — the Pressable's only child. */
   const scrimStyle = (result: ReturnType<typeof renderBackdrop>) => {
     const scrim = result.getByTestId('bottom-sheet-backdrop-a').children[0];
-    if (typeof scrim === 'string') throw new Error('expected the scrim view');
+    if (!scrim || typeof scrim === 'string')
+      throw new Error('expected the scrim view');
     return StyleSheet.flatten(
       scrim.props.style as Parameters<typeof StyleSheet.flatten>[0]
     );
@@ -363,7 +364,11 @@ describe('BottomSheetBackdrop rendering', () => {
   // The manager drives the fade off `animatedIndex`; a config style carrying
   // its own `opacity` must restyle the scrim without replacing that fade.
   it('keeps the animated opacity over a static one in the config', () => {
-    jest.mocked(useAnimatedStyle).mockReturnValueOnce({ opacity: 0.99 });
+    jest
+      .mocked(useAnimatedStyle)
+      .mockReturnValueOnce({ opacity: 0.99 } as unknown as ReturnType<
+        typeof useAnimatedStyle
+      >);
     act(() =>
       setBackdrop('a', {
         kind: 'styled',

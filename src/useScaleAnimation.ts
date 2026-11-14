@@ -121,8 +121,8 @@ function useScaleAnimatedStyleInternal(scaleDepth: number) {
   return useAnimatedStyle(() => {
     const p = progress.value;
 
-    // Identity transform on first frame collapses layout in
-    // React Native 0.85's new animation backend. Returning an empty
+    // Identity transform on first frame collapses layout in the
+    // animation backend React Native introduced in 0.85. Returning an empty
     // style keeps the view at its natural position+size when idle.
     if (!p) {
       return {};

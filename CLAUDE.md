@@ -6,9 +6,9 @@ modes, the backdrop and the iOS-style background scale.
 
 | | |
 |---|---|
-| React / RN | 19.2.0 / 0.83.10 (New Architecture) |
+| React / RN | 19.3.0 / 0.88.1 (New Architecture) |
 | State | zustand ^5.0.3 |
-| Animation | react-native-reanimated ^4.2.1 |
+| Animation | react-native-reanimated 4.7.1 |
 | Portals | react-native-teleport ^1.1.7 |
 
 | Adapter | Import from | Wraps |
@@ -294,7 +294,7 @@ selector runs on every store change (twice per render under StrictMode), so a re
 write inside it would make the result depend on how often it ran.
 
 An empty style is returned at depth 0 — an identity transform on the first frame
-collapses layout in RN 0.85's animation backend.
+collapses layout in the animation backend React Native introduced in 0.85.
 
 Public exports are the style hooks: `useBackgroundScaleAnimatedStyle()` and
 `useSheetScaleAnimatedStyle(sheetId)`.
@@ -434,9 +434,14 @@ adapter, which is the exact error the subpaths exist to avoid.
 `CustomModalAdapter`'s props type is exported as **`ModalAdapterProps`**. The
 component was renamed, the type was not; changing it needs a major bump.
 
-The example app aliases the subpaths in its own `babel.config.js` because RNBB's
-module-resolver would otherwise prefix-match them into `src/index.tsx/gorhom`.
-Consumer apps need nothing — Metro reads `exports` from package.json.
+The example app aliases the main entry and each subpath to `src/` in its own
+`babel.config.js`. The main entry is matched exactly (`^name$`): a prefix alias
+would turn `…/gorhom` into `src/index.tsx/gorhom`. That config does not use
+RNBB's `babel-config` helper — Expo's transformer loads Babel config without a
+filename, which RNBB's RegExp/string overrides cannot be evaluated under — and
+`metro.config.js` turns RNBB's `blacklistRE` (ignored since Metro 0.87) into a
+`blockList`, so peers still bundle once. Consumer apps need nothing — Metro
+reads `exports` from package.json.
 
 ---
 
