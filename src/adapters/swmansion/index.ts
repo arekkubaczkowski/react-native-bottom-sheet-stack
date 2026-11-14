@@ -1,6 +1,5 @@
 export {
   SwmansionSheetAdapter,
-  programmatic,
   type SwmansionSheetAdapterProps,
   type SwmansionHandleConfig,
   type Detent,

@@ -8,7 +8,8 @@ import { BottomSheetContext } from '../BottomSheet.context';
 import { BottomSheetDefaultIndexContext } from '../BottomSheetDefaultIndex.context';
 import { BottomSheetManagerProvider } from '../BottomSheetManager.provider';
 import { BottomSheetRefContext } from '../BottomSheetRef.context';
-import { SwmansionSheetAdapter, programmatic } from '../adapters/swmansion';
+import * as swmansionSubpath from '../adapters/swmansion';
+import { SwmansionSheetAdapter } from '../adapters/swmansion';
 import type { SheetAdapterRef } from '../adapter.types';
 import { ensureAnimatedIndex, getAnimatedIndex } from '../animatedRegistry';
 import { initBottomSheetCoordinator } from '../bottomSheetCoordinator';
@@ -452,31 +453,25 @@ describe('props handed to the native sheet', () => {
 
     expect(native().style[0]).toEqual({ top: INSETS.top });
     expect(native().topInset).toBe(0);
-    expect(native()).not.toHaveProperty('extendUnderStatusBar');
   });
 
-  it('honours topInset, and the deprecated extendUnderStatusBar as topInset 0', () => {
+  it('honours topInset', () => {
     const { rerender } = renderOpening({ topInset: 12 });
     expect(native().style[0]).toEqual({ top: 12 });
     expect(native().topInset).toBe(0);
 
-    rerender({ extendUnderStatusBar: true });
+    rerender({ topInset: 0 });
     expect(native().style[0]).toEqual({ top: 0 });
-
-    rerender({ extendUnderStatusBar: true, topInset: 8 });
-    expect(native().style[0]).toEqual({ top: 8 });
   });
 
-  it('maps the deprecated disableScrollableNegotiation onto scrollCoordination', () => {
-    const { rerender } = renderOpening({ disableScrollableNegotiation: true });
-    expect(native().scrollCoordination).toBe('none');
-    expect(native()).not.toHaveProperty('disableScrollableNegotiation');
-
-    rerender({
-      disableScrollableNegotiation: true,
-      scrollCoordination: 'handoff',
-    });
-    expect(native().scrollCoordination).toBe('handoff');
+  it('drops what upstream removed instead of aliasing it', () => {
+    expect(swmansionSubpath).not.toHaveProperty('programmatic');
+    // @ts-expect-error removed in 3.0 — use topInset={0}
+    renderOpening({ extendUnderStatusBar: true });
+    expect(native().style[0]).toEqual({ top: INSETS.top });
+    // @ts-expect-error removed in 3.0 — use scrollCoordination="none"
+    renderOpening({ disableScrollableNegotiation: true }, 'b');
+    expect(native().scrollCoordination).toBeUndefined();
   });
 
   it('never lets the native sheet unmount its content at the closed detent', () => {
@@ -580,10 +575,6 @@ describe('props handed to the native sheet', () => {
       { value: 0, programmatic: true },
       'content',
     ]);
-  });
-
-  it('keeps the deprecated programmatic() helper working', () => {
-    expect(programmatic(320)).toEqual({ value: 320, programmatic: true });
   });
 
   it('expands to the full height the sheet has, unless detents say otherwise', () => {

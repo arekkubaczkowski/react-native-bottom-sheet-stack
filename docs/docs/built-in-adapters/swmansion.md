@@ -73,7 +73,7 @@ Not accepted, because the manager owns them:
 
 `topInset` is applied by offsetting the sheet's host rather than natively: the native default follows where the host sits in the window, and the manager's background scale moves that. It defaults to the top safe-area inset; pass `0` to let the sheet go under the status bar.
 
-Your `onIndexChange` / `onSettle` handlers are still invoked after the adapter's own logic. The subpath also exports the `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types, and re-exports upstream's `Detent`, `DetentValue`, `DetentConfig`, `DetentInsets`, `SurfaceStyle`, `ScrollCoordination` and `ScrollCoordinationMode` types. The `programmatic()` helper is still exported but deprecated: write the detent as `{ value, programmatic: true }`.
+Your `onIndexChange` / `onSettle` handlers are still invoked after the adapter's own logic. The subpath also exports the `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types, and re-exports upstream's `Detent`, `DetentValue`, `DetentConfig`, `DetentInsets`, `SurfaceStyle`, `ScrollCoordination` and `ScrollCoordinationMode` types.
 
 :::info `onIndexChange` is wider than the native prop
 The adapter's `onIndexChange` differs from the native one in two ways:
@@ -257,7 +257,7 @@ This adapter registers a hardware-back handler automatically (via `useBackHandle
 3.0 moves the adapter to `@swmansion/react-native-bottom-sheet` 1.x.
 
 - **Peers.** `@swmansion/react-native-bottom-sheet` `^1.0.0`, which needs React Native >= 0.82 and React >= 19.1.1. For `keyboardBehavior="inset"`, `react-native-keyboard-controller` >= 1.18.
-- **Removed upstream, kept here as deprecated aliases:**
+- **Removed.** Upstream dropped these, and 3.0 drops them too:
 
   | 2.x | 3.x |
   | --- | --- |

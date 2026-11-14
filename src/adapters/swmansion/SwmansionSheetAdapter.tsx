@@ -50,17 +50,6 @@ export type {
 };
 
 /**
- * A detent that dragging skips and the sheet only reaches through `index`.
- *
- * @deprecated Write the detent as `{ value, programmatic: true }`. Upstream
- * removed this helper in 0.18; it stays here so existing imports keep working.
- */
-export const programmatic = (value: DetentValue): DetentConfig => ({
-  value,
-  programmatic: true,
-});
-
-/**
  * Style overrides for the adapter-rendered grab handle (the default pill).
  *
  * For total control over the rendering, pass a custom React element to the
@@ -152,19 +141,6 @@ export interface SwmansionSheetAdapterProps
    * detent next time.
    */
   expandedIndex?: number;
-  /**
-   * Lets the sheet extend under the status bar.
-   *
-   * @deprecated Use `topInset={0}`. Upstream removed this prop in 0.18.
-   */
-  extendUnderStatusBar?: boolean;
-  /**
-   * Stops nested scrollables from negotiating gestures with the sheet.
-   *
-   * @deprecated Use `scrollCoordination="none"`. Upstream deprecated this prop
-   * in 0.17 and removed it in 0.18.
-   */
-  disableScrollableNegotiation?: boolean;
   /**
    * A shared value the adapter writes the sheet's position to on the UI
    * thread, as the native sheet reports it: the distance from the bottom of
@@ -453,9 +429,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
       keyboardBehavior = 'none',
       cornerRadius,
       topInset,
-      extendUnderStatusBar = false,
-      scrollCoordination,
-      disableScrollableNegotiation,
       animatedPosition,
       ...props
     },
@@ -471,7 +444,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // Applied as an offset of the host and zeroed natively: the native default
     // is derived from where the host sits in the window, so an ancestor
     // transform (the background scale) would re-anchor the sheet mid-animation.
-    const hostTop = topInset ?? (extendUnderStatusBar ? 0 : insets.top);
+    const hostTop = topInset ?? insets.top;
 
     const detents =
       detentsProp ?? (fullHeight ? [0, FULL_HEIGHT_DETENT] : DEFAULT_DETENTS);
@@ -753,10 +726,6 @@ export const SwmansionSheetAdapter = React.forwardRef<
         {...props}
         detents={resolvedDetents}
         surfaceStyle={[radiusStyle, surfaceStyle]}
-        scrollCoordination={
-          scrollCoordination ??
-          (disableScrollableNegotiation ? 'none' : undefined)
-        }
         style={[{ top: hostTop }, style]}
         // Managed by the adapter (not overridable):
         lazy={false}
