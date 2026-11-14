@@ -326,6 +326,241 @@ describe('lifecycle', () => {
   });
 });
 
+describe('bridge rules', () => {
+  it('waits for the settle when a persistent sheet is closed while rising, after a full cycle', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    renderPersistent();
+    settle(0);
+    act(() => {
+      store().open(portal('p'));
+    });
+    await flushFrames();
+    settle(1);
+    act(() => {
+      store().startClosing('p');
+    });
+    await flushFrames();
+    settle(0);
+    expect(statusOf('p')).toBe('hidden');
+
+    act(() => {
+      store().open(portal('p'));
+    });
+    await flushFrames();
+    act(() => {
+      store().startClosing('p');
+    });
+    await flushFrames();
+
+    expect(statusOf('p')).toBe('closing');
+    settle(0);
+    expect(statusOf('p')).toBe('hidden');
+  });
+
+  it('answers an expand() and a close() in one batch on a sheet resting closed', () => {
+    const { ref } = renderPersistent();
+    settle(0);
+    store().open(portal('p'));
+
+    act(() => {
+      ref.current!.expand();
+      store().startClosing('p');
+      ref.current!.close();
+    });
+
+    expect(native().index).toBe(0);
+    expect(statusOf('p')).toBe('hidden');
+  });
+
+  it('waits for native when a stale closed settle lands while it heads up, then the sheet is closed', () => {
+    const { ref } = renderPersistent();
+    store().open(portal('p'));
+    act(() => ref.current!.expand());
+    // The mount's own settle, reported after the open was already sent.
+    settle(0);
+
+    act(() => {
+      store().startClosing('p');
+      ref.current!.close();
+    });
+    expect(statusOf('p')).toBe('closing');
+
+    settle(0);
+    expect(statusOf('p')).toBe('hidden');
+  });
+
+  it('sends a switch-parked sheet the user dragged up back down', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    renderOpening();
+    await flushFrames();
+    settle(1);
+    setSheetRef('b', { current: { expand: jest.fn(), close: jest.fn() } });
+    act(() => {
+      store().open(portal('b'), 'switch');
+    });
+    await flushFrames();
+    settle(0);
+
+    await userSnap(1);
+    settle(1);
+
+    expect(native().index).toBe(0);
+    expect(statusOf('a')).toBe('hidden');
+  });
+
+  it('puts a sheet still opening back up when an undecided interceptor holds the close', async () => {
+    renderOpening();
+    setOnBeforeClose('a', () => new Promise<boolean>(() => {}));
+
+    await userSnap(0);
+    settle(0);
+
+    expect(statusOf('a')).toBe('opening');
+    expect(native().index).toBe(1);
+  });
+
+  it('announces every open, not only the first', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    const onIndexChange = jest.fn();
+    renderPersistent({ onIndexChange });
+    settle(0);
+
+    for (let cycle = 0; cycle < 2; cycle++) {
+      act(() => {
+        store().open(portal('p'));
+      });
+      await flushFrames();
+      settle(1);
+      act(() => {
+        store().startClosing('p');
+      });
+      await flushFrames();
+      settle(0);
+    }
+
+    expect(onIndexChange.mock.calls).toEqual([
+      [1, 0],
+      [1, 0],
+    ]);
+  });
+
+  it("calls the consumer's onSettle after the adapter has acted on it", () => {
+    const seen: (string | undefined)[] = [];
+    const onSettle = jest.fn(() => {
+      seen.push(statusOf('a'));
+    });
+    renderOpening({ onSettle });
+
+    settle(1);
+
+    expect(onSettle).toHaveBeenCalledWith(1);
+    expect(seen).toEqual(['open']);
+  });
+
+  it('wraps the native view for the position worklet and forces animateIn', () => {
+    renderOpening();
+
+    expect(typeof native().wrapNativeView).toBe('function');
+    expect(native().animateIn).toBe(true);
+  });
+
+  it('clamps a settle that names a detent shrunk away since', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    const { rerender } = renderOpening({ detents: [0, 300, 600] });
+    await flushFrames();
+    rerender({ detents: [0, 300] });
+    settle(2);
+    expect(statusOf('a')).toBe('open');
+
+    setSheetRef('b', { current: { expand: jest.fn(), close: jest.fn() } });
+    act(() => {
+      store().open(portal('b'), 'switch');
+      store().startClosing('b');
+    });
+    await flushFrames(2);
+
+    expect(statusOf('a')).toBe('open');
+  });
+});
+
+describe('settle watchdog', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['requestAnimationFrame', 'nextTick'] });
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  // Fabric mounted the open and the close as one transaction: native never
+  // moved, so it settles nothing.
+  const swallowedOpenAndClose = () => {
+    const view = renderPersistent();
+    settle(0);
+    store().open(portal('p'));
+    act(() => view.ref.current!.expand());
+    act(() => {
+      store().startClosing('p');
+      view.ref.current!.close();
+    });
+    expect(statusOf('p')).toBe('closing');
+    return view;
+  };
+
+  it('reports the target once native is seen resting on it', () => {
+    swallowedOpenAndClose();
+
+    act(() => jest.advanceTimersByTime(450 + 1000));
+
+    expect(statusOf('p')).toBe('hidden');
+    expect(store().open(portal('p'))).toMatchObject({ opened: true });
+  });
+
+  it('waits while the sheet is visibly away from the target, then reports anyway', () => {
+    swallowedOpenAndClose();
+    getAnimatedIndex('p')!.set(0.4);
+
+    act(() => jest.advanceTimersByTime(450 + 1000 + 3 * 1000));
+    expect(statusOf('p')).toBe('closing');
+
+    act(() => jest.advanceTimersByTime(1000));
+    expect(statusOf('p')).toBe('hidden');
+  });
+
+  it('stays out of the way when the settle arrives', () => {
+    const { ref } = renderOpening();
+    act(() => ref.current!.expand());
+    settle(1);
+    expect(statusOf('a')).toBe('open');
+
+    act(() => {
+      store().startClosing('a');
+      ref.current!.close();
+    });
+    act(() => jest.advanceTimersByTime(300));
+    settle(0);
+    expect(statusOf('a')).toBeUndefined();
+
+    act(() => jest.advanceTimersByTime(10_000));
+    expect(statusOf('a')).toBeUndefined();
+  });
+
+  it('follows settleDuration', () => {
+    const view = renderPersistent({ settleDuration: 2000 });
+    settle(0);
+    store().open(portal('p'));
+    act(() => view.ref.current!.expand());
+    act(() => {
+      store().startClosing('p');
+      view.ref.current!.close();
+    });
+
+    act(() => jest.advanceTimersByTime(2000 + 999));
+    expect(statusOf('p')).toBe('closing');
+    act(() => jest.advanceTimersByTime(1));
+    expect(statusOf('p')).toBe('hidden');
+  });
+});
+
 describe('controlled index', () => {
   it('follows a user snap between open detents', async () => {
     const onIndexChange = jest.fn();
@@ -355,6 +590,7 @@ describe('controlled index', () => {
     [0, 1],
     [5, 2],
     [1.5, 2],
+    [NaN, 2],
   ])('clamps expandedIndex %p to %p and warns', (expandedIndex, expected) => {
     renderOpening({ detents: [0, 300, 600], expandedIndex });
 
@@ -433,6 +669,51 @@ describe('controlled index', () => {
 
     expect(onIndexChange).toHaveBeenCalledTimes(1);
     expect(onIndexChange).toHaveBeenCalledWith(2, 0);
+  });
+
+  it('stays quiet when a drag is released back onto the same detent', async () => {
+    const onIndexChange = jest.fn();
+    renderOpening({ detents: [0, 300, 600], onIndexChange });
+    settle(2);
+
+    await userSnap(2);
+
+    expect(onIndexChange).not.toHaveBeenCalled();
+  });
+
+  it('announces the way back up after an interceptor declines a dragged close', async () => {
+    const onIndexChange = jest.fn();
+    renderOpening({ onIndexChange });
+    settle(1);
+    setOnBeforeClose('a', () => false);
+
+    await userSnap(0);
+    settle(0);
+
+    expect(onIndexChange.mock.calls).toEqual([
+      [0, 1],
+      [1, 0],
+    ]);
+  });
+
+  it('announces the way back down after a closing sheet is flung up', async () => {
+    unsubscribe = initBottomSheetCoordinator('g1');
+    const onIndexChange = jest.fn();
+    renderOpening({ onIndexChange });
+    await flushFrames();
+    settle(1);
+    act(() => {
+      store().startClosing('a');
+    });
+    await flushFrames();
+
+    await userSnap(1);
+    settle(1);
+
+    expect(onIndexChange.mock.calls.slice(-2)).toEqual([
+      [1, 0],
+      [0, 1],
+    ]);
   });
 
   it('treats a 0% detent as closed', async () => {
@@ -642,6 +923,13 @@ describe('keyboard inset', () => {
       detents: [0, { value: 300, insets: { bottom: 4 } }],
     });
     expect(inset().bottomGap).toBe(4);
+
+    rerender({
+      keyboardBehavior: 'inset',
+      detached: true,
+      detents: [0, { value: 300, insets: { left: 4, right: 4 } }],
+    });
+    expect(inset().bottomGap).toBe(0);
   });
 });
 

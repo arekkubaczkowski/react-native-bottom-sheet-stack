@@ -245,7 +245,7 @@ export interface SwmansionSheetAdapterProps
    *   card counts towards it.
    *
    * `'inset'` needs the optional peer `react-native-keyboard-controller`
-   * >= 1.18, with its `KeyboardProvider` at the app root. When the peer is
+   * >= 1.15, with its `KeyboardProvider` at the app root. When the peer is
    * missing or older, the sheet renders without avoidance and warns once in
    * development. See the Keyboard avoidance guide for when to use which.
    */
@@ -262,6 +262,16 @@ export interface SwmansionSheetAdapterProps
    */
   cornerRadius?: number;
   /**
+   * Space kept above the sheet.
+   *
+   * Applied as an offset of the sheet's host, not natively, so the background
+   * scale cannot shift the sheet. It owns the host's `top`, so a `top` in
+   * `style` is ignored. Pass `0` to go under the status bar.
+   *
+   * @default the top safe-area inset
+   */
+  topInset?: number;
+  /**
    * Called when the sheet's snap index changes.
    *
    * Wider than the native prop in two ways:
@@ -271,6 +281,11 @@ export interface SwmansionSheetAdapterProps
    *   changes and `onSettle` only reports the end of the animation.
    * - It receives the **previous** index as a second argument, so you can tell
    *   the direction of a change without tracking it yourself.
+   *
+   * It fires only for an actual change: a drag released back onto its own
+   * detent is silent. When the adapter overrules a gesture it reports the way
+   * back — `(openIndex, 0)` after an interceptor declines a dragged close,
+   * `(0, i)` when a closing sheet flung up is sent back down.
    *
    * It does not fire for a manager-driven close or an {@link expandedIndex}
    * move; `useBottomSheetStatus` reports a close, and `onSettle` the end of
@@ -333,6 +348,18 @@ function resolveOpenIndex(
   }
   return Math.min(Math.max(expandedIndex, 1), lastIndex);
 }
+
+// Upstream's default `settleDuration`. iOS animates with its own spring of
+// roughly the same length.
+const DEFAULT_SETTLE_MS = 450;
+// How long past the settle duration a drive may go unanswered before the
+// adapter asks whether native is already resting on the target.
+const SETTLE_WATCHDOG_MARGIN_MS = 1000;
+// Rechecks while the sheet is visibly away from the target (a finger holding
+// it, a slow frame), after which the adapter reports the target anyway.
+const SETTLE_WATCHDOG_RETRIES = 4;
+// `animatedIndex` is a float off the native position stream.
+const AT_TARGET_EPSILON = 0.01;
 
 const MODAL_ONLY_PROPS = [
   'modal',
@@ -454,6 +481,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
       cornerRadius,
       topInset,
       animatedPosition,
+      settleDuration,
       ...rest
     },
     forwardedRef
@@ -550,7 +578,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // Keyed on the prop, not on `openIndex`: adding a detent must not drag a
     // sheet that never asked to move.
     const [seenExpandedIndex, setSeenExpandedIndex] = useState(expandedIndex);
-    if (expandedIndex !== seenExpandedIndex) {
+    if (!Object.is(expandedIndex, seenExpandedIndex)) {
       setSeenExpandedIndex(expandedIndex);
       if (safeIndex !== CLOSED_INDEX) {
         setIndex(openIndex);
@@ -603,7 +631,19 @@ export const SwmansionSheetAdapter = React.forwardRef<
       }
     }, [canClose, expandedIndex, openIndex, lastIndex]);
 
-    const reportSettled = (settledIndex: number) => {
+    // Native onIndexChange skips programmatic changes; surface an open at
+    // animation start (onSettle only reports the end), once per open.
+    const announceOpen = () => {
+      if (!openReportedRef.current) {
+        openReportedRef.current = true;
+        onIndexChange?.(openIndex, CLOSED_INDEX);
+      }
+    };
+
+    const reportSettled = (reportedIndex: number) => {
+      // A settle that left JS before `detents` shrank names a detent native
+      // has since clamped away from.
+      const settledIndex = Math.min(reportedIndex, lastIndex);
       settledIndexRef.current = settledIndex;
       const status = getSheetStatus(id);
 
@@ -613,6 +653,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
           // the sheet mid-close and flung it back. Left there it stays on
           // screen with no way to close it while an interceptor blocks drags.
           setIndex(CLOSED_INDEX);
+          openReportedRef.current = false;
+          // The consumer last heard the fling up; tell it the sheet goes down.
+          onIndexChange?.(CLOSED_INDEX, settledIndex);
           return;
         }
         handleOpened();
@@ -626,7 +669,50 @@ export const SwmansionSheetAdapter = React.forwardRef<
         // or is still deciding, or this settle is older than the open that
         // followed it. Put the sheet back where the store says it is.
         setIndex(openIndex);
+        announceOpen();
       }
+    };
+
+    const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(
+      () => () => {
+        if (watchdogRef.current !== null) {
+          clearTimeout(watchdogRef.current);
+        }
+      },
+      []
+    );
+
+    // Fabric can mount two commits as one when the main thread is busy, so a
+    // drive and its reversal a frame later reach native as no change and it
+    // settles nothing. Without this the sheet waits at `opening` or `closing`
+    // for the rest of the session.
+    const armSettleWatchdog = (target: number) => {
+      if (watchdogRef.current !== null) {
+        clearTimeout(watchdogRef.current);
+      }
+      let retries = SETTLE_WATCHDOG_RETRIES;
+      const check = () => {
+        watchdogRef.current = null;
+        if (
+          nativeTargetRef.current !== target ||
+          settledIndexRef.current !== null
+        ) {
+          return;
+        }
+        const atTarget =
+          Math.abs(animatedIndex.get() - (target - 1)) < AT_TARGET_EPSILON;
+        if (!atTarget && retries > 0) {
+          retries -= 1;
+          watchdogRef.current = setTimeout(check, SETTLE_WATCHDOG_MARGIN_MS);
+          return;
+        }
+        reportSettled(target);
+      };
+      watchdogRef.current = setTimeout(
+        check,
+        (settleDuration ?? DEFAULT_SETTLE_MS) + SETTLE_WATCHDOG_MARGIN_MS
+      );
     };
 
     // Native reports a settle only for an index change it actually makes.
@@ -640,19 +726,16 @@ export const SwmansionSheetAdapter = React.forwardRef<
         settledIndexRef.current === target
       ) {
         reportSettled(target);
+        return;
       }
+      armSettleWatchdog(target);
     };
 
     // No dependency list: the handle closes over this render's detents and
     // callbacks, and the coordinator reads `ref.current` at call time.
     useImperativeHandle(ref, () => ({
       expand: () => {
-        // Native onIndexChange skips programmatic changes; surface the open at
-        // animation start (onSettle only reports the end).
-        if (!openReportedRef.current) {
-          openReportedRef.current = true;
-          onIndexChange?.(openIndex, CLOSED_INDEX);
-        }
+        announceOpen();
         drive(openIndex);
       },
       close: () => {
@@ -677,7 +760,10 @@ export const SwmansionSheetAdapter = React.forwardRef<
         openReportedRef.current = false;
         handleDismiss();
       }
-      onIndexChange?.(nextIndex, prevIndex);
+      // Native reports every drag release, also one back onto the same detent.
+      if (nextIndex !== prevIndex) {
+        onIndexChange?.(nextIndex, prevIndex);
+      }
     };
 
     // `useEvent` keeps its first worklet unless told to rebuild, so a caller
@@ -726,15 +812,19 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const innerStyle = [fillStyle, handleInsetStyle];
     const needsInnerWrapper = fillStyle || handleInsetStyle;
 
+    // Mirrors `resolvedDetents`: a detent with insets of its own keeps them,
+    // missing `bottom` and all, so only a detent without them gets the default.
+    const keyboardInsets = toDetentConfig(
+      detents[safeIndex === CLOSED_INDEX ? openIndex : safeIndex] ?? 0
+    ).insets;
+    const keyboardBottomGap = keyboardInsets
+      ? (keyboardInsets.bottom ?? 0)
+      : detached
+        ? resolvedBottomInset
+        : 0;
+
     const inner = needsKeyboardInset ? (
-      <SwmansionKeyboardInset
-        style={innerStyle}
-        bottomGap={
-          toDetentConfig(
-            detents[safeIndex === CLOSED_INDEX ? openIndex : safeIndex] ?? 0
-          ).insets?.bottom ?? (detached ? resolvedBottomInset : 0)
-        }
-      >
+      <SwmansionKeyboardInset style={innerStyle} bottomGap={keyboardBottomGap}>
         {children}
         {handleResult?.contentOverlay}
       </SwmansionKeyboardInset>
@@ -756,6 +846,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
         // Managed by the adapter (not overridable):
         lazy={false}
         topInset={0}
+        settleDuration={settleDuration}
         index={safeIndex}
         animateIn
         wrapNativeView={Animated.createAnimatedComponent}

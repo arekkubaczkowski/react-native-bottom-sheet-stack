@@ -366,7 +366,15 @@ holds these rules:
    Under `open` or `opening` the store never agreed to close — an interceptor
    declined or is still deciding, or the settle predates a later open — so the
    adapter returns the index to the open detent. Under `hidden` it does nothing.
-6. The widened `onIndexChange(openIndex, 0)` is announced once per open.
+6. The widened `onIndexChange(openIndex, 0)` is announced once per open. A
+   restore after a declined close announces it again; a fling-back sent down
+   reports `(0, i)`; a release onto the same detent reports nothing.
+7. A drive nobody settles is caught by a watchdog. Fabric can mount a drive
+   and its reversal as one transaction, so native sees no change and settles
+   nothing. After `settleDuration` + 1 s the adapter reports the target itself
+   if `animatedIndex` shows native resting on it, and after up to four more
+   1 s rechecks regardless. A settle index above the last detent is clamped —
+   it can predate a `detents` shrink.
 
 ---
 

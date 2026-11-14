@@ -33,12 +33,15 @@ try {
   keyboardController = null;
 }
 
-// `KeyboardController.state()` arrived in 1.18, so an older install takes the
-// fallback rather than throwing on the first render. Module-level constant, so
+// `KeyboardController.isVisible()` and `.state()` arrived in 1.15, so an older
+// install takes the fallback rather than throwing on the first render. The peer
+// range stays wider than that on purpose: an app on an older version that never
+// uses `keyboardBehavior="inset"` must still install. Module-level constant, so
 // the branch in `SwmansionKeyboardInset` is stable for the lifetime of the app
 // and never violates the rules of hooks.
 const isKeyboardControllerUsable =
   typeof keyboardController?.KeyboardEvents?.addListener === 'function' &&
+  typeof keyboardController?.KeyboardController?.isVisible === 'function' &&
   typeof keyboardController?.KeyboardController?.state === 'function';
 
 let hasWarnedMissingPeer = false;
@@ -94,7 +97,7 @@ function MissingPeerFallback({ children, style }: Props) {
       hasWarnedMissingPeer = true;
       console.warn(
         '[SwmansionSheetAdapter] keyboardBehavior="inset" requires ' +
-          'react-native-keyboard-controller >= 1.18. Rendering without ' +
+          'react-native-keyboard-controller >= 1.15. Rendering without ' +
           'keyboard avoidance.'
       );
     }
@@ -108,7 +111,7 @@ function MissingPeerFallback({ children, style }: Props) {
  * `SwmansionSheetAdapter` for every sheet size when `keyboardBehavior="inset"`.
  *
  * Falls back to a plain wrapper (and a one-time dev warning) when
- * `react-native-keyboard-controller` is missing or older than 1.18.
+ * `react-native-keyboard-controller` is missing or older than 1.15.
  */
 export function SwmansionKeyboardInset(props: Props) {
   return isKeyboardControllerUsable ? (

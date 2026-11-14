@@ -107,7 +107,7 @@ function YourAppContent() {
 | `CustomModalAdapter` | `react-native-bottom-sheet-stack` | Custom animated modal | None |
 | `ReactNativeModalAdapter` | `react-native-bottom-sheet-stack/react-native-modal` | `react-native-modal` | `react-native-modal` |
 | `ActionsSheetAdapter` | `react-native-bottom-sheet-stack/actions-sheet` | `react-native-actions-sheet` | `react-native-actions-sheet` |
-| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | `@swmansion/react-native-bottom-sheet` 1.x (Fabric / New Architecture, React Native >= 0.82); `react-native-keyboard-controller` >= 1.18 with its `KeyboardProvider` (optional, only for `keyboardBehavior="inset"`) |
+| `SwmansionSheetAdapter` | `react-native-bottom-sheet-stack/swmansion` | `@swmansion/react-native-bottom-sheet` | `@swmansion/react-native-bottom-sheet` 1.x (Fabric / New Architecture, React Native >= 0.82); `react-native-keyboard-controller` >= 1.15 with its `KeyboardProvider` (optional, only for `keyboardBehavior="inset"`) |
 
 Adapters with 3rd-party dependencies are shipped as separate subpath exports so that importing the main package never triggers Metro resolution errors for uninstalled libraries. Each sheet in the stack can use a different adapter.
 

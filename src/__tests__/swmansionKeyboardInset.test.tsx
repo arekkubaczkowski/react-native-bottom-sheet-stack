@@ -48,11 +48,10 @@ const installedPeer: Peer = () => {
   };
 };
 
-// 1.17: events and a selector-less hook, but no `KeyboardController.state()`.
-const peer117: Peer = () => ({
+// 1.14: events, but neither `KeyboardController.isVisible()` nor `.state()`.
+const peer114: Peer = () => ({
   KeyboardEvents: mockKeyboardEvents,
   KeyboardController: { dismiss: () => {} },
-  useKeyboardState: () => ({ height: 0, isVisible: false }),
 });
 
 /**
@@ -168,7 +167,7 @@ describe('SwmansionKeyboardInset', () => {
         throw new Error('Cannot find module');
       },
     ],
-    ['predates 1.18', peer117],
+    ['predates 1.15', peer114],
   ])('renders without avoidance and warns once when the peer %s', (_, peer) => {
     const { render, Text, Inset } = load(peer);
 

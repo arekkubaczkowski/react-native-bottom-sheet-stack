@@ -328,10 +328,19 @@ import { getSheetStatus } from 'react-native-bottom-sheet-stack';
 
 const [index, setIndex] = useState(0); // 0 = collapsed
 const openIndex = detents.length - 1;
+// The index the library is resting on; null while it moves.
+const settledRef = useRef<number | null>(null);
+
+// A library stays silent when told to go where it already rests, so answer
+// that drive yourself (see below).
+const drive = (target: number) => {
+  setIndex(target);
+  if (settledRef.current === target) onSettle(target);
+};
 
 useImperativeHandle(ref, () => ({
-  expand: () => setIndex(openIndex),
-  close: () => setIndex(0),
+  expand: () => drive(openIndex),
+  close: () => drive(0),
 }));
 
 // Settle = animation finished. It can disagree with the store: an interceptor
@@ -339,6 +348,7 @@ useImperativeHandle(ref, () => ({
 // flung a closing sheet back up. Finish only what the store agreed to, and
 // send the sheet back otherwise.
 const onSettle = (i: number) => {
+  settledRef.current = i;
   const status = getSheetStatus(id);
   if (i > 0) {
     if (status === 'closing' || status === 'hidden') setIndex(0);
@@ -354,6 +364,7 @@ const onSettle = (i: number) => {
 // a later write of the old value is swallowed as "no change". Reaching
 // collapsed means dismiss.
 const onIndexChange = (i: number) => {
+  settledRef.current = null;
   setIndex(i);
   if (i <= 0) handleDismiss();
 };
@@ -380,7 +391,10 @@ already is: no animation, so no settle. The manager can ask exactly that — an
 persistent sheet already resting closed — and then waits for a settle that
 never comes, leaving the sheet stuck in `opening` or `closing`. Track the
 position the library last settled on, and when a drive targets it, report
-`handleOpened()` / `handleClosed()` yourself.
+`handleOpened()` / `handleClosed()` yourself. The example above is the minimum;
+`SwmansionSheetAdapter` also clears the settled position whenever the `index` it
+passes changes, and runs a watchdog for the settle React Native can swallow
+when two updates reach native as one.
 
 This is the shape [`SwmansionSheetAdapter`](/built-in-adapters/swmansion) uses to
 bridge Software Mansion's native sheet. Note that `animatedIndex` is driven

@@ -54,6 +54,7 @@ Software Mansion's sheet is **fully controlled**: it exposes no imperative ref, 
 | `onIndexChange(i)` to another open detent | The user snapped between open detents → `index` follows, and the sheet stays open |
 | `expandedIndex` changes | An open sheet moves to the new detent (to the last one when `expandedIndex` is unset). A closed sheet stays closed and opens there next time |
 | `onPositionChange` | Drives the shared `animatedIndex` on the UI thread for a smooth backdrop fade |
+| No settle after a drive | When the main thread is busy, React Native can hand a drive and its reversal to native as one update, and native then settles nothing. If no settle arrives within `settleDuration` plus a second, and the sheet is visibly resting on its target, the adapter reports the target itself. A sheet held away from it (a finger on it) gets up to four more seconds |
 
 :::info Closed detent
 The detent at index `0` must be closed (`0` or `'0%'`) so the manager can close the sheet, and at least one open detent must follow it — this matches the library's default `detents` of `[0, 'content']`. A dev-mode warning fires once if it doesn't.
@@ -80,6 +81,8 @@ The adapter's `onIndexChange` differs from the native one in two ways:
 
 - **It fires on the programmatic open too.** The native callback skips programmatic `index` changes (and `onSettle` only reports the *end* of the animation), so there's no native signal for the start of a manager-driven open. The adapter emits `onIndexChange(openIndex, 0)` once per open, at open-animation start, giving you an immediate open hook (e.g. haptics).
 - **It receives the previous index.** The signature is `(nextIndex, prevIndex)` — the first argument keeps the native meaning (the index the sheet is moving to), and the second is the index the sheet was at before the change, so you can tell the direction without tracking it yourself.
+
+It fires only when the index actually changes: releasing a drag back onto the detent it started from is silent. When the adapter overrules a user gesture, it reports the way back too — `(openIndex, 0)` when an interceptor declines a dragged close and the sheet returns up, `(0, i)` when a closing sheet the user flung up goes back down.
 
 It does **not** fire for a manager-driven close, nor for a move you make by changing `expandedIndex` — you already know about those. To follow a close, read `useBottomSheetStatus(id)`, which reports `isClosing`; `onSettle` reports the end of every movement.
 
@@ -141,7 +144,7 @@ const position = useSharedValue(0);
 ```
 
 :::info `keyboardBehavior="inset"` needs an optional peer
-This is the only convenience with an extra dependency: it follows the keyboard through [`react-native-keyboard-controller`](https://kirillzyusko.github.io/react-native-keyboard-controller/) **>= 1.18**, declared as an **optional** peer, with its `KeyboardProvider` at the root of your app. If the package is missing or older, the sheet renders without keyboard avoidance and logs a one-time dev warning. Install it only if you use `keyboardBehavior="inset"`:
+This is the only convenience with an extra dependency: it follows the keyboard through [`react-native-keyboard-controller`](https://kirillzyusko.github.io/react-native-keyboard-controller/) **>= 1.15**, declared as an **optional** peer, with its `KeyboardProvider` at the root of your app. If the package is missing or older, the sheet renders without keyboard avoidance and logs a one-time dev warning. Install it only if you use `keyboardBehavior="inset"`:
 
 ```bash
 npm install react-native-keyboard-controller
@@ -256,7 +259,7 @@ This adapter registers a hardware-back handler automatically (via `useBackHandle
 
 3.0 moves the adapter to `@swmansion/react-native-bottom-sheet` 1.x.
 
-- **Peers.** `@swmansion/react-native-bottom-sheet` `^1.0.0`, which needs React Native >= 0.82 and React >= 19.1.1. For `keyboardBehavior="inset"`, `react-native-keyboard-controller` >= 1.18.
+- **Peers.** `@swmansion/react-native-bottom-sheet` `^1.0.0`, which needs React Native >= 0.82 and React >= 19.1.1. For `keyboardBehavior="inset"`, `react-native-keyboard-controller` >= 1.15.
 - **Removed.** Upstream dropped these, and 3.0 drops them too:
 
   | 2.x | 3.x |

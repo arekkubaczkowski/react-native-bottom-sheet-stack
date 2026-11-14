@@ -44,7 +44,7 @@ yarn add react-native-actions-sheet
 # For SwmansionSheetAdapter (native / New Architecture, React Native >= 0.82)
 yarn add @swmansion/react-native-bottom-sheet@^1 react-native-safe-area-context
 # Optional — only for SwmansionSheetAdapter's keyboardBehavior="inset"
-# (>= 1.18, with its KeyboardProvider at the app root)
+# (>= 1.15, with its KeyboardProvider at the app root)
 yarn add react-native-keyboard-controller
 
 ```
