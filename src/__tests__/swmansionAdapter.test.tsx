@@ -1,5 +1,5 @@
 import { type ComponentProps, type ReactElement } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, render } from '@testing-library/react-native';
 import { useEvent } from 'react-native-reanimated';
@@ -451,24 +451,53 @@ describe('props handed to the native sheet', () => {
   it('keeps the sheet below the status bar by offsetting the host, not natively', () => {
     renderOpening();
 
-    expect(native().style[0]).toEqual({ top: INSETS.top });
+    expect(native().style[1]).toEqual({ top: INSETS.top });
     expect(native().topInset).toBe(0);
   });
 
   it('honours topInset', () => {
     const { rerender } = renderOpening({ topInset: 12 });
-    expect(native().style[0]).toEqual({ top: 12 });
+    expect(native().style[1]).toEqual({ top: 12 });
     expect(native().topInset).toBe(0);
 
     rerender({ topInset: 0 });
-    expect(native().style[0]).toEqual({ top: 0 });
+    expect(native().style[1]).toEqual({ top: 0 });
+  });
+
+  it('lets topInset win over a top in style', () => {
+    renderOpening({ topInset: 12, style: { top: 99, opacity: 0.5 } });
+
+    expect(StyleSheet.flatten(native().style)).toEqual({
+      top: 12,
+      opacity: 0.5,
+    });
+  });
+
+  it('never forwards modal-only props, even from an untyped caller', () => {
+    renderOpening({
+      modal: true,
+      windowOverlay: true,
+      onCloseRequest: () => {},
+      scrimColor: 'red',
+      scrimAccessibilityLabel: 'Close',
+    } as AdapterProps);
+
+    for (const key of [
+      'modal',
+      'windowOverlay',
+      'onCloseRequest',
+      'scrimColor',
+      'scrimAccessibilityLabel',
+    ]) {
+      expect(native()).not.toHaveProperty(key);
+    }
   });
 
   it('drops what upstream removed instead of aliasing it', () => {
     expect(swmansionSubpath).not.toHaveProperty('programmatic');
     // @ts-expect-error removed in 3.0 — use topInset={0}
     renderOpening({ extendUnderStatusBar: true });
-    expect(native().style[0]).toEqual({ top: INSETS.top });
+    expect(native().style[1]).toEqual({ top: INSETS.top });
     // @ts-expect-error removed in 3.0 — use scrollCoordination="none"
     renderOpening({ disableScrollableNegotiation: true }, 'b');
     expect(native().scrollCoordination).toBeUndefined();
@@ -617,17 +646,29 @@ describe('keyboard inset', () => {
 });
 
 describe('handle', () => {
-  it('hides the handle and its content inset while dismissal is blocked', () => {
-    const view = renderOpening({
-      handle: <View testID="custom-handle" />,
-    });
-    expect(view.queryByTestId('custom-handle')).toBeTruthy();
+  it('hides the default pill and its content inset while dismissal is blocked', () => {
+    const view = renderOpening({ handle: { color: 'pill-color' } });
+    const surfaceJson = () =>
+      JSON.stringify(render(<>{native().surface}</>).toJSON());
+    expect(surfaceJson()).toContain('pill-color');
     expect(JSON.stringify(view.toJSON())).toContain('paddingTop');
 
     act(() => store().setPreventDismiss('a', true));
 
-    expect(view.queryByTestId('custom-handle')).toBeNull();
+    expect(surfaceJson()).not.toContain('pill-color');
     expect(JSON.stringify(view.toJSON())).not.toContain('paddingTop');
+  });
+
+  it('keeps a custom handle element while dismissal is blocked, so a close button in it stays reachable', () => {
+    const view = renderOpening({
+      handle: <View testID="custom-handle" />,
+    });
+    expect(view.queryByTestId('custom-handle')).toBeTruthy();
+
+    act(() => store().setPreventDismiss('a', true));
+
+    expect(view.queryByTestId('custom-handle')).toBeTruthy();
+    expect(JSON.stringify(view.toJSON())).toContain('paddingTop');
   });
 
   it('renders a custom handle above the content so it can take touches', () => {

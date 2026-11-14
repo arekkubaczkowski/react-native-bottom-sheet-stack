@@ -30,8 +30,11 @@ import type {
   SheetAdapterRef,
 } from '../../adapter.types';
 import { useBottomSheetDefaultIndex } from '../../BottomSheetDefaultIndex.context';
-import { useBottomSheetStore, useSheetPreventDismiss } from '../../store';
-import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
+import { useSheetPreventDismiss } from '../../store';
+import {
+  createSheetEventHandlers,
+  getSheetStatus,
+} from '../../bottomSheetCoordinator';
 import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
@@ -84,7 +87,8 @@ export interface SwmansionHandleConfig {
  * - `topInset` — accepted, but applied by offsetting the sheet host rather than
  *   natively: the native default follows where the host sits in the window, so
  *   a scaled ancestor (the background scale) would shift the sheet. Defaults to
- *   the top safe-area inset; pass `0` to go under the status bar.
+ *   the top safe-area inset; pass `0` to go under the status bar. It owns the
+ *   host's `top`, so a `top` in `style` is ignored.
  *
  * Every other native prop (`detents`, `style`, `surface`, `surfaceStyle`,
  * `animateContentHeight`, `scrollCoordination`, `settleDuration` in
@@ -163,9 +167,10 @@ export interface SwmansionSheetAdapterProps
    *   given a default top inset of `32`; override it with your own padding if
    *   your handle is taller.
    *
-   * Automatically hidden when dismissal is blocked (`useOnBeforeClose`) — a
-   * non-draggable sheet showing a grab handle would mislead. Defaults to off
-   * (no handle), so raw usage is unaffected.
+   * The pill (`true` or the object form) is hidden while dismissal is blocked
+   * (`useOnBeforeClose`) — a non-draggable sheet showing a grab handle would
+   * mislead. An element always renders, because it may be the one way out of
+   * a blocked sheet. Defaults to off (no handle), so raw usage is unaffected.
    */
   handle?: boolean | SwmansionHandleConfig | ReactElement;
   /**
@@ -329,6 +334,25 @@ function resolveOpenIndex(
   return Math.min(Math.max(expandedIndex, 1), lastIndex);
 }
 
+const MODAL_ONLY_PROPS = [
+  'modal',
+  'windowOverlay',
+  'onCloseRequest',
+  'scrimColor',
+  'scrimAccessibilityLabel',
+] as const;
+
+/**
+ * Upstream's `BottomSheet` reads the modal-only props from the same object as
+ * the inline ones. The types already reject them, but an untyped caller would
+ * get `modal` portalling the sheet out of the manager's layer.
+ */
+function withoutModalOnlyProps<T extends object>(props: T): T {
+  const result = { ...props } as Record<string, unknown>;
+  for (const key of MODAL_ONLY_PROPS) delete result[key];
+  return result as T;
+}
+
 function renderHandle(handle: boolean | SwmansionHandleConfig | ReactElement): {
   surfaceOverlay: ReactNode;
   contentOverlay: ReactNode;
@@ -430,7 +454,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
       cornerRadius,
       topInset,
       animatedPosition,
-      ...props
+      ...rest
     },
     forwardedRef
   ) => {
@@ -440,6 +464,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const preventDismiss = useSheetPreventDismiss(id);
     const insets = useSafeAreaInsets();
     useAdapterBackdrop(id, backdrop);
+    const props = withoutModalOnlyProps(rest);
 
     // Applied as an offset of the host and zeroed natively: the native default
     // is derived from where the host sits in the window, so an ancestor
@@ -454,8 +479,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const canClose = detents.length > 1 && isClosedDetent(detents[0]);
     const expandedDetentValue = toDetentConfig(detents[openIndex] ?? 0).value;
 
-    const handleResult =
-      handle && !preventDismiss ? renderHandle(handle) : null;
+    const showHandle =
+      isValidElement(handle) || (Boolean(handle) && !preventDismiss);
+    const handleResult = handle && showHandle ? renderHandle(handle) : null;
 
     const isContentSized = expandedDetentValue === 'content';
     const shouldFill = fillContent ?? !isContentSized;
@@ -579,7 +605,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
 
     const reportSettled = (settledIndex: number) => {
       settledIndexRef.current = settledIndex;
-      const status = useBottomSheetStore.getState().sheetsById[id]?.status;
+      const status = getSheetStatus(id);
 
       if (!isClosedDetent(detents[settledIndex])) {
         if (status === 'closing' || status === 'hidden') {
@@ -726,7 +752,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
         {...props}
         detents={resolvedDetents}
         surfaceStyle={[radiusStyle, surfaceStyle]}
-        style={[{ top: hostTop }, style]}
+        style={[style, { top: hostTop }]}
         // Managed by the adapter (not overridable):
         lazy={false}
         topInset={0}

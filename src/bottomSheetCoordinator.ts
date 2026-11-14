@@ -1,6 +1,11 @@
 import type { SheetAdapterEvents } from './adapter.types';
 import { useBottomSheetStore } from './store';
-import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
+import type {
+  BottomSheetStatus,
+  CascadeOptions,
+  CloseAllResult,
+  CloseResult,
+} from './store';
 import { getOnBeforeClose } from './onBeforeCloseRegistry';
 import { getSheetRef } from './refsMap';
 
@@ -90,6 +95,19 @@ export function initBottomSheetCoordinator(groupId: string) {
       });
     }
   );
+}
+
+/**
+ * A sheet's current status, read outside React — `undefined` when no sheet
+ * with that id exists.
+ *
+ * For adapters that must decide what a library event means at the moment it
+ * arrives: a settle on the closed position finishes a close only if the store
+ * is `'closing'`, and is an interceptor's refusal otherwise. Inside render use
+ * `useBottomSheetStatus` instead, which re-renders on change.
+ */
+export function getSheetStatus(sheetId: string): BottomSheetStatus | undefined {
+  return useBottomSheetStore.getState().sheetsById[sheetId]?.status;
 }
 
 /**

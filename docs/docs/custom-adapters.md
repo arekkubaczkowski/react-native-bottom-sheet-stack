@@ -324,7 +324,7 @@ Some libraries have no boolean visibility and no imperative ref at all — the p
 
 ```tsx
 import Animated, { useEvent } from 'react-native-reanimated';
-import { useBottomSheetStore } from 'react-native-bottom-sheet-stack';
+import { getSheetStatus } from 'react-native-bottom-sheet-stack';
 
 const [index, setIndex] = useState(0); // 0 = collapsed
 const openIndex = detents.length - 1;
@@ -339,7 +339,7 @@ useImperativeHandle(ref, () => ({
 // flung a closing sheet back up. Finish only what the store agreed to, and
 // send the sheet back otherwise.
 const onSettle = (i: number) => {
-  const status = useBottomSheetStore.getState().sheetsById[id]?.status;
+  const status = getSheetStatus(id);
   if (i > 0) {
     if (status === 'closing' || status === 'hidden') setIndex(0);
     else handleOpened();
@@ -416,6 +416,8 @@ Do **not** hand-roll the effect. A single effect keyed on the prop clears and re
 `useSetBackdrop` remains the imperative escape hatch: `setBackdrop(id, false)` suppresses the shared backdrop, `setBackdrop(id, true)` clears the override.
 
 `useSheetPreventDismiss(id)` reports whether a `useOnBeforeClose` interceptor is currently blocking dismissal, so you can disable your library's native swipe/tap gestures while it is.
+
+`getSheetStatus(id)` reads a sheet's status outside React, at the moment a library event arrives — what a controlled adapter needs to tell a finished close from an interceptor's refusal (see the settle handler above). In render, use `useBottomSheetStatus` instead.
 
 ### Libraries Without Separate Dismiss/Close Phases
 

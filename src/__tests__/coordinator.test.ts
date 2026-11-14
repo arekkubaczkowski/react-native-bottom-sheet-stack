@@ -1,4 +1,8 @@
-import { closeAllAnimated, requestClose } from '../bottomSheetCoordinator';
+import {
+  closeAllAnimated,
+  getSheetStatus,
+  requestClose,
+} from '../bottomSheetCoordinator';
 import { setOnBeforeClose } from '../onBeforeCloseRegistry';
 import {
   openAndSettle,
@@ -9,6 +13,21 @@ import {
 } from './testUtils';
 
 setupSheetTest();
+
+describe('getSheetStatus', () => {
+  it('reads the live status outside React, and undefined once the sheet is gone', () => {
+    expect(getSheetStatus('a')).toBeUndefined();
+
+    store().open(portal('a'));
+    expect(getSheetStatus('a')).toBe('opening');
+    store().markOpen('a');
+    expect(getSheetStatus('a')).toBe('open');
+    store().startClosing('a');
+    expect(getSheetStatus('a')).toBe('closing');
+    store().finishClosing('a');
+    expect(getSheetStatus('a')).toBeUndefined();
+  });
+});
 
 describe('requestClose', () => {
   it('closes an open sheet', async () => {

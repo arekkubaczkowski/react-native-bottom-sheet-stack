@@ -71,7 +71,7 @@ Not accepted, because the manager owns them:
 - `onPositionChange` / `wrapNativeView` — consumed by the adapter to drive the backdrop fade on the UI thread. Pass `animatedPosition` to observe the position.
 - Every modal-only prop (`scrimColor`, a detent's `scrimOpacity`, `scrimAccessibilityLabel`, `windowOverlay`, `onCloseRequest`). The manager always renders the sheet inline; see [Backdrop](#backdrop).
 
-`topInset` is applied by offsetting the sheet's host rather than natively: the native default follows where the host sits in the window, and the manager's background scale moves that. It defaults to the top safe-area inset; pass `0` to let the sheet go under the status bar.
+`topInset` is applied by offsetting the sheet's host rather than natively: the native default follows where the host sits in the window, and the manager's background scale moves that. It defaults to the top safe-area inset; pass `0` to let the sheet go under the status bar. Because it owns the host's `top`, a `top` in `style` is ignored.
 
 Your `onIndexChange` / `onSettle` handlers are still invoked after the adapter's own logic. The subpath also exports the `SwmansionSheetAdapterProps` and `SwmansionHandleConfig` (the `handle` object form) types, and re-exports upstream's `Detent`, `DetentValue`, `DetentConfig`, `DetentInsets`, `SurfaceStyle`, `ScrollCoordination` and `ScrollCoordinationMode` types.
 
@@ -106,7 +106,7 @@ A bare `<SwmansionSheetAdapter>` is not quite the raw native sheet, though. It p
 | Prop | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `expandedIndex` | `number` | _last detent_ | Index into `detents` the sheet expands to when opened. Replaces the native `index`, which the adapter owns. An integer outside `1 … detents.length - 1` is clamped into that range; a non-integer falls back to the last detent. Either way, with a dev warning. Changing it moves an open sheet to the new detent. |
-| `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle and insets the content to clear it. Pass `true` for the default pill (translucent white, made for a dark surface), an object to restyle it, or a React element for full control. An element renders above the content, so a button inside it takes touches. Auto-hidden when dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. |
+| `handle` | `boolean \| { color?, width?, height? } \| ReactElement` | `false` | Renders a grab handle and insets the content to clear it. Pass `true` for the default pill (translucent white, made for a dark surface), an object to restyle it, or a React element for full control. An element renders above the content, so a button inside it takes touches. The pill is hidden while dismissal is blocked (see [Close interception](/close-interception)) — a non-draggable sheet showing a grab handle would mislead. An element always renders, so a close button in it stays reachable. |
 | `fullHeight` | `boolean` | `false` | Expands the sheet to the full height available to it. Upstream has percentage detents now, but this stays a shorthand for "as tall as the sheet can be": it passes a detent taller than any screen, which native caps to the space it has. Stays below the status bar unless `topInset={0}`; with `detached`, the space the insets leave. Ignored when explicit `detents` are passed. |
 | `detached` | `boolean` | `false` | Floats the sheet free of the screen edges — the *detached* presentation from `@gorhom/bottom-sheet`. The gaps are native detent `insets`, so a tap in them reaches the backdrop, and all four corners are rounded. A detent that states its own `insets` keeps them. See [Detached sheets](#detached-sheets). |
 | `bottomInset` | `number` | _safe-area bottom, at least `16`_ | Gap below the sheet. Only meaningful with `detached`. |
@@ -269,6 +269,7 @@ This adapter registers a hardware-back handler automatically (via `useBackHandle
 - **Corners and shadows go through `surfaceStyle`.** `cornerRadius` is applied natively and clips the content; a radius in `surfaceStyle` wins over it. A shadow drawn by a custom `surface` element is now clipped — move it to `surfaceStyle`.
 - **Detached gaps pass touches.** A tap beside or below a detached card reaches the backdrop and dismisses the sheet.
 - **`expandedIndex` is live.** Changing it moves an open sheet. Out-of-range values are clamped and a non-integer falls back to the last detent, with a dev warning. Unsetting it moves an open sheet to the last detent.
-- **A custom `handle` element takes touches.**
+- **A custom `handle` element takes touches**, and stays visible while an interceptor blocks dismissal. Only the default pill hides.
+- **`topInset` wins over `style.top`.**
 - **`onIndexChange` follows user snaps between open detents**, and the programmatic-open call fires once per open as `(openIndex, 0)`.
 - **Upstream behaviour changes** that are not this adapter's, but that you will notice: Android settles in about 0.45 s instead of about 0.2 s; a gentle swipe can reach the next detent before the midpoint; and an upward drag hands off from the sheet to a nested scrollable without lifting the finger (the default since upstream 0.17; `scrollCoordination` changes it).

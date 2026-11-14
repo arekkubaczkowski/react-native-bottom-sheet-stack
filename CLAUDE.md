@@ -141,8 +141,9 @@ without re-animating it out. `'hidden'` is deliberately excluded: a
 adapter rendered, so `finishClosing` would delete a live sheet on every
 persistent mount.
 
-Also exported publicly for adapter authors: `requestClose(id)` and
-`closeAllAnimated(groupId, opts)`.
+Also exported publicly for adapter authors: `requestClose(id)`,
+`closeAllAnimated(groupId, opts)` and `getSheetStatus(id)` — the supported way
+to read a status outside React; `useBottomSheetStore` is internal.
 
 ---
 
