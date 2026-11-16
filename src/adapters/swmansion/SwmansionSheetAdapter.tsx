@@ -132,9 +132,10 @@ export interface SwmansionSheetAdapterProps
   /**
    * Index into `detents` the sheet expands to when opened.
    *
-   * Defaults to the last detent. An integer from `1` through the last index;
-   * an integer outside that range is clamped into it, and a non-integer falls
-   * back to the last detent, either way with a dev warning. The detent
+   * Defaults to the last detent. An integer from `1` through the last index.
+   * One above the last index is clamped to it silently, because `detents` may
+   * shrink under it; one below `1` is clamped to `1` and a non-integer falls
+   * back to the last detent, both with a dev warning. The detent
    * at index `0` must be closed (`0` or `'0%'`) — this matches the library's
    * default `detents` of `[0, 'content']` and is what the manager snaps back
    * to when closing.
@@ -266,7 +267,8 @@ export interface SwmansionSheetAdapterProps
    *
    * Applied as an offset of the sheet's host, not natively, so the background
    * scale cannot shift the sheet. It owns the host's `top`, so a `top` in
-   * `style` is ignored. Pass `0` to go under the status bar.
+   * `style` is ignored. Pass `0` to go under the status bar; a negative value
+   * is clamped to `0` with a dev warning.
    *
    * @default the top safe-area inset
    */
@@ -355,8 +357,9 @@ const DEFAULT_SETTLE_MS = 450;
 // How long past the settle duration a drive may go unanswered before the
 // adapter asks whether native is already resting on the target.
 const SETTLE_WATCHDOG_MARGIN_MS = 1000;
-// Rechecks while the sheet is visibly away from the target (a finger holding
-// it, a slow frame), after which the adapter reports the target anyway.
+// Rechecks while the sheet is visibly away from the target, after which the
+// adapter reports the target anyway — but only while native rests on some
+// detent. Between detents is a finger holding the sheet, and that waits.
 const SETTLE_WATCHDOG_RETRIES = 4;
 // `animatedIndex` is a float off the native position stream.
 const AT_TARGET_EPSILON = 0.01;
@@ -497,7 +500,8 @@ export const SwmansionSheetAdapter = React.forwardRef<
     // Applied as an offset of the host and zeroed natively: the native default
     // is derived from where the host sits in the window, so an ancestor
     // transform (the background scale) would re-anchor the sheet mid-animation.
-    const hostTop = topInset ?? insets.top;
+    // Upstream throws on a negative inset; this one is a JS offset, so clamp.
+    const hostTop = Math.max(topInset ?? insets.top, 0);
 
     const detents =
       detentsProp ?? (fullHeight ? [0, FULL_HEIGHT_DETENT] : DEFAULT_DETENTS);
@@ -622,14 +626,25 @@ export const SwmansionSheetAdapter = React.forwardRef<
             'close.'
         );
       }
-      if (expandedIndex !== undefined && expandedIndex !== openIndex) {
+      if (topInset !== undefined && topInset < 0) {
+        console.warn(
+          `[SwmansionSheetAdapter] \`topInset\` must not be negative. ` +
+            `Received ${topInset}; using 0.`
+        );
+      }
+      // Above the last detent is not a mistake: `detents` may shrink under it.
+      if (
+        expandedIndex !== undefined &&
+        expandedIndex !== openIndex &&
+        !(Number.isInteger(expandedIndex) && expandedIndex > lastIndex)
+      ) {
         console.warn(
           `[SwmansionSheetAdapter] \`expandedIndex\` must be an integer from ` +
             `1 through ${lastIndex}. Received ${String(expandedIndex)}; ` +
             `using ${openIndex}.`
         );
       }
-    }, [canClose, expandedIndex, openIndex, lastIndex]);
+    }, [canClose, expandedIndex, openIndex, lastIndex, topInset]);
 
     // Native onIndexChange skips programmatic changes; surface an open at
     // animation start (onSettle only reports the end), once per open.
@@ -641,7 +656,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     };
 
     const reportSettled = (reportedIndex: number) => {
-      // A settle that left JS before `detents` shrank names a detent native
+      // A settle that left native before `detents` shrank names a detent it
       // has since clamped away from.
       const settledIndex = Math.min(reportedIndex, lastIndex);
       settledIndexRef.current = settledIndex;
@@ -666,8 +681,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
         handleClosed();
       } else if (status === 'open' || status === 'opening') {
         // Down, but the store never agreed to a close: an interceptor declined
-        // or is still deciding, or this settle is older than the open that
-        // followed it. Put the sheet back where the store says it is.
+        // or is still deciding. Put the sheet back where the store says it is.
         setIndex(openIndex);
         announceOpen();
       }
@@ -700,10 +714,12 @@ export const SwmansionSheetAdapter = React.forwardRef<
         ) {
           return;
         }
-        const atTarget =
-          Math.abs(animatedIndex.get() - (target - 1)) < AT_TARGET_EPSILON;
-        if (!atTarget && retries > 0) {
-          retries -= 1;
+        const position = animatedIndex.get();
+        const atTarget = Math.abs(position - (target - 1)) < AT_TARGET_EPSILON;
+        const onADetent =
+          Math.abs(position - Math.round(position)) < AT_TARGET_EPSILON;
+        if (!atTarget && (retries > 0 || !onADetent)) {
+          retries = Math.max(retries - 1, 0);
           watchdogRef.current = setTimeout(check, SETTLE_WATCHDOG_MARGIN_MS);
           return;
         }
@@ -745,7 +761,12 @@ export const SwmansionSheetAdapter = React.forwardRef<
     }));
 
     const handleNativeSettle = (settledIndex: number) => {
-      reportSettled(settledIndex);
+      // Native does not settle a superseded spring, so a settle on another
+      // index than the one it was last sent to left native before that send
+      // reached it. A user's fling is not one: it reports its index first.
+      if (Math.min(settledIndex, lastIndex) === nativeTargetRef.current) {
+        reportSettled(settledIndex);
+      }
       onSettle?.(settledIndex);
     };
 

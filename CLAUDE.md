@@ -373,7 +373,14 @@ holds these rules:
    and its reversal as one transaction, so native sees no change and settles
    nothing. After `settleDuration` + 1 s the adapter reports the target itself
    if `animatedIndex` shows native resting on it, and after up to four more
-   1 s rechecks regardless. A settle index above the last detent is clamped —
+   1 s rechecks if native rests on any detent. Between detents is a finger
+   holding the sheet, and the watchdog waits for the release however long it
+   takes — reporting a close there unmounts the sheet under the finger.
+8. A native settle on an index other than the one native was last sent to is
+   dropped (the consumer's `onSettle` still hears it). Native never settles a
+   superseded spring, so such a settle left native before the newer index
+   reached it; a user's fling reports its index through `onIndexChange` first
+   and so always matches. A settle index above the last detent is clamped —
    it can predate a `detents` shrink.
 
 ---

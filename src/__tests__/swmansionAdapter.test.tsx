@@ -515,15 +515,73 @@ describe('settle watchdog', () => {
     expect(store().open(portal('p'))).toMatchObject({ opened: true });
   });
 
-  it('waits while the sheet is visibly away from the target, then reports anyway', () => {
+  it('reports the target anyway once native has rested on another detent through every recheck', () => {
     swallowedOpenAndClose();
-    getAnimatedIndex('p')!.set(0.4);
+    // Resting on detent 1 while the target is 0.
+    getAnimatedIndex('p')!.set(0);
 
     act(() => jest.advanceTimersByTime(450 + 1000 + 3 * 1000));
     expect(statusOf('p')).toBe('closing');
 
     act(() => jest.advanceTimersByTime(1000));
     expect(statusOf('p')).toBe('hidden');
+  });
+
+  it('never finishes a close under a finger holding the sheet between detents', () => {
+    swallowedOpenAndClose();
+    getAnimatedIndex('p')!.set(-0.4);
+
+    act(() => jest.advanceTimersByTime(60_000));
+    expect(statusOf('p')).toBe('closing');
+
+    // Released, and native comes to rest on the target.
+    getAnimatedIndex('p')!.set(-1);
+    act(() => jest.advanceTimersByTime(1000));
+    expect(statusOf('p')).toBe('hidden');
+  });
+
+  it('drops a timer whose target a user snap has replaced', async () => {
+    const onIndexChange = jest.fn();
+    const { ref } = renderOpening({ detents: [0, 300, 600], onIndexChange });
+    act(() => ref.current!.expand());
+    await userSnap(1);
+
+    act(() => jest.advanceTimersByTime(60_000));
+
+    expect(statusOf('a')).toBe('opening');
+    expect(onIndexChange.mock.calls).toEqual([
+      [2, 0],
+      [1, 2],
+    ]);
+  });
+
+  it('drops a timer whose drive native has since settled', () => {
+    const { ref } = renderPersistent();
+    settle(0);
+    store().open(portal('p'));
+    act(() => ref.current!.expand());
+    settle(1);
+    expect(statusOf('p')).toBe('open');
+    getAnimatedIndex('p')!.set(0);
+    // The store has started a close the coordinator has not driven yet; a
+    // late report of the open settle would read it as a fling and pull the
+    // sheet down on its own.
+    act(() => {
+      store().startClosing('p');
+    });
+
+    act(() => jest.advanceTimersByTime(60_000));
+
+    expect(native().index).toBe(1);
+  });
+
+  it('clears its timer on unmount', () => {
+    const { unmount } = swallowedOpenAndClose();
+    unmount();
+
+    act(() => jest.advanceTimersByTime(60_000));
+
+    expect(statusOf('p')).toBe('closing');
   });
 
   it('stays out of the way when the settle arrives', () => {
@@ -588,7 +646,6 @@ describe('controlled index', () => {
 
   it.each([
     [0, 1],
-    [5, 2],
     [1.5, 2],
     [NaN, 2],
   ])('clamps expandedIndex %p to %p and warns', (expandedIndex, expected) => {
@@ -598,6 +655,30 @@ describe('controlled index', () => {
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('expandedIndex')
     );
+  });
+
+  it('clamps an expandedIndex above the last detent without a warning, since detents may shrink under it', () => {
+    renderOpening({ detents: [0, 300, 600], expandedIndex: 5 });
+
+    expect(native().index).toBe(2);
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('ignores an open settle that left native before a programmatic close reached it', () => {
+    const onIndexChange = jest.fn();
+    const { ref } = renderOpening({ onIndexChange });
+    act(() => ref.current!.expand());
+
+    act(() => {
+      store().startClosing('a');
+      ref.current!.close();
+    });
+    settle(1);
+
+    expect(native().index).toBe(0);
+    expect(onIndexChange.mock.calls).toEqual([[1, 0]]);
+    settle(0);
+    expect(statusOf('a')).toBeUndefined();
   });
 
   it('moves an open sheet when expandedIndex changes', () => {
@@ -743,6 +824,15 @@ describe('props handed to the native sheet', () => {
 
     rerender({ topInset: 0 });
     expect(native().style[1]).toEqual({ top: 0 });
+  });
+
+  it('clamps a negative topInset to 0 and warns', () => {
+    renderOpening({ topInset: -20 });
+
+    expect(native().style[1]).toEqual({ top: 0 });
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('topInset')
+    );
   });
 
   it('lets topInset win over a top in style', () => {
