@@ -1,5 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
-import { type StyleProp, View, type ViewStyle } from 'react-native';
+import { useEffect, useState } from 'react';
 
 // Minimal shape of the bits we use — typed locally so the lib does not need the
 // optional peer installed to typecheck (matching the react-native-modal /
@@ -7,11 +6,7 @@ import { type StyleProp, View, type ViewStyle } from 'react-native';
 interface KeyboardControllerModule {
   KeyboardEvents: {
     addListener: (
-      name:
-        | 'keyboardWillShow'
-        | 'keyboardDidShow'
-        | 'keyboardWillHide'
-        | 'keyboardDidHide',
+      name: 'keyboardWillShow' | 'keyboardWillHide' | 'keyboardDidHide',
       callback: (event: { height: number }) => void
     ) => { remove: () => void };
   };
@@ -21,10 +16,7 @@ interface KeyboardControllerModule {
   };
 }
 
-// `react-native-keyboard-controller` is an optional peer. Resolve it lazily and
-// tolerate its absence so the adapter never hard-requires it — keyboard
-// avoidance is strictly opt-in via `keyboardBehavior="inset"`. Apps that don't
-// use that prop pull in zero extra native code.
+// The optional peer can be absent when keyboard avoidance is unused.
 let keyboardController: Partial<KeyboardControllerModule> | null;
 try {
   keyboardController =
@@ -33,37 +25,41 @@ try {
   keyboardController = null;
 }
 
-// `KeyboardController.isVisible()` and `.state()` arrived in 1.15, so an older
-// install takes the fallback rather than throwing on the first render. The peer
-// range stays wider than that on purpose: an app on an older version that never
-// uses `keyboardBehavior="inset"` must still install. Module-level constant, so
-// the branch in `SwmansionKeyboardInset` is stable for the lifetime of the app
-// and never violates the rules of hooks.
+// isVisible() and state() require 1.15, above the optional peer range.
 const isKeyboardControllerUsable =
   typeof keyboardController?.KeyboardEvents?.addListener === 'function' &&
   typeof keyboardController?.KeyboardController?.isVisible === 'function' &&
   typeof keyboardController?.KeyboardController?.state === 'function';
 
+const keyboard = isKeyboardControllerUsable
+  ? (keyboardController as KeyboardControllerModule)
+  : null;
 let hasWarnedMissingPeer = false;
 
-interface Props {
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
-  /** Space the sheet already keeps below its content (a detached sheet's gap). */
-  bottomGap?: number;
+function getKeyboardHeight() {
+  const controller = keyboard?.KeyboardController;
+  return controller?.isVisible() ? controller.state().height : 0;
 }
 
-function KeyboardInsetActive({ children, style, bottomGap = 0 }: Props) {
-  const { KeyboardController, KeyboardEvents } =
-    keyboardController as KeyboardControllerModule;
+export function useSwmansionKeyboardHeight(enabled: boolean) {
   const [keyboardHeight, setKeyboardHeight] = useState(() =>
-    KeyboardController.isVisible() ? KeyboardController.state().height : 0
+    enabled ? getKeyboardHeight() : 0
   );
-
   useEffect(() => {
-    // Will-hide, not only did-hide: releasing the inset once the keyboard is
-    // gone leaves the sheet standing over an empty strip for the whole
-    // dismissal.
+    if (!enabled) return;
+    if (!keyboard) {
+      if (__DEV__ && !hasWarnedMissingPeer) {
+        hasWarnedMissingPeer = true;
+        console.warn(
+          '[SwmansionSheetAdapter] keyboardBehavior="inset" requires ' +
+            'react-native-keyboard-controller >= 1.15. Rendering without ' +
+            'keyboard avoidance.'
+        );
+      }
+      return;
+    }
+
+    const { KeyboardEvents } = keyboard;
     const subscriptions = [
       KeyboardEvents.addListener('keyboardWillShow', (event) =>
         setKeyboardHeight(event.height)
@@ -73,50 +69,10 @@ function KeyboardInsetActive({ children, style, bottomGap = 0 }: Props) {
       ),
       KeyboardEvents.addListener('keyboardDidHide', () => setKeyboardHeight(0)),
     ];
+    // Catch a keyboard change between the initial render and subscription.
+    setKeyboardHeight(getKeyboardHeight());
     return () => subscriptions.forEach((subscription) => subscription.remove());
-  }, [KeyboardEvents]);
+  }, [enabled]);
 
-  // Pad by the keyboard height: a content-sized sheet re-measures taller (the
-  // strip hides behind the keyboard); a fixed-height one (gets `flex: 1` via
-  // `style`) shrinks its scroll area above the keyboard instead. A gap the
-  // sheet already keeps below itself covers that much of the keyboard.
-  const inset = Math.max(0, keyboardHeight - bottomGap);
-
-  return (
-    <View style={[style, inset > 0 && { paddingBottom: inset }]}>
-      {children}
-    </View>
-  );
-}
-
-function MissingPeerFallback({ children, style }: Props) {
-  // Warn from an effect (not during render) so the one-time flag mutation is a
-  // legal side effect under the React Compiler.
-  useEffect(() => {
-    if (__DEV__ && !hasWarnedMissingPeer) {
-      hasWarnedMissingPeer = true;
-      console.warn(
-        '[SwmansionSheetAdapter] keyboardBehavior="inset" requires ' +
-          'react-native-keyboard-controller >= 1.15. Rendering without ' +
-          'keyboard avoidance.'
-      );
-    }
-  }, []);
-
-  return <View style={style}>{children}</View>;
-}
-
-/**
- * Pads its content by the on-screen keyboard height. Used by
- * `SwmansionSheetAdapter` for every sheet size when `keyboardBehavior="inset"`.
- *
- * Falls back to a plain wrapper (and a one-time dev warning) when
- * `react-native-keyboard-controller` is missing or older than 1.15.
- */
-export function SwmansionKeyboardInset(props: Props) {
-  return isKeyboardControllerUsable ? (
-    <KeyboardInsetActive {...props} />
-  ) : (
-    <MissingPeerFallback {...props} />
-  );
+  return enabled ? keyboardHeight : 0;
 }

@@ -244,10 +244,6 @@ export const SwmansionCustomHandleSheet = ({ ref }: SheetRef) => {
   );
 };
 
-/**
- * `keyboardBehavior="inset"` on a detached sheet. The gap below the card
- * already covers part of the keyboard, so the field sits just above it.
- */
 export const SwmansionKeyboardDetachedSheet = ({ ref }: SheetRef) => {
   const { close } = useBottomSheetContext();
   const [text, setText] = React.useState('');

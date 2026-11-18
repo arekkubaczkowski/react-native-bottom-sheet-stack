@@ -35,15 +35,13 @@ jest.mock('@swmansion/react-native-bottom-sheet', () => ({
   },
 }));
 
-const mockKeyboardInsetProps: Record<string, any>[] = [];
+let mockKeyboardHeight = 0;
 
 // The keyboard peer is not installed at the repo root; its own suite covers
 // the inset. Here only what the adapter hands it matters.
 jest.mock('../adapters/swmansion/SwmansionKeyboardInset', () => ({
-  SwmansionKeyboardInset: (props: Record<string, any>) => {
-    mockKeyboardInsetProps.push(props);
-    return props.children;
-  },
+  useSwmansionKeyboardHeight: (enabled: boolean) =>
+    enabled ? mockKeyboardHeight : 0,
 }));
 
 const INSETS = { top: 47, left: 0, right: 0, bottom: 34 };
@@ -139,7 +137,7 @@ setupSheetTest();
 
 beforeEach(() => {
   mockNativeProps.length = 0;
-  mockKeyboardInsetProps.length = 0;
+  mockKeyboardHeight = 0;
   frameQueue = [];
   (useEvent as jest.Mock).mockClear();
   jest
@@ -987,39 +985,48 @@ describe('props handed to the native sheet', () => {
 });
 
 describe('keyboard inset', () => {
-  const inset = () =>
-    mockKeyboardInsetProps[mockKeyboardInsetProps.length - 1]!;
+  it('keeps the detached bottom gap above the keyboard instead of padding the content', () => {
+    const props: AdapterProps = { detached: true, keyboardBehavior: 'inset' };
+    const { rerender } = renderOpening(props);
 
-  it('is only mounted for keyboardBehavior="inset"', () => {
-    renderOpening();
+    mockKeyboardHeight = 300;
+    rerender(props);
+    expect(StyleSheet.flatten(native().style)).toMatchObject({ bottom: 300 });
+    expect(native().detents[1].insets.bottom).toBe(INSETS.bottom);
 
-    expect(mockKeyboardInsetProps).toHaveLength(0);
+    const fixed: AdapterProps = {
+      ...props,
+      detents: [0, { value: '100%', insets: { bottom: 48 } }],
+    };
+    rerender(fixed);
+    expect(StyleSheet.flatten(native().style)).toMatchObject({ bottom: 300 });
+    expect(native().detents[1].insets.bottom).toBe(48);
+    expect(
+      StyleSheet.flatten(native().children.props.style).paddingBottom
+    ).toBeUndefined();
+
+    mockKeyboardHeight = 0;
+    rerender(fixed);
+    expect(StyleSheet.flatten(native().style).bottom).toBeUndefined();
   });
 
-  it('discounts the gap a detached sheet already keeps below itself', () => {
-    const { rerender } = renderOpening({ keyboardBehavior: 'inset' });
-    expect(inset().bottomGap).toBe(0);
+  it('leaves a detached sheet in place unless keyboard avoidance is enabled', () => {
+    mockKeyboardHeight = 300;
+    renderOpening({ detached: true, style: { bottom: 12 } });
+    expect(StyleSheet.flatten(native().style).bottom).toBe(12);
+  });
 
-    rerender({ keyboardBehavior: 'inset', detached: true });
-    expect(inset().bottomGap).toBe(INSETS.bottom);
-
-    rerender({ keyboardBehavior: 'inset', detached: true, bottomInset: 48 });
-    expect(inset().bottomGap).toBe(48);
-
-    rerender({
+  it('keeps padding an anchored sheet and accounts for an explicit bottom inset', () => {
+    mockKeyboardHeight = 300;
+    renderOpening({
       keyboardBehavior: 'inset',
-      detached: true,
-      bottomInset: 48,
-      detents: [0, { value: 300, insets: { bottom: 4 } }],
+      detents: [0, { value: 400, insets: { bottom: 24 } }],
     });
-    expect(inset().bottomGap).toBe(4);
-
-    rerender({
-      keyboardBehavior: 'inset',
-      detached: true,
-      detents: [0, { value: 300, insets: { left: 4, right: 4 } }],
+    expect(StyleSheet.flatten(native().style).bottom).toBeUndefined();
+    expect(StyleSheet.flatten(native().children.props.style)).toMatchObject({
+      flex: 1,
+      paddingBottom: 276,
     });
-    expect(inset().bottomGap).toBe(0);
   });
 });
 

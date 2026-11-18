@@ -157,12 +157,12 @@ The native swmansion sheet does nothing about the keyboard, so a `TextInput` nea
 
 ### `'inset'` — the sheet handles it
 
-The sheet pads its content by the keyboard height, from the moment the keyboard starts to show until it starts to hide. The effect adapts to the sheet's size automatically:
+Keyboard avoidance starts when the keyboard begins to show and resets when it begins to hide. For an anchored sheet, the adapter pads the content:
 
 - **Content-sized** sheet (`'content'` detent): it re-measures taller and the added strip hides behind the keyboard, lifting the content clear of it.
 - **Fixed-height** sheet (numeric or percentage `detents` / `fullHeight`): the content area shrinks by the keyboard height, so a scrollable child scrolls within the remaining space above the keyboard.
 
-With `detached`, the gap below the card already covers that much of the keyboard, so the content is padded only by the rest.
+With `detached`, the whole card moves above the keyboard and keeps its native bottom gap. Fixed and percentage detents resolve within the remaining height.
 
 ```tsx
 // Content-sized sheet with an input that should stay above the keyboard.

@@ -40,7 +40,7 @@ import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
 import { useBackHandler } from '../../useBackHandler';
 import { useBottomSheetContext } from '../../useBottomSheetContext';
-import { SwmansionKeyboardInset } from './SwmansionKeyboardInset';
+import { useSwmansionKeyboardHeight } from './SwmansionKeyboardInset';
 
 export type {
   Detent,
@@ -242,8 +242,8 @@ export interface SwmansionSheetAdapterProps
    * - `'inset'` — the sheet insets its content by the keyboard height, for
    *   every sheet size (content must be a plain scrollable/view; don't also
    *   nest a keyboard-aware one). The inset follows the keyboard from the start
-   *   of its show and hide animations. With {@link detached}, the gap below the
-   *   card counts towards it.
+   *   of its show and hide animations. With {@link detached}, it moves the
+   *   card above the keyboard and preserves the detent's bottom gap.
    *
    * `'inset'` needs the optional peer `react-native-keyboard-controller`
    * >= 1.15, with its `KeyboardProvider` at the app root. When the peer is
@@ -494,6 +494,8 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const animatedIndex = useAnimatedIndex();
     const preventDismiss = useSheetPreventDismiss(id);
     const insets = useSafeAreaInsets();
+    const needsKeyboardInset = keyboardBehavior === 'inset';
+    const keyboardHeight = useSwmansionKeyboardHeight(needsKeyboardInset);
     useAdapterBackdrop(id, backdrop);
     const props = withoutModalOnlyProps(rest);
 
@@ -826,31 +828,24 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const handleInsetStyle = handleResult
       ? { paddingTop: handleResult.contentInset }
       : null;
-    // Applies to every sheet size: a content-sized sheet re-measures taller, a
-    // fixed-height one (carries `fillStyle`) shrinks its scroll area instead.
-    const needsKeyboardInset = keyboardBehavior === 'inset';
-
-    const innerStyle = [fillStyle, handleInsetStyle];
-    const needsInnerWrapper = fillStyle || handleInsetStyle;
-
-    // Mirrors `resolvedDetents`: a detent with insets of its own keeps them,
-    // missing `bottom` and all, so only a detent without them gets the default.
-    const keyboardInsets = toDetentConfig(
-      detents[safeIndex === CLOSED_INDEX ? openIndex : safeIndex] ?? 0
-    ).insets;
-    const keyboardBottomGap = keyboardInsets
-      ? (keyboardInsets.bottom ?? 0)
-      : detached
-        ? resolvedBottomInset
-        : 0;
-
-    const inner = needsKeyboardInset ? (
-      <SwmansionKeyboardInset style={innerStyle} bottomGap={keyboardBottomGap}>
-        {children}
-        {handleResult?.contentOverlay}
-      </SwmansionKeyboardInset>
-    ) : needsInnerWrapper ? (
-      <View style={innerStyle}>
+    const activeDetent = safeIndex === CLOSED_INDEX ? openIndex : safeIndex;
+    const bottomGap =
+      toDetentConfig(resolvedDetents[activeDetent] ?? 0).insets?.bottom ?? 0;
+    // Raise the host so the native gap stays outside the card.
+    const liftedHost = detached && keyboardHeight > 0;
+    const paddingBottom = liftedHost
+      ? 0
+      : Math.max(0, keyboardHeight - bottomGap);
+    const needsInnerWrapper =
+      needsKeyboardInset || fillStyle || handleInsetStyle;
+    const inner = needsInnerWrapper ? (
+      <View
+        style={[
+          fillStyle,
+          handleInsetStyle,
+          paddingBottom > 0 && { paddingBottom },
+        ]}
+      >
         {children}
         {handleResult?.contentOverlay}
       </View>
@@ -863,7 +858,11 @@ export const SwmansionSheetAdapter = React.forwardRef<
         {...props}
         detents={resolvedDetents}
         surfaceStyle={[radiusStyle, surfaceStyle]}
-        style={[style, { top: hostTop }]}
+        style={[
+          style,
+          { top: hostTop },
+          liftedHost && { bottom: keyboardHeight },
+        ]}
         // Managed by the adapter (not overridable):
         lazy={false}
         topInset={0}
