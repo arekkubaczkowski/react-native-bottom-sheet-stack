@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 
-// Minimal shape of the bits we use — typed locally so the lib does not need the
-// optional peer installed to typecheck (matching the react-native-modal /
-// actions-sheet adapters, which `require` uninstalled peers untyped).
+// Keep the types local so this optional peer is unnecessary at build time.
 interface KeyboardControllerModule {
   KeyboardEvents: {
     addListener: (
@@ -16,7 +14,6 @@ interface KeyboardControllerModule {
   };
 }
 
-// The optional peer can be absent when keyboard avoidance is unused.
 let keyboardController: Partial<KeyboardControllerModule> | null;
 try {
   keyboardController =
@@ -60,14 +57,14 @@ export function useSwmansionKeyboardHeight(enabled: boolean) {
     }
 
     const { KeyboardEvents } = keyboard;
+    const clearHeight = () => setKeyboardHeight(0);
     const subscriptions = [
       KeyboardEvents.addListener('keyboardWillShow', (event) =>
         setKeyboardHeight(event.height)
       ),
-      KeyboardEvents.addListener('keyboardWillHide', () =>
-        setKeyboardHeight(0)
-      ),
-      KeyboardEvents.addListener('keyboardDidHide', () => setKeyboardHeight(0)),
+      // Follow the hide animation from its start and also handle didHide alone.
+      KeyboardEvents.addListener('keyboardWillHide', clearHeight),
+      KeyboardEvents.addListener('keyboardDidHide', clearHeight),
     ];
     // Catch a keyboard change between the initial render and subscription.
     setKeyboardHeight(getKeyboardHeight());

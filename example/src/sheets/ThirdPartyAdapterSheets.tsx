@@ -369,13 +369,6 @@ export function GorhomSheetDemoContent() {
 // @swmansion/react-native-bottom-sheet adapter
 // ---------------------------------------------------------------------------
 
-/**
- * Demonstrates the SwmansionSheetAdapter stacking with itself.
- *
- * Software Mansion's bottom sheet is a fully controlled Fabric component — the
- * adapter bridges its `index`/`detents` model onto the manager's imperative
- * open/close contract. Requires the New Architecture.
- */
 export function SwmansionSheetDemoContent() {
   const { close } = useBottomSheetContext<'swmansion-sheet-demo'>();
   const { open, close: closeById } = useBottomSheetManager();
@@ -539,18 +532,6 @@ export function SwmansionSheetDemoContent() {
   );
 }
 
-/**
- * `keyboardBehavior` side by side.
- *
- * With `'inset'` the sheet pads its content by the keyboard height, so a
- * content-sized sheet re-measures taller and the field stays above the
- * keyboard. With `'none'` the keyboard covers the bottom of the sheet — the
- * content is expected to own keyboard avoidance itself.
- *
- * `'inset'` needs the optional peer `react-native-keyboard-controller` and a
- * `KeyboardProvider` at the app root (see `App.tsx`); without it the adapter
- * warns once and renders as if `'none'`.
- */
 const KeyboardSwmansionSheet = ({
   behavior,
   ref,
@@ -602,14 +583,6 @@ const KeyboardSwmansionSheet = ({
   );
 };
 
-/**
- * Detached (floating) presentation — the sheet is lifted off the screen edges
- * instead of anchored to the bottom, with all four corners rounded.
- *
- * The insets default to 16pt horizontally and the bottom safe-area inset (at
- * least 16pt), so a bare `detached` already clears the home indicator; both are
- * overridable.
- */
 const DetachedSwmansionSheet = ({
   ref,
 }: {

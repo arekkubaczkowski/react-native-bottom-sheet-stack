@@ -97,15 +97,7 @@ export function initBottomSheetCoordinator(groupId: string) {
   );
 }
 
-/**
- * A sheet's current status, read outside React — `undefined` when no sheet
- * with that id exists.
- *
- * For adapters that must decide what a library event means at the moment it
- * arrives: a settle on the closed position finishes a close only if the store
- * is `'closing'`, and is an interceptor's refusal otherwise. Inside render use
- * `useBottomSheetStatus` instead, which re-renders on change.
- */
+/** Reads the live sheet status outside React. Returns `undefined` if the sheet is absent. */
 export function getSheetStatus(sheetId: string): BottomSheetStatus | undefined {
   return useBottomSheetStore.getState().sheetsById[sheetId]?.status;
 }

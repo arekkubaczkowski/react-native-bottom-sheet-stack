@@ -28,14 +28,6 @@ type SheetRef = { ref?: React.Ref<SheetAdapterRef> };
 
 const DETENT_LABELS = ['closed', 'half', 'full'] as const;
 
-/**
- * Detents between open heights, driven both ways.
- *
- * `expandedIndex` is held in state: the buttons move the open sheet, and a
- * drag between detents is written back through `onIndexChange`. The first
- * list row is opaque and flush to the top edge, so the native corner clip is
- * visible.
- */
 export const SwmansionDetentsSheet = ({ ref }: SheetRef) => {
   const { close } = useBottomSheetContext();
   const [expandedIndex, setExpandedIndex] = React.useState(2);
@@ -80,10 +72,6 @@ export const SwmansionDetentsSheet = ({ ref }: SheetRef) => {
   );
 };
 
-/**
- * A close interceptor on the native sheet. The grab handle is hidden and the
- * closed detent cannot be dragged to; the backdrop and Android Back ask first.
- */
 export const SwmansionInterceptedSheet = ({ ref }: SheetRef) => {
   const { close } = useBottomSheetContext();
 
@@ -109,10 +97,6 @@ export const SwmansionInterceptedSheet = ({ ref }: SheetRef) => {
   );
 };
 
-/**
- * A detached card with a shadow from `surfaceStyle`, which falls outside the
- * card because the gaps are native insets rather than part of the sheet.
- */
 export const SwmansionDetachedShadowSheet = ({
   ref,
   bottomInset,
@@ -179,10 +163,6 @@ export const SwmansionDetachedDetentsSheet = ({ ref }: SheetRef) => {
   );
 };
 
-/**
- * `animatedPosition` driving a view inside the sheet: the bar fades in as the
- * sheet rises, during drags and settles alike.
- */
 export const SwmansionPositionSheet = ({ ref }: SheetRef) => {
   const { close } = useBottomSheetContext();
   const position = useSharedValue(0);
@@ -212,7 +192,6 @@ export const SwmansionPositionSheet = ({ ref }: SheetRef) => {
   );
 };
 
-/** A custom handle element that takes touches: its button closes the sheet. */
 export const SwmansionCustomHandleSheet = ({ ref }: SheetRef) => {
   const { close } = useBottomSheetContext();
 
@@ -246,7 +225,6 @@ export const SwmansionCustomHandleSheet = ({ ref }: SheetRef) => {
 
 export const SwmansionKeyboardDetachedSheet = ({ ref }: SheetRef) => {
   const { close } = useBottomSheetContext();
-  const [text, setText] = React.useState('');
 
   return (
     <SwmansionSheetAdapter
@@ -263,8 +241,6 @@ export const SwmansionKeyboardDetachedSheet = ({ ref }: SheetRef) => {
           style={styles.input}
           placeholder="Type something…"
           placeholderTextColor={colors.textMuted}
-          value={text}
-          onChangeText={setText}
         />
         <SecondaryButton title="Close" onPress={close} />
       </View>
