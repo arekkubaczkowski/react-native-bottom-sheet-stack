@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.17",
-    "@gorhom/bottom-sheet": "^5.2.8",
+    "@gorhom/bottom-sheet": "^5.2.14",
     "@react-native-clipboard/clipboard": "^1.16.3",
     "@swmansion/react-native-bottom-sheet": "1.0.0",
     "expo": "^58.0.25",
