@@ -1,0 +1,66 @@
+diff --git a/dist/modal.js b/dist/modal.js
+index 74edee454ea8449e45dc21b96066d3de5d58535a..e1a9f1804b29a72ca5a1c13a5b9d44522cbc1300 100644
+--- a/dist/modal.js
++++ b/dist/modal.js
+@@ -1,5 +1,5 @@
+ import * as React from 'react';
+-import { Animated, DeviceEventEmitter, Dimensions, InteractionManager, KeyboardAvoidingView, Modal, PanResponder, Platform, TouchableWithoutFeedback, View, } from 'react-native';
++import { Animated, DeviceEventEmitter, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Platform, TouchableWithoutFeedback, View, } from 'react-native';
+ import * as animatable from 'react-native-animatable';
+ import { buildAnimations, initializeAnimations, reversePercentage, } from './utils';
+ import styles from './modal.style';
+@@ -69,7 +69,6 @@ export class ReactNativeModal extends React.Component {
+     contentRef;
+     panResponder = null;
+     didUpdateDimensionsEmitter = null;
+-    interactionHandle = null;
+     constructor(props) {
+         super(props);
+         const { animationIn, animationOut } = buildAnimations(extractAnimationFromProps(props));
+@@ -115,10 +114,6 @@ export class ReactNativeModal extends React.Component {
+         if (this.didUpdateDimensionsEmitter) {
+             this.didUpdateDimensionsEmitter.remove();
+         }
+-        if (this.interactionHandle) {
+-            InteractionManager.clearInteractionHandle(this.interactionHandle);
+-            this.interactionHandle = null;
+-        }
+     }
+     componentDidUpdate(prevProps) {
+         // If the animations have been changed then rebuild them to make sure we're
+@@ -393,17 +388,10 @@ export class ReactNativeModal extends React.Component {
+         }
+         if (this.contentRef) {
+             this.props.onModalWillShow && this.props.onModalWillShow();
+-            if (this.interactionHandle == null) {
+-                this.interactionHandle = InteractionManager.createInteractionHandle();
+-            }
+             this.contentRef
+                 .animate(this.animationIn, this.props.animationInTiming)
+                 .then(() => {
+                 this.isTransitioning = false;
+-                if (this.interactionHandle) {
+-                    InteractionManager.clearInteractionHandle(this.interactionHandle);
+-                    this.interactionHandle = null;
+-                }
+                 if (!this.props.isVisible) {
+                     this.close();
+                 }
+@@ -439,17 +427,10 @@ export class ReactNativeModal extends React.Component {
+         }
+         if (this.contentRef) {
+             this.props.onModalWillHide && this.props.onModalWillHide();
+-            if (this.interactionHandle == null) {
+-                this.interactionHandle = InteractionManager.createInteractionHandle();
+-            }
+             this.contentRef
+                 .animate(animationOut, this.props.animationOutTiming)
+                 .then(() => {
+                 this.isTransitioning = false;
+-                if (this.interactionHandle) {
+-                    InteractionManager.clearInteractionHandle(this.interactionHandle);
+-                    this.interactionHandle = null;
+-                }
+                 if (this.props.isVisible) {
+                     this.open();
+                 }

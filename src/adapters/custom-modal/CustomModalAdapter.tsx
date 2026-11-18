@@ -1,7 +1,6 @@
-import React, { useImperativeHandle, useState } from 'react';
+import React, { useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
-  useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
@@ -13,7 +12,10 @@ import type {
   AdapterBackdropProps,
   SheetAdapterRef,
 } from '../../adapter.types';
-import { createSheetEventHandlers } from '../../bottomSheetCoordinator';
+import {
+  createSheetEventHandlers,
+  getSheetStatus,
+} from '../../bottomSheetCoordinator';
 import { useAdapterBackdrop } from '../../useAdapterBackdrop';
 import { useAdapterRef } from '../../useAdapterRef';
 import { useAnimatedIndex } from '../../useAnimatedIndex';
@@ -38,24 +40,44 @@ export const CustomModalAdapter = React.forwardRef<
   const animatedIndex = useAnimatedIndex();
   useAdapterBackdrop(id, backdrop);
   const [rendered, setRendered] = useState(false);
-  const [open, setOpen] = useState(false);
+  const transition = useRef(0);
 
   const progress = useSharedValue(0);
 
   const { handleDismiss, handleOpened, handleClosed } =
     createSheetEventHandlers(id);
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      expand: () => {
-        setRendered(true);
-        setOpen(true);
-      },
-      close: () => setOpen(false),
-    }),
-    []
-  );
+  const finishTransition = (visible: boolean, request: number) => {
+    if (request !== transition.current) return;
+    if (visible) {
+      handleOpened();
+    } else {
+      const status = getSheetStatus(id);
+      if (status !== 'closing' && status !== 'hidden') return;
+      setRendered(false);
+      handleClosed();
+    }
+  };
+
+  const animate = (visible: boolean) => {
+    const request = ++transition.current;
+    if (visible) setRendered(true);
+    progress.set(
+      withTiming(
+        visible ? 1 : 0,
+        { duration: ANIMATION_DURATION },
+        (finished) => {
+          'worklet';
+          if (finished) scheduleOnRN(finishTransition, visible, request);
+        }
+      )
+    );
+  };
+
+  useImperativeHandle(ref, () => ({
+    expand: () => animate(true),
+    close: () => animate(false),
+  }));
 
   // Drive animatedIndex off the same `progress` that animates the modal, so
   // the manager's backdrop fades in step with it. Setting it discretely in
@@ -64,31 +86,6 @@ export const CustomModalAdapter = React.forwardRef<
   useDerivedValue(() => {
     animatedIndex.set(progress.value - 1);
   });
-
-  const onAnimationEnd = (value: boolean) => {
-    'worklet';
-    if (value) {
-      scheduleOnRN(handleOpened);
-    } else {
-      scheduleOnRN(setRendered, false);
-      scheduleOnRN(handleClosed);
-    }
-  };
-
-  useAnimatedReaction(
-    () => open,
-    (value, prevValue) => {
-      if (prevValue === null || value === prevValue) return;
-      progress.value = withTiming(
-        value ? 1 : 0,
-        { duration: ANIMATION_DURATION },
-        (finished) => {
-          if (!finished) return;
-          onAnimationEnd(value);
-        }
-      );
-    }
-  );
 
   useBackHandler(id, handleDismiss);
 

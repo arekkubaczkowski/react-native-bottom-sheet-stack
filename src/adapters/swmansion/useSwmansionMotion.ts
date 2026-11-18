@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { NativeSyntheticEvent } from 'react-native';
+import { Platform, type NativeSyntheticEvent } from 'react-native';
 import { useEvent, useHandler } from 'react-native-reanimated';
 import type {
   Detent,
@@ -232,7 +232,7 @@ export function useSwmansionMotion(
   };
   const { doDependenciesDiffer } = useHandler(
     { onPositionChange: updatePosition },
-    [animatedIndex, animatedPosition]
+    Platform.OS === 'web' ? [animatedIndex, animatedPosition] : undefined
   );
 
   const onPositionChange = useEvent<

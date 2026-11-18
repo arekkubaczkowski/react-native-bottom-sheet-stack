@@ -1,5 +1,5 @@
 import { type ComponentProps, type ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, render } from '@testing-library/react-native';
 import {
@@ -1089,6 +1089,7 @@ describe('position stream', () => {
   type PositionHandler = (event: { index: number; position: number }) => void;
 
   beforeEach(() => {
+    jest.replaceProperty(Platform, 'OS', 'web');
     let previousDependencies: unknown[] = [];
     let boundHandler: PositionHandler | undefined;
 
@@ -1112,6 +1113,7 @@ describe('position stream', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     (useHandler as jest.Mock)
       .mockReset()
       .mockReturnValue({ doDependenciesDiffer: false });

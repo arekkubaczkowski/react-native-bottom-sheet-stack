@@ -12215,7 +12215,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-modal@npm:^14.0.0-rc.1":
+"react-native-modal@npm:14.0.0-rc.1":
   version: 14.0.0-rc.1
   resolution: "react-native-modal@npm:14.0.0-rc.1"
   dependencies:
@@ -12224,6 +12224,18 @@ __metadata:
     react: "*"
     react-native: ">=0.70.0"
   checksum: 19bca96dde148c14ed4cc0e52fedd0a12ca952815e4dcbea31d0a98962d75dc3c011c677f5f9cd15f2b88f78ccd03134647b280724bc6de148c25e28eea1a7e4
+  languageName: node
+  linkType: hard
+
+"react-native-modal@patch:react-native-modal@npm%3A14.0.0-rc.1#./.yarn/patches/react-native-modal-npm-14.0.0-rc.1-e522ba0672.patch::locator=react-native-bottom-sheet-stack%40workspace%3A.":
+  version: 14.0.0-rc.1
+  resolution: "react-native-modal@patch:react-native-modal@npm%3A14.0.0-rc.1#./.yarn/patches/react-native-modal-npm-14.0.0-rc.1-e522ba0672.patch::version=14.0.0-rc.1&hash=6e8e97&locator=react-native-bottom-sheet-stack%40workspace%3A."
+  dependencies:
+    react-native-animatable: 1.4.0
+  peerDependencies:
+    react: "*"
+    react-native: ">=0.70.0"
+  checksum: 2f2c609c2df43cfe9cb97a4adcffda3cc871d0c2323c7be500f486d1f2bd9919c57479115d429fb8cfaa2005cd91ad1b731fe9b3c4a46a2f81eda6aa649675d4
   languageName: node
   linkType: hard
 

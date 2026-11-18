@@ -64,7 +64,7 @@ const PartialCloseLevel = forwardRef<BottomSheetMethods, LevelProps>(
       });
 
     return (
-      <Sheet ref={ref}>
+      <Sheet ref={ref} snapPoints={['90%']} scrollable>
         <View style={styles.badges}>
           <Badge label={`level ${level}`} color={colors.primary} />
           {blocking ? <Badge label="blocking" color={colors.warning} /> : null}
