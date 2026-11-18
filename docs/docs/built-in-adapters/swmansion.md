@@ -222,6 +222,21 @@ The adapter gives every open detent the gaps as native detent `insets`, unless t
 
 All four corners are rounded through the native `surfaceStyle`, which clips the surface and the content. An anchored sheet keeps its bottom two corners square.
 
+To open as a floating card and expand to full height, give the upper detent an empty `insets` object. The lower detent inherits the detached gaps and the sheet interpolates the side and bottom gaps to zero as it moves up.
+
+```tsx
+<SwmansionSheetAdapter
+  detached
+  handle
+  expandedIndex={1}
+  detents={[0, 'content', { value: '100%', insets: {} }]}
+>
+  <View style={{ padding: 20 }}>{/* ... */}</View>
+</SwmansionSheetAdapter>
+```
+
+The full-height detent still respects `topInset`, which defaults to the top safe-area inset. The same corner radii apply at both heights.
+
 :::note Shadows
 Put a shadow in `surfaceStyle` (`boxShadow`, or `elevation` / the `shadow*` props); the native sheet casts it outside the card. A shadow drawn by the `surface` element itself is clipped with the surface.
 

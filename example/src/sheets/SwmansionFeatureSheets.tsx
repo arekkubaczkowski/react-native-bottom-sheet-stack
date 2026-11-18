@@ -143,6 +143,42 @@ export const SwmansionDetachedShadowSheet = ({
   );
 };
 
+export const SwmansionDetachedDetentsSheet = ({ ref }: SheetRef) => {
+  const { close } = useBottomSheetContext();
+  const [expandedIndex, setExpandedIndex] = React.useState(1);
+
+  return (
+    <SwmansionSheetAdapter
+      ref={ref}
+      detached
+      handle
+      detents={[0, 'content', { value: '100%', insets: {} }]}
+      fillContent={false}
+      expandedIndex={expandedIndex}
+      onIndexChange={(next) => {
+        if (next > 0) {
+          setExpandedIndex(next);
+        }
+      }}
+    >
+      <View style={styles.body}>
+        <Text style={sharedStyles.h1}>Floating to full height</Text>
+        <Text style={sharedStyles.text}>
+          Drag up to close the side and bottom gaps. Drag down to restore them.
+        </Text>
+        <View style={styles.row}>
+          <SmallButton title="Floating" onPress={() => setExpandedIndex(1)} />
+          <SmallButton
+            title="Full height"
+            onPress={() => setExpandedIndex(2)}
+          />
+        </View>
+        <SecondaryButton title="Close" onPress={close} />
+      </View>
+    </SwmansionSheetAdapter>
+  );
+};
+
 /**
  * `animatedPosition` driving a view inside the sheet: the bar fades in as the
  * sheet rises, during drags and settles alike.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   CustomModalAdapter,
   type SheetAdapterRef,
@@ -22,6 +22,7 @@ import { useUser } from '../context/UserContext';
 import { colors, sharedStyles } from '../styles/theme';
 import {
   SwmansionCustomHandleSheet,
+  SwmansionDetachedDetentsSheet,
   SwmansionDetachedShadowSheet,
   SwmansionDetentsSheet,
   SwmansionInterceptedSheet,
@@ -432,8 +433,8 @@ export function SwmansionSheetDemoContent() {
   };
 
   return (
-    <SwmansionSheetAdapter detents={[0, 'content']} handle>
-      <View style={styles.swmSheetContent}>
+    <SwmansionSheetAdapter detents={[0, '100%']} handle>
+      <ScrollView contentContainerStyle={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
           <Badge label="Stacking" color={colors.primary} />
@@ -479,6 +480,10 @@ export function SwmansionSheetDemoContent() {
           <Button title="Switch to Sheet" onPress={handleSwitch} />
           <Button title="Replace with Sheet" onPress={handleReplace} />
           <Button title="Push Detached Sheet" onPress={handleDetached} />
+          <Button
+            title="Floating to full height"
+            onPress={() => pushFeature(<SwmansionDetachedDetentsSheet />)}
+          />
           <Button
             title="Keyboard: inset"
             onPress={() => handleKeyboard('inset')}
@@ -529,7 +534,7 @@ export function SwmansionSheetDemoContent() {
           />
           <SecondaryButton title="Close" onPress={close} />
         </View>
-      </View>
+      </ScrollView>
     </SwmansionSheetAdapter>
   );
 }
