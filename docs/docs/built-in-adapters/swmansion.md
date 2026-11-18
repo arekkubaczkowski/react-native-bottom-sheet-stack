@@ -157,7 +157,7 @@ The native swmansion sheet does nothing about the keyboard, so a `TextInput` nea
 
 ### `'inset'` — the sheet handles it
 
-Keyboard avoidance starts when the keyboard begins to show and resets when it begins to hide. For an anchored sheet, the adapter pads the content:
+The adapter animates keyboard avoidance over the duration reported by the keyboard. For an anchored sheet, it animates the content padding:
 
 - **Content-sized** sheet (`'content'` detent): it re-measures taller and the added strip hides behind the keyboard, lifting the content clear of it.
 - **Fixed-height** sheet (numeric or percentage `detents` / `fullHeight`): the content area shrinks by the keyboard height, so a scrollable child scrolls within the remaining space above the keyboard.

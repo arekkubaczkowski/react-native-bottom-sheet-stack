@@ -2,7 +2,7 @@ import { type ComponentProps, type ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, render } from '@testing-library/react-native';
-import { useEvent } from 'react-native-reanimated';
+import { useAnimatedStyle, useEvent } from 'react-native-reanimated';
 
 import { BottomSheetContext } from '../BottomSheet.context';
 import { BottomSheetDefaultIndexContext } from '../BottomSheetDefaultIndex.context';
@@ -40,8 +40,9 @@ let mockKeyboardHeight = 0;
 // The keyboard peer is not installed at the repo root; its own suite covers
 // the inset. Here only what the adapter hands it matters.
 jest.mock('../adapters/swmansion/SwmansionKeyboardInset', () => ({
-  useSwmansionKeyboardHeight: (enabled: boolean) =>
-    enabled ? mockKeyboardHeight : 0,
+  useSwmansionKeyboardHeight: (enabled: boolean) => ({
+    get: () => (enabled ? mockKeyboardHeight : 0),
+  }),
 }));
 
 const INSETS = { top: 47, left: 0, right: 0, bottom: 34 };
@@ -985,6 +986,14 @@ describe('props handed to the native sheet', () => {
 });
 
 describe('keyboard inset', () => {
+  beforeEach(() => {
+    (useAnimatedStyle as jest.Mock).mockImplementation((update) => update());
+  });
+
+  afterEach(() => {
+    (useAnimatedStyle as jest.Mock).mockImplementation(() => ({}));
+  });
+
   it('keeps the detached bottom gap above the keyboard instead of padding the content', () => {
     const props: AdapterProps = { detached: true, keyboardBehavior: 'inset' };
     const { rerender } = renderOpening(props);
@@ -1007,7 +1016,7 @@ describe('keyboard inset', () => {
 
     mockKeyboardHeight = 0;
     rerender(fixed);
-    expect(StyleSheet.flatten(native().style).bottom).toBeUndefined();
+    expect(StyleSheet.flatten(native().style).bottom).toBe(0);
   });
 
   it('leaves a detached sheet in place unless keyboard avoidance is enabled', () => {

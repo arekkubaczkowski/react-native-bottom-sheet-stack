@@ -1,7 +1,10 @@
 import React, { type ReactElement, useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { type SharedValue } from 'react-native-reanimated';
+import Animated, {
+  type SharedValue,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 import {
   BottomSheet,
   type BottomSheetProps,
@@ -259,11 +262,21 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const activeDetent = index === CLOSED_INDEX ? openIndex : index;
     const bottomGap =
       toDetentConfig(resolvedDetents[activeDetent] ?? 0).insets?.bottom ?? 0;
-    // Lift the host so the detached gap stays outside the card.
-    const liftedHost = detached && keyboardHeight > 0;
-    const paddingBottom = liftedHost
-      ? 0
-      : Math.max(0, keyboardHeight - bottomGap);
+    // Animate the host so the detached gap stays outside the card.
+    const animateHost = needsKeyboardInset && detached;
+    const hostBottom = animateHost
+      ? (StyleSheet.flatten(style)?.bottom ?? 0)
+      : undefined;
+    const keyboardHostStyle = useAnimatedStyle<ViewStyle>(() => {
+      const height = keyboardHeight.get();
+      return { bottom: animateHost && height > 0 ? height : hostBottom };
+    });
+    const animateContent = needsKeyboardInset && !detached;
+    const keyboardContentStyle = useAnimatedStyle(() => ({
+      paddingBottom: animateContent
+        ? Math.max(0, keyboardHeight.get() - bottomGap)
+        : undefined,
+    }));
     const wrapContent =
       needsKeyboardInset || shouldFill || handlePadding !== undefined;
 
@@ -277,7 +290,8 @@ export const SwmansionSheetAdapter = React.forwardRef<
         style={[
           style,
           { top: hostTop },
-          liftedHost && { bottom: keyboardHeight },
+          // SWM types this as a plain style but forwards it to the animated host.
+          animateHost && (keyboardHostStyle as ViewStyle),
         ]}
         // Persistent sheets keep their content mounted at the closed detent.
         lazy={false}
@@ -292,18 +306,18 @@ export const SwmansionSheetAdapter = React.forwardRef<
         surface={composedSurface}
       >
         {wrapContent ? (
-          <View
+          <Animated.View
             style={[
               shouldFill ? styles.fill : null,
               handlePadding === undefined
                 ? null
                 : { paddingTop: handlePadding },
-              paddingBottom > 0 && { paddingBottom },
+              animateContent && keyboardContentStyle,
             ]}
           >
             {children}
             {contentHandle}
-          </View>
+          </Animated.View>
         ) : (
           children
         )}

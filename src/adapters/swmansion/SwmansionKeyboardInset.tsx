@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect } from 'react';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
 
 // Keep the types local so this optional peer is unnecessary at build time.
 interface KeyboardControllerModule {
   KeyboardEvents: {
     addListener: (
       name: 'keyboardWillShow' | 'keyboardWillHide' | 'keyboardDidHide',
-      callback: (event: { height: number }) => void
+      callback: (event: { height: number; duration: number }) => void
     ) => { remove: () => void };
   };
   KeyboardController: {
     isVisible: () => boolean;
-    state: () => { height: number };
+    state: () => { height: number } | null;
   };
 }
 
@@ -35,15 +36,16 @@ let hasWarnedMissingPeer = false;
 
 function getKeyboardHeight() {
   const controller = keyboard?.KeyboardController;
-  return controller?.isVisible() ? controller.state().height : 0;
+  return controller?.isVisible() ? (controller.state()?.height ?? 0) : 0;
 }
 
 export function useSwmansionKeyboardHeight(enabled: boolean) {
-  const [keyboardHeight, setKeyboardHeight] = useState(() =>
-    enabled ? getKeyboardHeight() : 0
-  );
-  useEffect(() => {
-    if (!enabled) return;
+  const keyboardHeight = useSharedValue(0);
+  useLayoutEffect(() => {
+    if (!enabled) {
+      keyboardHeight.set(0);
+      return;
+    }
     if (!keyboard) {
       if (__DEV__ && !hasWarnedMissingPeer) {
         hasWarnedMissingPeer = true;
@@ -57,19 +59,23 @@ export function useSwmansionKeyboardHeight(enabled: boolean) {
     }
 
     const { KeyboardEvents } = keyboard;
-    const clearHeight = () => setKeyboardHeight(0);
     const subscriptions = [
-      KeyboardEvents.addListener('keyboardWillShow', (event) =>
-        setKeyboardHeight(event.height)
+      KeyboardEvents.addListener('keyboardWillShow', ({ height, duration }) =>
+        keyboardHeight.set(
+          withTiming(height, { duration: Math.max(0, duration) })
+        )
       ),
-      // Follow the hide animation from its start and also handle didHide alone.
-      KeyboardEvents.addListener('keyboardWillHide', clearHeight),
-      KeyboardEvents.addListener('keyboardDidHide', clearHeight),
+      KeyboardEvents.addListener('keyboardWillHide', ({ duration }) =>
+        keyboardHeight.set(withTiming(0, { duration: Math.max(0, duration) }))
+      ),
+      KeyboardEvents.addListener('keyboardDidHide', () =>
+        keyboardHeight.set(0)
+      ),
     ];
     // Catch a keyboard change between the initial render and subscription.
-    setKeyboardHeight(getKeyboardHeight());
+    keyboardHeight.set(getKeyboardHeight());
     return () => subscriptions.forEach((subscription) => subscription.remove());
-  }, [enabled]);
+  }, [enabled, keyboardHeight]);
 
-  return enabled ? keyboardHeight : 0;
+  return keyboardHeight;
 }

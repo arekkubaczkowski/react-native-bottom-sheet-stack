@@ -1,6 +1,6 @@
 export {};
 
-type Listener = (event: { height: number }) => void;
+type Listener = (event: { height: number; duration: number }) => void;
 type Peer = () => unknown;
 
 const mockListeners = new Map<string, Set<Listener>>();
@@ -33,12 +33,17 @@ const load = (peer: Peer) => {
     require('@testing-library/react-native/pure') as typeof import('@testing-library/react-native/pure');
   const { useSwmansionKeyboardHeight } =
     require('../adapters/swmansion/SwmansionKeyboardInset') as typeof import('../adapters/swmansion/SwmansionKeyboardInset');
+  const reanimated =
+    require('react-native-reanimated') as typeof import('react-native-reanimated');
 
   return {
-    emit: (name: string, height: number) =>
+    animate: jest.spyOn(reanimated, 'withTiming'),
+    emit: (name: string, height: number, duration = 0) =>
       act(() => {
         mockHeight = height;
-        mockListeners.get(name)?.forEach((listener) => listener({ height }));
+        mockListeners
+          .get(name)
+          ?.forEach((listener) => listener({ height, duration }));
       }),
     renderHeight: (enabled = true) =>
       renderHook(useSwmansionKeyboardHeight, { initialProps: enabled }),
@@ -56,15 +61,17 @@ afterEach(() => {
 });
 
 describe('useSwmansionKeyboardHeight', () => {
-  it('reports the height from the start of show until the start of hide', () => {
-    const { emit, renderHeight } = load(installedPeer);
+  it('animates to both keyboard targets over their native durations', () => {
+    const { animate, emit, renderHeight } = load(installedPeer);
     const { result, unmount } = renderHeight();
 
-    emit('keyboardWillShow', 300);
-    expect(result.current).toBe(300);
+    emit('keyboardWillShow', 300, 250);
+    expect(animate).toHaveBeenLastCalledWith(300, { duration: 250 });
+    expect(result.current.get()).toBe(300);
 
-    emit('keyboardWillHide', 0);
-    expect(result.current).toBe(0);
+    emit('keyboardWillHide', 0, 180);
+    expect(animate).toHaveBeenLastCalledWith(0, { duration: 180 });
+    expect(result.current.get()).toBe(0);
     unmount();
   });
 
@@ -73,7 +80,7 @@ describe('useSwmansionKeyboardHeight', () => {
     const { renderHeight } = load(installedPeer);
     const { result, unmount } = renderHeight();
 
-    expect(result.current).toBe(280);
+    expect(result.current.get()).toBe(280);
     unmount();
   });
 
@@ -81,15 +88,15 @@ describe('useSwmansionKeyboardHeight', () => {
     const { emit, renderHeight } = load(installedPeer);
     const { result, rerender, unmount } = renderHeight(false);
     emit('keyboardWillShow', 300);
-    expect(result.current).toBe(0);
+    expect(result.current.get()).toBe(0);
     expect(mockListeners.size).toBe(0);
 
     rerender(true);
-    expect(result.current).toBe(300);
+    expect(result.current.get()).toBe(300);
     expect(mockListeners.get('keyboardWillShow')?.size).toBe(1);
 
     rerender(false);
-    expect(result.current).toBe(0);
+    expect(result.current.get()).toBe(0);
     expect(mockListeners.get('keyboardWillShow')?.size).toBe(0);
     unmount();
   });
@@ -117,13 +124,13 @@ describe('useSwmansionKeyboardHeight', () => {
   ])('returns zero and only warns when enabled if the peer %s', (_, peer) => {
     const { renderHeight } = load(peer);
     const first = renderHeight(false);
-    expect(first.result.current).toBe(0);
+    expect(first.result.current.get()).toBe(0);
     expect(console.warn).not.toHaveBeenCalled();
 
     first.rerender(true);
     const second = renderHeight();
-    expect(first.result.current).toBe(0);
-    expect(second.result.current).toBe(0);
+    expect(first.result.current.get()).toBe(0);
+    expect(second.result.current.get()).toBe(0);
     expect(console.warn).toHaveBeenCalledTimes(1);
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('react-native-keyboard-controller')
