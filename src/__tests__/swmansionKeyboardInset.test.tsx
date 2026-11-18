@@ -1,58 +1,56 @@
 export {};
 
-type Listener = (event: { height: number; duration: number }) => void;
+type Listener = (event: { height: number }) => void;
 type Peer = () => unknown;
 
-const mockListeners = new Map<string, Set<Listener>>();
-let mockHeight = 0;
+let mockHandlers: Record<string, Listener> | undefined;
 
 const installedPeer: Peer = () => ({
-  KeyboardEvents: {
-    addListener: (name: string, listener: Listener) => {
-      const listeners = mockListeners.get(name) ?? new Set<Listener>();
-      mockListeners.set(name, listeners.add(listener));
-      return { remove: () => listeners.delete(listener) };
-    },
+  useGenericKeyboardHandler: (handlers: Record<string, Listener>) => {
+    const { useLayoutEffect } = require('react') as typeof import('react');
+    useLayoutEffect(() => {
+      mockHandlers = handlers;
+      return () => {
+        mockHandlers = undefined;
+      };
+    }, [handlers]);
   },
-  KeyboardController: {
-    isVisible: () => mockHeight > 0,
-    state: () => ({ height: mockHeight }),
-  },
-});
-
-const peer114: Peer = () => ({
-  ...(installedPeer() as object),
-  KeyboardController: { dismiss: () => {} },
 });
 
 const load = (peer: Peer) => {
-  // The optional peer is resolved once at import. Reset React and the renderer too.
   jest.resetModules();
   jest.doMock('react-native-keyboard-controller', peer, { virtual: true });
-  const { act, renderHook } =
+  const { createElement } = require('react') as typeof import('react');
+  const { act, render } =
     require('@testing-library/react-native/pure') as typeof import('@testing-library/react-native/pure');
-  const { useSwmansionKeyboardHeight } =
-    require('../adapters/swmansion/SwmansionKeyboardInset') as typeof import('../adapters/swmansion/SwmansionKeyboardInset');
-  const reanimated =
+  const { Keyboard } = require('react-native') as typeof import('react-native');
+  const { makeMutable } =
     require('react-native-reanimated') as typeof import('react-native-reanimated');
+  const { SwmansionKeyboardInset } =
+    require('../adapters/swmansion/SwmansionKeyboardInset') as typeof import('../adapters/swmansion/SwmansionKeyboardInset');
 
   return {
-    animate: jest.spyOn(reanimated, 'withTiming'),
-    emit: (name: string, height: number, duration = 0) =>
-      act(() => {
-        mockHeight = height;
-        mockListeners
-          .get(name)
-          ?.forEach((listener) => listener({ height, duration }));
+    emit: (name: string, height: number) =>
+      act(() => mockHandlers?.[name]?.({ height })),
+    mount: () => {
+      const height = makeMutable(0);
+      return {
+        height,
+        ...render(createElement(SwmansionKeyboardInset, { height })),
+      };
+    },
+    setVisibleHeight: (height: number) =>
+      jest.spyOn(Keyboard, 'metrics').mockReturnValue({
+        height,
+        width: 390,
+        screenX: 0,
+        screenY: 844 - height,
       }),
-    renderHeight: (enabled = true) =>
-      renderHook(useSwmansionKeyboardHeight, { initialProps: enabled }),
   };
 };
 
 beforeEach(() => {
-  mockListeners.clear();
-  mockHeight = 0;
+  mockHandlers = undefined;
   jest.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
@@ -60,57 +58,46 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('useSwmansionKeyboardHeight', () => {
-  it('animates to both keyboard targets over their native durations', () => {
-    const { animate, emit, renderHeight } = load(installedPeer);
-    const { result, unmount } = renderHeight();
+describe('SwmansionKeyboardInset', () => {
+  it('uses intermediate native positions through opening and interactive dismissal', () => {
+    const { emit, mount } = load(installedPeer);
+    const { height, unmount } = mount();
 
-    emit('keyboardWillShow', 300, 250);
-    expect(animate).toHaveBeenLastCalledWith(300, { duration: 250 });
-    expect(result.current.get()).toBe(300);
+    emit('onStart', 300);
+    expect(height.get()).toBe(0);
+    emit('onMove', 127);
+    expect(height.get()).toBe(127);
+    emit('onMove', 246);
+    expect(height.get()).toBe(246);
+    emit('onEnd', 300);
+    expect(height.get()).toBe(300);
 
-    emit('keyboardWillHide', 0, 180);
-    expect(animate).toHaveBeenLastCalledWith(0, { duration: 180 });
-    expect(result.current.get()).toBe(0);
+    emit('onStart', 0);
+    expect(height.get()).toBe(300);
+    emit('onInteractive', 108);
+    expect(height.get()).toBe(108);
+    emit('onEnd', 0);
+    expect(height.get()).toBe(0);
     unmount();
   });
 
-  it('starts with the current height if the keyboard is visible', () => {
-    mockHeight = 280;
-    const { renderHeight } = load(installedPeer);
-    const { result, unmount } = renderHeight();
+  it('starts at the current height when mounted with a visible keyboard', () => {
+    const { mount, setVisibleHeight } = load(installedPeer);
+    setVisibleHeight(280);
 
-    expect(result.current.get()).toBe(280);
+    const { height, unmount } = mount();
+    expect(height.get()).toBe(280);
     unmount();
   });
 
-  it('reads the current height when enabled and unsubscribes when disabled', () => {
-    const { emit, renderHeight } = load(installedPeer);
-    const { result, rerender, unmount } = renderHeight(false);
-    emit('keyboardWillShow', 300);
-    expect(result.current.get()).toBe(0);
-    expect(mockListeners.size).toBe(0);
-
-    rerender(true);
-    expect(result.current.get()).toBe(300);
-    expect(mockListeners.get('keyboardWillShow')?.size).toBe(1);
-
-    rerender(false);
-    expect(result.current.get()).toBe(0);
-    expect(mockListeners.get('keyboardWillShow')?.size).toBe(0);
-    unmount();
-  });
-
-  it('removes all its listeners on unmount', () => {
-    const { renderHeight } = load(installedPeer);
-    const { unmount } = renderHeight();
-    expect(mockListeners.get('keyboardWillHide')?.size).toBe(1);
+  it('unsubscribes and clears the offset on unmount', () => {
+    const { emit, mount } = load(installedPeer);
+    const { height, unmount } = mount();
+    emit('onMove', 150);
 
     unmount();
-
-    expect(
-      [...mockListeners.values()].every((listeners) => listeners.size === 0)
-    ).toBe(true);
+    expect(mockHandlers).toBeUndefined();
+    expect(height.get()).toBe(0);
   });
 
   it.each<[string, Peer]>([
@@ -120,17 +107,15 @@ describe('useSwmansionKeyboardHeight', () => {
         throw new Error('Cannot find module');
       },
     ],
-    ['predates 1.15', peer114],
-  ])('returns zero and only warns when enabled if the peer %s', (_, peer) => {
-    const { renderHeight } = load(peer);
-    const first = renderHeight(false);
-    expect(first.result.current.get()).toBe(0);
-    expect(console.warn).not.toHaveBeenCalled();
+    ['lacks native movement handlers', () => ({})],
+  ])('leaves the offset at zero and warns once if the peer %s', (_, peer) => {
+    const { mount, setVisibleHeight } = load(peer);
+    setVisibleHeight(280);
+    const first = mount();
+    const second = mount();
 
-    first.rerender(true);
-    const second = renderHeight();
-    expect(first.result.current.get()).toBe(0);
-    expect(second.result.current.get()).toBe(0);
+    expect(first.height.get()).toBe(0);
+    expect(second.height.get()).toBe(0);
     expect(console.warn).toHaveBeenCalledTimes(1);
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('react-native-keyboard-controller')

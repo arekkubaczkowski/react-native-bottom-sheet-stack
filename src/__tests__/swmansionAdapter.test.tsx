@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, render } from '@testing-library/react-native';
 import { useAnimatedStyle, useEvent } from 'react-native-reanimated';
+import * as reanimated from 'react-native-reanimated';
 
 import { BottomSheetContext } from '../BottomSheet.context';
 import { BottomSheetDefaultIndexContext } from '../BottomSheetDefaultIndex.context';
@@ -40,9 +41,7 @@ let mockKeyboardHeight = 0;
 // The keyboard peer is not installed at the repo root; its own suite covers
 // the inset. Here only what the adapter hands it matters.
 jest.mock('../adapters/swmansion/SwmansionKeyboardInset', () => ({
-  useSwmansionKeyboardHeight: (enabled: boolean) => ({
-    get: () => (enabled ? mockKeyboardHeight : 0),
-  }),
+  SwmansionKeyboardInset: () => null,
 }));
 
 const INSETS = { top: 47, left: 0, right: 0, bottom: 34 };
@@ -988,10 +987,17 @@ describe('props handed to the native sheet', () => {
 describe('keyboard inset', () => {
   beforeEach(() => {
     (useAnimatedStyle as jest.Mock).mockImplementation((update) => update());
+    const height = reanimated.makeMutable(0);
+    jest.spyOn(height, 'get').mockImplementation(() => mockKeyboardHeight);
+    const numberValues: {
+      useSharedValue: typeof reanimated.useSharedValue<number>;
+    } = reanimated;
+    jest.spyOn(numberValues, 'useSharedValue').mockReturnValue(height);
   });
 
   afterEach(() => {
     (useAnimatedStyle as jest.Mock).mockImplementation(() => ({}));
+    jest.mocked(reanimated.useSharedValue).mockRestore();
   });
 
   it('keeps the detached bottom gap above the keyboard instead of padding the content', () => {

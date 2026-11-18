@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
+  useSharedValue,
 } from 'react-native-reanimated';
 import {
   BottomSheet,
@@ -26,7 +27,7 @@ import {
   toDetentConfig,
 } from './detents';
 import { renderSurface, resolveSurfaceRadius } from './surface';
-import { useSwmansionKeyboardHeight } from './SwmansionKeyboardInset';
+import { SwmansionKeyboardInset } from './SwmansionKeyboardInset';
 import { useSwmansionMotion } from './useSwmansionMotion';
 
 export type {
@@ -194,7 +195,7 @@ export const SwmansionSheetAdapter = React.forwardRef<
     const preventDismiss = useSheetPreventDismiss(id);
     const insets = useSafeAreaInsets();
     const needsKeyboardInset = keyboardBehavior === 'inset';
-    const keyboardHeight = useSwmansionKeyboardHeight(needsKeyboardInset);
+    const keyboardHeight = useSharedValue(0);
     useAdapterBackdrop(id, backdrop);
 
     const detents = getDetents(detentsProp, fullHeight);
@@ -317,6 +318,9 @@ export const SwmansionSheetAdapter = React.forwardRef<
           >
             {children}
             {contentHandle}
+            {needsKeyboardInset && (
+              <SwmansionKeyboardInset height={keyboardHeight} />
+            )}
           </Animated.View>
         ) : (
           children
