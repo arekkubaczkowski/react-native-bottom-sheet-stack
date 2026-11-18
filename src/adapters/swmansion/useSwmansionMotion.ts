@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react';
 import type { NativeSyntheticEvent } from 'react-native';
-import { useEvent } from 'react-native-reanimated';
+import { useEvent, useHandler } from 'react-native-reanimated';
 import type {
   Detent,
   PositionChangeEventData,
@@ -225,24 +225,19 @@ export function useSwmansionMotion(
     }
   };
 
-  // Reanimated's useEvent keeps its first worklet until asked to rebuild.
-  const [boundPosition, setBoundPosition] = useState(animatedPosition);
-  const rebuild = boundPosition !== animatedPosition;
-  if (rebuild) {
-    setBoundPosition(animatedPosition);
-  }
+  const updatePosition = (event: PositionChangeEventData) => {
+    'worklet';
+    animatedIndex.set(event.index - 1);
+    animatedPosition?.set(event.position);
+  };
+  const { doDependenciesDiffer } = useHandler(
+    { onPositionChange: updatePosition },
+    [animatedIndex, animatedPosition]
+  );
 
   const onPositionChange = useEvent<
     NativeSyntheticEvent<PositionChangeEventData>
-  >(
-    (event) => {
-      'worklet';
-      animatedIndex.set(event.index - 1);
-      animatedPosition?.set(event.position);
-    },
-    ['onPositionChange'],
-    rebuild
-  );
+  >(updatePosition, ['onPositionChange'], doDependenciesDiffer);
 
   return {
     index: safeIndex,

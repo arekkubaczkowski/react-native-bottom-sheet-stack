@@ -2,7 +2,11 @@ import { type ComponentProps, type ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, render } from '@testing-library/react-native';
-import { useAnimatedStyle, useEvent } from 'react-native-reanimated';
+import {
+  useAnimatedStyle,
+  useEvent,
+  useHandler,
+} from 'react-native-reanimated';
 import * as reanimated from 'react-native-reanimated';
 
 import { BottomSheetContext } from '../BottomSheet.context';
@@ -1082,13 +1086,37 @@ describe('handle', () => {
 });
 
 describe('position stream', () => {
-  const worklet = () => {
-    const calls = (useEvent as jest.Mock).mock.calls;
-    return calls[calls.length - 1]![0] as (event: {
-      index: number;
-      position: number;
-    }) => void;
-  };
+  type PositionHandler = (event: { index: number; position: number }) => void;
+
+  beforeEach(() => {
+    let previousDependencies: unknown[] = [];
+    let boundHandler: PositionHandler | undefined;
+
+    (useHandler as jest.Mock).mockImplementation(
+      (_, dependencies: unknown[]) => {
+        const doDependenciesDiffer =
+          dependencies.length !== previousDependencies.length ||
+          dependencies.some(
+            (value, index) => !Object.is(value, previousDependencies[index])
+          );
+        previousDependencies = dependencies;
+        return { doDependenciesDiffer };
+      }
+    );
+    (useEvent as jest.Mock).mockImplementation(
+      (handler: PositionHandler, _, rebuild: boolean) => {
+        if (!boundHandler || rebuild) boundHandler = handler;
+        return boundHandler;
+      }
+    );
+  });
+
+  afterEach(() => {
+    (useHandler as jest.Mock)
+      .mockReset()
+      .mockReturnValue({ doDependenciesDiffer: false });
+    (useEvent as jest.Mock).mockReset();
+  });
 
   it('drives animatedIndex one below the native detent index, and animatedPosition as reported', () => {
     const animatedPosition = ensureAnimatedIndex('position-probe');
@@ -1097,24 +1125,32 @@ describe('position stream', () => {
     expect((useEvent as jest.Mock).mock.calls[0]![1]).toEqual([
       'onPositionChange',
     ]);
-    worklet()({ index: 0.25, position: 120 });
+    native().onPositionChange({ index: 0.25, position: 120 });
 
     expect(getAnimatedIndex('a')!.value).toBe(-0.75);
     expect(animatedPosition.value).toBe(120);
   });
 
-  it('rebinds the worklet when animatedPosition is swapped for another value', () => {
+  it('updates only the current animatedPosition, including after attaching and detaching it', () => {
     const before = ensureAnimatedIndex('position-before');
     const after = ensureAnimatedIndex('position-after');
-    const { rerender } = renderOpening({ animatedPosition: before });
+    const { rerender } = renderOpening();
 
-    (useEvent as jest.Mock).mockClear();
+    rerender({ animatedPosition: before });
+    native().onPositionChange({ index: 0.5, position: 120 });
+    expect(before.value).toBe(120);
+
+    const handlerBeforeSwap = native().onPositionChange;
+    rerender({ animatedPosition: before, handle: true });
+    expect(native().onPositionChange).toBe(handlerBeforeSwap);
     rerender({ animatedPosition: after });
-
-    const rebuilds = (useEvent as jest.Mock).mock.calls.map((call) => call[2]);
-    expect(rebuilds).toContain(true);
-    worklet()({ index: 1, position: 300 });
+    native().onPositionChange({ index: 1, position: 300 });
+    expect(before.value).toBe(120);
     expect(after.value).toBe(300);
-    expect(before.value).toBe(-1);
+
+    rerender({});
+    native().onPositionChange({ index: 0.25, position: 80 });
+    expect(after.value).toBe(300);
+    expect(getAnimatedIndex('a')!.value).toBe(-0.75);
   });
 });
