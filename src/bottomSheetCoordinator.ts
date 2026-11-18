@@ -1,6 +1,11 @@
 import type { SheetAdapterEvents } from './adapter.types';
 import { useBottomSheetStore } from './store';
-import type { CascadeOptions, CloseAllResult, CloseResult } from './store';
+import type {
+  BottomSheetStatus,
+  CascadeOptions,
+  CloseAllResult,
+  CloseResult,
+} from './store';
 import { getOnBeforeClose } from './onBeforeCloseRegistry';
 import { getSheetRef } from './refsMap';
 
@@ -90,6 +95,11 @@ export function initBottomSheetCoordinator(groupId: string) {
       });
     }
   );
+}
+
+/** Reads the live sheet status outside React. Returns `undefined` if the sheet is absent. */
+export function getSheetStatus(sheetId: string): BottomSheetStatus | undefined {
+  return useBottomSheetStore.getState().sheetsById[sheetId]?.status;
 }
 
 /**

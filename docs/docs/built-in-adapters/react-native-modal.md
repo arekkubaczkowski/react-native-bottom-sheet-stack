@@ -4,6 +4,8 @@ Wraps [`react-native-modal`](https://github.com/react-native-modal/react-native-
 
 ## Installation
 
+On React Native 0.88, `react-native-modal` 14.0.0-rc.1 needs a patch to remove its calls to `InteractionManager`. The example applies the Yarn patch in `.yarn/patches/`. If your app installs the same peer version, apply the patch in your app as well.
+
 ```bash
 npm install react-native-modal
 ```

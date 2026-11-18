@@ -6,7 +6,7 @@ import {
 } from 'react-native-bottom-sheet-stack';
 
 import type { SheetAdapterRef } from '../../../src/adapter.types';
-import { SwmansionSheetAdapter } from '../../../src/adapters/swmansion';
+import { SwmansionSheetAdapter } from 'react-native-bottom-sheet-stack/swmansion';
 import { Badge, Button, SecondaryButton } from '../components';
 import { ScannerNestedSheet1 } from './ScannerNestedSheets';
 import { colors, sharedStyles } from '../styles/theme';

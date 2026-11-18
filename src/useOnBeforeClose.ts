@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 
 import { useMaybeBottomSheetContext } from './BottomSheet.context';
 import { useSetPreventDismiss } from './store';
@@ -61,7 +61,9 @@ export function useOnBeforeClose(callback: OnBeforeCloseCallback): void {
   const stableCallback = useStableCallback(callback);
   const id = context?.id;
 
-  useEffect(() => {
+  // Layout, not passive: adapters lay themselves out from `preventDismiss`,
+  // so a flag that lands after the first paint moves an opening sheet.
+  useLayoutEffect(() => {
     if (!id) return;
     setOnBeforeClose(id, stableCallback);
     setPreventDismiss(id, true);

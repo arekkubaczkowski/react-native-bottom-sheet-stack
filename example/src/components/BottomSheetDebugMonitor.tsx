@@ -32,6 +32,10 @@ interface LogEntry {
 
 const MAX_LOGS = 200;
 const logHistory: LogEntry[] = [];
+const EMPTY_STACK: string[] = [];
+const EMPTY_SHEETS: ReturnType<
+  typeof useBottomSheetStore.getState
+>['sheetsById'] = {};
 
 // Track previous animatedIndex values for change detection
 const previousValues = new Map<string, number>();
@@ -77,9 +81,11 @@ export function trackEnsure(sheetId: string, value: number) {
 // Poll all animatedIndex values and log changes
 function pollAnimatedIndexValues() {
   const registry = __getAllAnimatedIndexes();
+  const values = new Map<string, number>();
 
   registry.forEach((animatedIndex, key) => {
-    const currentValue = animatedIndex.value;
+    const currentValue = animatedIndex.get();
+    values.set(key, currentValue);
     const previousValue = previousValues.get(key);
 
     // Log if value changed significantly (more than 0.01)
@@ -118,23 +124,33 @@ function pollAnimatedIndexValues() {
       previousValues.delete(key);
     }
   });
+
+  return values;
 }
 
 export function BottomSheetDebugMonitor() {
   const [modalVisible, setModalVisible] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const sheetsById = useBottomSheetStore((state) => state.sheetsById, shallow);
-  // Flattened for display only — the store keys the stack by group.
-  //
-  // Both selectors take `shallow`, and that is load-bearing here rather than
-  // decoration: the flatten allocates a fresh array on every call, so with the
-  // default reference check Zustand would treat every store write as a change
-  // and re-render this monitor constantly. Nothing in this file is memoized —
-  // the example app does not run React Compiler (the plugin lives in the root
-  // babel.config.js, which only covers src/).
+  const [animatedValues, setAnimatedValues] = useState(
+    () => new Map<string, number>()
+  );
+  const sheetsById = useBottomSheetStore((state) =>
+    modalVisible ? state.sheetsById : EMPTY_SHEETS
+  );
   const stackOrder = useBottomSheetStore(
-    (state) => Object.values(state.stackOrderByGroup).flat(),
+    (state) =>
+      modalVisible
+        ? Object.values(state.stackOrderByGroup).flat()
+        : EMPTY_STACK,
     shallow
+  );
+  const sheetCount = useBottomSheetStore(
+    (state) => Object.keys(state.sheetsById).length
+  );
+  const activeCount = useBottomSheetStore((state) =>
+    Object.values(state.stackOrderByGroup).reduce(
+      (count, group) => count + group.length,
+      0
+    )
   );
 
   const pan = useRef(new Animated.ValueXY({ x: 20, y: 100 })).current;
@@ -158,11 +174,13 @@ export function BottomSheetDebugMonitor() {
     })
   ).current;
 
-  // Poll animatedIndex values every 50ms to catch rapid changes
   useEffect(() => {
-    const interval = setInterval(pollAnimatedIndexValues, 50);
+    if (!modalVisible) return;
+    const sample = () => setAnimatedValues(pollAnimatedIndexValues());
+    sample();
+    const interval = setInterval(sample, 250);
     return () => clearInterval(interval);
-  }, []);
+  }, [modalVisible]);
 
   // Subscribe to store changes to log them
   useEffect(() => {
@@ -204,10 +222,7 @@ export function BottomSheetDebugMonitor() {
         });
 
         // Detect stack changes, per group
-        if (
-          JSON.stringify(current.stackOrderByGroup) !==
-          JSON.stringify(previous.stackOrderByGroup)
-        ) {
+        if (current.stackOrderByGroup !== previous.stackOrderByGroup) {
           Object.entries(current.stackOrderByGroup).forEach(
             ([groupId, stack]) => {
               addDebugLog(
@@ -223,18 +238,6 @@ export function BottomSheetDebugMonitor() {
 
     return unsubscribe;
   }, []);
-
-  // Auto refresh when modal is open
-  useEffect(() => {
-    if (modalVisible) {
-      const interval = setInterval(() => setRefreshKey((k) => k + 1), 500);
-      return () => clearInterval(interval);
-    }
-    return undefined;
-  }, [modalVisible]);
-
-  const sheetCount = Object.keys(sheetsById).length;
-  const activeCount = stackOrder.length;
 
   const generateStatsText = () => {
     const registry = __getAllAnimatedIndexes();
@@ -355,120 +358,122 @@ export function BottomSheetDebugMonitor() {
       </Animated.View>
 
       {/* Debug Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Bottom Sheet Debug</Text>
-            <View style={styles.headerButtons}>
-              <Pressable onPress={copyStats} style={styles.copyButton}>
-                <Text style={styles.copyButtonText}>Copy</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setModalVisible(false)}
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>Close</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          <ScrollView style={styles.content} key={refreshKey}>
-            {/* Current State */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Current State</Text>
-              <Text style={styles.label}>Stack Order:</Text>
-              <Text style={styles.value}>
-                [{stackOrder.join(', ') || 'empty'}]
-              </Text>
-
-              <Text style={styles.label}>Sheets ({sheetCount}):</Text>
-              {Object.entries(sheetsById).map(([id, sheet]) => {
-                const animatedIndexRegistry = __getAllAnimatedIndexes();
-                const animatedIndex = animatedIndexRegistry.get(id);
-                return (
-                  <View key={id} style={styles.sheetItem}>
-                    <Text style={styles.sheetId}>{id}</Text>
-                    <Text style={styles.sheetDetails}>
-                      status: {sheet.status} | portal: {String(sheet.usePortal)}{' '}
-                      | keepMounted: {String(sheet.keepMounted)}
-                    </Text>
-                    <Text style={styles.sheetDetails}>
-                      portalSession: {sheet.portalSession} | inStack:{' '}
-                      {String(stackOrder.includes(id))}
-                    </Text>
-                    <Text
-                      style={[styles.sheetDetails, styles.animatedIndexValue]}
-                    >
-                      animatedIndex:{' '}
-                      {animatedIndex ? animatedIndex.value.toFixed(4) : 'N/A'}
-                      {animatedIndex ? ` (in registry)` : ' (NOT in registry!)'}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-
-            {/* AnimatedIndex Registry */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>AnimatedIndex Registry</Text>
-              {(() => {
-                const registry = __getAllAnimatedIndexes();
-                const entries = Array.from(registry.entries());
-                if (entries.length === 0) {
-                  return <Text style={styles.value}>Empty</Text>;
-                }
-                return entries.map(([id, animatedIndex]) => (
-                  <View key={id} style={styles.registryItem}>
-                    <Text style={styles.registryId}>{id}</Text>
-                    <Text style={styles.registryValue}>
-                      value: {animatedIndex.value.toFixed(4)}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.registryStatus,
-                        sheetsById[id]
-                          ? styles.registryInStore
-                          : styles.registryOrphan,
-                      ]}
-                    >
-                      {sheetsById[id] ? 'in store' : 'ORPHAN (not in store!)'}
-                    </Text>
-                  </View>
-                ));
-              })()}
-            </View>
-
-            {/* Log History */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Log History ({logHistory.length})
-              </Text>
-              {logHistory.map((log, index) => (
-                <View
-                  key={index}
-                  style={[styles.logItem, styles[`log_${log.type}`]]}
+      {modalVisible && (
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Bottom Sheet Debug</Text>
+              <View style={styles.headerButtons}>
+                <Pressable onPress={copyStats} style={styles.copyButton}>
+                  <Text style={styles.copyButtonText}>Copy</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
                 >
-                  <Text style={styles.logTime}>
-                    {new Date(log.timestamp).toLocaleTimeString()}
-                  </Text>
-                  <Text style={styles.logSheet}>[{log.sheetId}]</Text>
-                  <Text style={styles.logMessage}>{log.message}</Text>
-                  {log.value !== undefined && (
-                    <Text style={styles.logValue}>
-                      {JSON.stringify(log.value)}
-                    </Text>
-                  )}
-                </View>
-              ))}
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </Pressable>
+              </View>
             </View>
-          </ScrollView>
-        </View>
-      </Modal>
+
+            <ScrollView style={styles.content}>
+              {/* Current State */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Current State</Text>
+                <Text style={styles.label}>Stack Order:</Text>
+                <Text style={styles.value}>
+                  [{stackOrder.join(', ') || 'empty'}]
+                </Text>
+
+                <Text style={styles.label}>Sheets ({sheetCount}):</Text>
+                {Object.entries(sheetsById).map(([id, sheet]) => {
+                  const animatedIndex = animatedValues.get(id);
+                  return (
+                    <View key={id} style={styles.sheetItem}>
+                      <Text style={styles.sheetId}>{id}</Text>
+                      <Text style={styles.sheetDetails}>
+                        status: {sheet.status} | portal:{' '}
+                        {String(sheet.usePortal)} | keepMounted:{' '}
+                        {String(sheet.keepMounted)}
+                      </Text>
+                      <Text style={styles.sheetDetails}>
+                        portalSession: {sheet.portalSession} | inStack:{' '}
+                        {String(stackOrder.includes(id))}
+                      </Text>
+                      <Text
+                        style={[styles.sheetDetails, styles.animatedIndexValue]}
+                      >
+                        animatedIndex: {animatedIndex?.toFixed(4) ?? 'N/A'}
+                        {animatedIndex !== undefined
+                          ? ' (in registry)'
+                          : ' (NOT in registry!)'}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* AnimatedIndex Registry */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>AnimatedIndex Registry</Text>
+                {(() => {
+                  const entries = Array.from(animatedValues.entries());
+                  if (entries.length === 0) {
+                    return <Text style={styles.value}>Empty</Text>;
+                  }
+                  return entries.map(([id, animatedIndex]) => (
+                    <View key={id} style={styles.registryItem}>
+                      <Text style={styles.registryId}>{id}</Text>
+                      <Text style={styles.registryValue}>
+                        value: {animatedIndex.toFixed(4)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.registryStatus,
+                          sheetsById[id]
+                            ? styles.registryInStore
+                            : styles.registryOrphan,
+                        ]}
+                      >
+                        {sheetsById[id] ? 'in store' : 'ORPHAN (not in store!)'}
+                      </Text>
+                    </View>
+                  ));
+                })()}
+              </View>
+
+              {/* Log History */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Log History ({logHistory.length})
+                </Text>
+                {logHistory.map((log, index) => (
+                  <View
+                    key={index}
+                    style={[styles.logItem, styles[`log_${log.type}`]]}
+                  >
+                    <Text style={styles.logTime}>
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </Text>
+                    <Text style={styles.logSheet}>[{log.sheetId}]</Text>
+                    <Text style={styles.logMessage}>{log.message}</Text>
+                    {log.value !== undefined && (
+                      <Text style={styles.logValue}>
+                        {JSON.stringify(log.value)}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
+      )}
     </>
   );
 }

@@ -1,14 +1,15 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   CustomModalAdapter,
+  type SheetAdapterRef,
   useBottomSheetContext,
   useBottomSheetManager,
 } from 'react-native-bottom-sheet-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionsSheetAdapter } from '../../../src/adapters/actions-sheet';
 import { ReactNativeModalAdapter } from '../../../src/adapters/react-native-modal';
-import { SwmansionSheetAdapter } from '../../../src/adapters/swmansion';
+import { SwmansionSheetAdapter } from 'react-native-bottom-sheet-stack/swmansion';
 
 import {
   Badge,
@@ -19,6 +20,15 @@ import {
 } from '../components';
 import { useUser } from '../context/UserContext';
 import { colors, sharedStyles } from '../styles/theme';
+import {
+  SwmansionCustomHandleSheet,
+  SwmansionDetachedDetentsSheet,
+  SwmansionDetachedShadowSheet,
+  SwmansionDetentsSheet,
+  SwmansionInterceptedSheet,
+  SwmansionKeyboardDetachedSheet,
+  SwmansionPositionSheet,
+} from './SwmansionFeatureSheets';
 
 // ---------------------------------------------------------------------------
 // Built-in ModalAdapter (View-based zoom+fade centered modal)
@@ -359,17 +369,26 @@ export function GorhomSheetDemoContent() {
 // @swmansion/react-native-bottom-sheet adapter
 // ---------------------------------------------------------------------------
 
-/**
- * Demonstrates the SwmansionSheetAdapter stacking with itself.
- *
- * Software Mansion's bottom sheet is a fully controlled Fabric component — the
- * adapter bridges its `index`/`detents` model onto the manager's imperative
- * open/close contract. Requires the New Architecture.
- */
 export function SwmansionSheetDemoContent() {
   const { close } = useBottomSheetContext<'swmansion-sheet-demo'>();
-  const { open } = useBottomSheetManager();
+  const { open, close: closeById } = useBottomSheetManager();
   const user = useUser();
+
+  const pushFeature = (sheet: React.ReactElement) => {
+    open(sheet, { mode: 'push', scaleBackground: true });
+  };
+
+  // Stress: this sheet is hidden by the switch and restored by the close in
+  // the same tick, before its own hide animation has started.
+  const handleSwitchThenClose = () => {
+    const id = open(<StackedSwmansionSheet mode="switch" />, {
+      mode: 'switch',
+      scaleBackground: true,
+    });
+    if (id) {
+      closeById(id);
+    }
+  };
 
   const handlePush = () => {
     open(<StackedSwmansionSheet mode="push" />, {
@@ -407,8 +426,8 @@ export function SwmansionSheetDemoContent() {
   };
 
   return (
-    <SwmansionSheetAdapter detents={[0, 'content']} handle>
-      <View style={styles.swmSheetContent}>
+    <SwmansionSheetAdapter detents={[0, '100%']} handle>
+      <ScrollView contentContainerStyle={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
           <Badge label="Stacking" color={colors.primary} />
@@ -455,6 +474,10 @@ export function SwmansionSheetDemoContent() {
           <Button title="Replace with Sheet" onPress={handleReplace} />
           <Button title="Push Detached Sheet" onPress={handleDetached} />
           <Button
+            title="Floating to full height"
+            onPress={() => pushFeature(<SwmansionDetachedDetentsSheet />)}
+          />
+          <Button
             title="Keyboard: inset"
             onPress={() => handleKeyboard('inset')}
           />
@@ -462,38 +485,66 @@ export function SwmansionSheetDemoContent() {
             title="Keyboard: none (compare)"
             onPress={() => handleKeyboard('none')}
           />
+        </View>
+
+        <View style={sharedStyles.scaleInfo}>
+          <Text style={sharedStyles.scaleInfoTitle}>1.0 features</Text>
+        </View>
+        <View style={styles.actions}>
+          <Button
+            title="Detents"
+            onPress={() => pushFeature(<SwmansionDetentsSheet />)}
+          />
+          <Button
+            title="Intercepted"
+            onPress={() => pushFeature(<SwmansionInterceptedSheet />)}
+          />
+          <Button
+            title="Detached with shadow"
+            onPress={() => pushFeature(<SwmansionDetachedShadowSheet />)}
+          />
+          <Button
+            title="Detached, 48pt gap"
+            onPress={() =>
+              pushFeature(<SwmansionDetachedShadowSheet bottomInset={48} />)
+            }
+          />
+          <Button
+            title="Position follower"
+            onPress={() => pushFeature(<SwmansionPositionSheet />)}
+          />
+          <Button
+            title="Custom handle"
+            onPress={() => pushFeature(<SwmansionCustomHandleSheet />)}
+          />
+          <Button
+            title="Keyboard, detached"
+            onPress={() => pushFeature(<SwmansionKeyboardDetachedSheet />)}
+          />
+          <SecondaryButton
+            title="Stress: switch, then close at once"
+            onPress={handleSwitchThenClose}
+          />
           <SecondaryButton title="Close" onPress={close} />
         </View>
-      </View>
+      </ScrollView>
     </SwmansionSheetAdapter>
   );
 }
 
-/**
- * `keyboardBehavior` side by side.
- *
- * With `'inset'` the sheet pads its content by the keyboard height, so a
- * content-sized sheet re-measures taller and the field stays above the
- * keyboard. With `'none'` the keyboard covers the bottom of the sheet — the
- * content is expected to own keyboard avoidance itself.
- *
- * `'inset'` needs the optional peer `react-native-keyboard-controller` and a
- * `KeyboardProvider` at the app root (see `App.tsx`); without it the adapter
- * warns once and renders as if `'none'`.
- */
 const KeyboardSwmansionSheet = ({
   behavior,
   ref,
 }: {
   behavior: 'none' | 'inset';
-  ref?: React.Ref<unknown>;
+  ref?: React.Ref<SheetAdapterRef>;
 }) => {
   const { close } = useBottomSheetContext();
   const [text, setText] = React.useState('');
 
   return (
     <SwmansionSheetAdapter
-      ref={ref as any}
+      ref={ref}
       detents={[0, 'content']}
       keyboardBehavior={behavior}
       handle
@@ -532,24 +583,15 @@ const KeyboardSwmansionSheet = ({
   );
 };
 
-/**
- * Detached (floating) presentation — the sheet is lifted off the screen edges
- * instead of anchored to the bottom, with all four corners rounded.
- *
- * The insets default to 16pt horizontally and the bottom safe-area inset (at
- * least 16pt), so a bare `detached` already clears the home indicator; both are
- * overridable.
- */
-const DetachedSwmansionSheet = ({ ref }: { ref?: React.Ref<unknown> }) => {
+const DetachedSwmansionSheet = ({
+  ref,
+}: {
+  ref?: React.Ref<SheetAdapterRef>;
+}) => {
   const { close } = useBottomSheetContext();
 
   return (
-    <SwmansionSheetAdapter
-      ref={ref as any}
-      detents={[0, 'content']}
-      detached
-      handle
-    >
+    <SwmansionSheetAdapter ref={ref} detents={[0, 'content']} detached handle>
       <View style={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />
@@ -557,9 +599,9 @@ const DetachedSwmansionSheet = ({ ref }: { ref?: React.Ref<unknown> }) => {
         </View>
         <Text style={sharedStyles.h1}>Detached Sheet</Text>
         <Text style={sharedStyles.text}>
-          Floats above the screen edges with every corner rounded. Detent
-          heights are measured against the inset frame, so `content` and
-          `fullHeight` stay correct with no arithmetic.
+          Floats above the screen edges with every corner rounded. The gaps are
+          native detent insets: they are not part of the sheet, so a tap in them
+          reaches the backdrop.
         </Text>
 
         <View style={styles.actions}>
@@ -798,7 +840,11 @@ const StackedSwmansionSheet = ({ mode, ref }: StackedProps) => {
   };
 
   return (
-    <SwmansionSheetAdapter ref={ref as any} detents={[0, 'content']} handle>
+    <SwmansionSheetAdapter
+      ref={ref as React.Ref<SheetAdapterRef>}
+      detents={[0, 'content']}
+      handle
+    >
       <View style={styles.swmSheetContent}>
         <View style={styles.badgeRow}>
           <Badge label="@swmansion/bottom-sheet" color={colors.cyan} />

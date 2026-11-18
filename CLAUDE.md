@@ -6,9 +6,9 @@ modes, the backdrop and the iOS-style background scale.
 
 | | |
 |---|---|
-| React / RN | 19.1.0 / 0.81.5 (New Architecture) |
+| React / RN | 19.3.0 / 0.88.1 (New Architecture) |
 | State | zustand ^5.0.3 |
-| Animation | react-native-reanimated ^4.2.1 |
+| Animation | react-native-reanimated 4.7.1 |
 | Portals | react-native-teleport ^1.1.7 |
 
 | Adapter | Import from | Wraps |
@@ -17,7 +17,7 @@ modes, the backdrop and the iOS-style background scale.
 | `GorhomSheetAdapter` | `…/gorhom` | `@gorhom/bottom-sheet` |
 | `ReactNativeModalAdapter` | `…/react-native-modal` | `react-native-modal` |
 | `ActionsSheetAdapter` | `…/actions-sheet` | `react-native-actions-sheet` |
-| `SwmansionSheetAdapter` | `…/swmansion` | `@swmansion/react-native-bottom-sheet` >= 0.16 (Fabric) |
+| `SwmansionSheetAdapter` | `…/swmansion` | `@swmansion/react-native-bottom-sheet` ^1.0 (Fabric) |
 
 ---
 
@@ -141,8 +141,9 @@ without re-animating it out. `'hidden'` is deliberately excluded: a
 adapter rendered, so `finishClosing` would delete a live sheet on every
 persistent mount.
 
-Also exported publicly for adapter authors: `requestClose(id)` and
-`closeAllAnimated(groupId, opts)`.
+Also exported publicly for adapter authors: `requestClose(id)`,
+`closeAllAnimated(groupId, opts)` and `getSheetStatus(id)` — the supported way
+to read a status outside React; `useBottomSheetStore` is internal.
 
 ---
 
@@ -154,7 +155,7 @@ Four maps that outlive React, which is why `resetBottomSheetRegistries()` exists
 |---|---|---|
 | `refsMap` | adapter refs | Refs are not serializable, so they cannot live in the store. Registered **before** the store write, because that write is what schedules the `QueueItem` render which reads the map. A rejected open reclaims only the entry it created — an orphan is unreclaimable, and deleting a pre-existing one strips a live sheet. Cleaned up by `QueueItem`'s unmount. |
 | `animatedRegistry` | `SharedValue<number>` per sheet | Created **eagerly** in `open()` / `mount()` so the backdrop always finds one. `resetAnimatedIndex` rewinds to `-1` on open, so a re-opened persistent sheet does not carry last cycle's value. `getAnimatedIndex` is a pure read and never creates. |
-| `onBeforeCloseRegistry` | close interceptors | Found from outside React by `requestClose` / `handleDismiss`. Its presence also flips `preventDismiss` on the store record. |
+| `onBeforeCloseRegistry` | close interceptors | Found from outside React by `requestClose` / `handleDismiss`. `useOnBeforeClose` registers here and flips `preventDismiss` on the store record in the same **layout** effect: adapters lay themselves out from the flag, so a flag that lands after the first paint moves an opening sheet. The public `setOnBeforeClose` registers without flipping it. |
 | `portalSessionRegistry` | monotonic counter per id | Feeds the `Portal`/`PortalHost` name. **Persists across sheet deletion on purpose** — reusing a name after a replace hits a react-native-teleport connection bug. |
 
 ---
@@ -294,7 +295,7 @@ selector runs on every store change (twice per render under StrictMode), so a re
 write inside it would make the result depend on how often it ran.
 
 An empty style is returned at depth 0 — an identity transform on the first frame
-collapses layout in RN 0.85's animation backend.
+collapses layout in the animation backend React Native introduced in 0.85.
 
 Public exports are the style hooks: `useBackgroundScaleAnimatedStyle()` and
 `useSheetScaleAnimatedStyle(sheetId)`.
@@ -322,25 +323,65 @@ when the show animation ends and `handleClosed` when the hide animation ends.
 
 ### SwmansionSheetAdapter constraints
 
-- Native `scrimColor` / `scrimOpacities` are gated on `modal` sheets on both
-  platforms. The manager always renders inline, so they can never paint — the
-  adapter does not accept them. Use the `backdrop` prop (`false` to disable).
+- Native `scrimColor` and a detent's `scrimOpacity` are modal-only. The manager
+  always renders inline, so they can never paint — the adapter does not accept
+  them. Use the `backdrop` prop (`false` to disable).
 - `fullHeight` passes a detent taller than any screen and lets native clamp it.
-  Do **not** recompute `windowHeight - insets.top` in JS: since 0.16 there is no
+  Do **not** recompute `windowHeight - insets.top` in JS: there is no
   JS-provided cap, and a JS estimate ignores that the sheet lives inside the
   manager's `QueueItem` layer.
-- `detached` is a **margin box inside the sheet's own content region**, not a
-  frame around an inset host. The card carries the insets and the full corner
-  radius, and the native `surface` is left off so nothing paints outside it.
+- `topInset` is resolved in JS and applied as an offset of the host, with native
+  `topInset={0}`. The native default follows where the host sits in the window,
+  and an ancestor transform (the background scale) moves that mid-animation.
+- `detached` is native detent `insets` plus a four-corner radius in
+  `surfaceStyle`. Do not bring back a JS margin box or a JS clip: the gaps must
+  stay outside the sheet, so a touch there reaches the backdrop.
+- `lazy` is forced off. It unmounts the content at the closed detent, which is
+  where a persistent sheet rests between opens.
+- Corners belong in `surfaceStyle`, which clips the surface and the content
+  natively — never on the `surface` element or a content wrapper. A radius the
+  consumer sets in `surfaceStyle` wins: the adapter then adds none, because
+  upstream resolves a specific corner ahead of `borderRadius`.
 
-  The native container is anchored bottom-to-host and only *translated*, so the
-  sheet's visible body always ends at the host bottom. Anchor the gap to that
-  bottom — by insetting the host or by clipping — and the card's bottom edge
-  never moves: it grows in place instead of entering from off-screen. Hanging the
-  card off the sheet's **top** edge makes its bottom travel with the sheet.
+### The swmansion bridge
 
-  Do not reintroduce a clip that needs the settled height. It is not knowable
-  during the first rise, so any such clip is wrong while the sheet opens.
+The native sheet is controlled through `index` and reports back through
+`onIndexChange` (user snaps) and `onSettle` (any animation's end). The adapter
+holds these rules:
+
+1. The `index` prop always holds the last detent anyone chose: the adapter's own
+   drives and every user snap.
+2. It never passes an index outside `0 … detents.length - 1` — upstream throws
+   during render. A `detents` prop that shrinks takes the index with it.
+3. A drive to the detent native already rests on is answered by the adapter:
+   native emits no settle for an index it already holds. "Rests on" is two
+   refs — the target native was last told or told us, and the detent it last
+   settled on — decided synchronously, because an `expand()` and a `close()`
+   in one React batch collapse to no prop change.
+4. A settle on an open detent reports opened — unless the store is already
+   `closing` or `hidden`, when the user caught the sheet mid-close and flung it
+   back up. The adapter then sends it back to the closed detent: left there it
+   stays on screen, and with an interceptor blocking drags nothing closes it.
+5. A settle on the closed detent finishes the sheet **only under `closing`**.
+   Under `open` or `opening` the store never agreed to close — an interceptor
+   declined or is still deciding, or the settle predates a later open — so the
+   adapter returns the index to the open detent. Under `hidden` it does nothing.
+6. The widened `onIndexChange(openIndex, 0)` is announced once per open. A
+   restore after a declined close announces it again; a fling-back sent down
+   reports `(0, i)`; a release onto the same detent reports nothing.
+7. A drive nobody settles is caught by a watchdog. Fabric can mount a drive
+   and its reversal as one transaction, so native sees no change and settles
+   nothing. After `settleDuration` + 1 s the adapter reports the target itself
+   if `animatedIndex` shows native resting on it, and after up to four more
+   1 s rechecks if native rests on any detent. Between detents is a finger
+   holding the sheet, and the watchdog waits for the release however long it
+   takes — reporting a close there unmounts the sheet under the finger.
+8. A native settle on an index other than the one native was last sent to is
+   dropped (the consumer's `onSettle` still hears it). Native never settles a
+   superseded spring, so such a settle left native before the newer index
+   reached it; a user's fling reports its index through `onIndexChange` first
+   and so always matches. A settle index above the last detent is clamped —
+   it can predate a `detents` shrink.
 
 ---
 
@@ -376,6 +417,14 @@ unmock at its own scope.
 `coordinatorSync.test.ts` stubs it with an explicit queue. Fake timers couple the
 test to how rAF is polyfilled, and `await` inside a fake-timer loop deadlocks.
 
+**Adapter suites record the native sheet.** `swmansionAdapter.test.tsx` mocks
+the library with a component that pushes its props to a recorder and renders
+`surface` and `children`, then drives `onSettle` / `onIndexChange` by hand.
+Test components go at module scope: inside `it()` the compiler outlines them
+and they lose what they captured. `swmansionKeyboardInset.test.tsx` loads each
+peer state in its own module registry (`jest.resetModules()` + `jest.doMock`),
+because the module decides at import whether the peer is usable.
+
 **Write the test so it fails without the fix.** Group isolation is the sharp
 case: asserting on a single sheet in the untouched group misses a leak that
 writes to the *other* group's stack, so assertions compare the whole
@@ -401,9 +450,14 @@ adapter, which is the exact error the subpaths exist to avoid.
 `CustomModalAdapter`'s props type is exported as **`ModalAdapterProps`**. The
 component was renamed, the type was not; changing it needs a major bump.
 
-The example app aliases the subpaths in its own `babel.config.js` because RNBB's
-module-resolver would otherwise prefix-match them into `src/index.tsx/gorhom`.
-Consumer apps need nothing — Metro reads `exports` from package.json.
+The example app aliases the main entry and each subpath to `src/` in its own
+`babel.config.js`. The main entry is matched exactly (`^name$`): a prefix alias
+would turn `…/gorhom` into `src/index.tsx/gorhom`. That config does not use
+RNBB's `babel-config` helper — Expo's transformer loads Babel config without a
+filename, which RNBB's RegExp/string overrides cannot be evaluated under — and
+`metro.config.js` turns RNBB's `blacklistRE` (ignored since Metro 0.87) into a
+`blockList`, so peers still bundle once. Consumer apps need nothing — Metro
+reads `exports` from package.json.
 
 ---
 
@@ -428,3 +482,6 @@ Consumer apps need nothing — Metro reads `exports` from package.json.
     renders the one backdrop; a second overlay stacks and is not stack-aware.
     Gorhom's `backdropComponent` is the one exception, kept deprecated for
     back-compat — do not copy the pattern.
+13. A controlled adapter must answer a drive to the position it already holds.
+    The library stays silent for it, and the sheet then waits at `opening` or
+    `closing` for a settle that never comes.

@@ -1,4 +1,5 @@
-import { act, renderHook } from '@testing-library/react-native';
+import { useEffect } from 'react';
+import { act, render, renderHook } from '@testing-library/react-native';
 
 import { getOnBeforeClose } from '../onBeforeCloseRegistry';
 import { useBottomSheetContext } from '../useBottomSheetContext';
@@ -17,6 +18,28 @@ setupSheetTest();
 
 const openPortal = (id: string, groupId = 'g1') =>
   store().open(portal(id, groupId));
+
+// Module scope, not inside the test: the compiler outlines these, and an
+// outlined component loses whatever it captured from a test body.
+const flagAtFirstPassiveEffect: unknown[] = [];
+
+// A child's passive effect runs before its parent's, and after every layout
+// effect of the commit.
+const FlagProbe = () => {
+  useEffect(() => {
+    flagAtFirstPassiveEffect.push(store().sheetsById.a?.preventDismiss);
+  }, []);
+  return null;
+};
+
+const InterceptingSheet = () => {
+  useOnBeforeClose(() => true);
+  return <FlagProbe />;
+};
+
+beforeEach(() => {
+  flagAtFirstPassiveEffect.length = 0;
+});
 
 describe('useSheetRenderData', () => {
   it('returns active sheets with a per-group stack index', () => {
@@ -146,6 +169,19 @@ describe('useOnBeforeClose', () => {
         wrapper: inGroup(),
       })
     ).toThrow(/must be used within a BottomSheet/);
+  });
+
+  // An adapter reads the flag to lay itself out (the swmansion one drops its
+  // grab handle and the inset under it). A flag that lands a paint late moves
+  // the content of a sheet that is already opening.
+  it('flags the sheet before the first paint', () => {
+    act(() => {
+      openPortal('a');
+    });
+
+    render(<InterceptingSheet />, { wrapper: inSheet('a') });
+
+    expect(flagAtFirstPassiveEffect).toEqual([true]);
   });
 });
 

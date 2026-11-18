@@ -29,6 +29,7 @@ export {
   createSheetEventHandlers,
   requestClose,
   closeAllAnimated,
+  getSheetStatus,
 } from './bottomSheetCoordinator';
 export { useAdapterBackdrop } from './useAdapterBackdrop';
 export { useAdapterRef } from './useAdapterRef';

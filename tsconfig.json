@@ -8,7 +8,16 @@
       "react-native-bottom-sheet-stack/gorhom": ["./src/adapters/gorhom-sheet/index"],
       "react-native-bottom-sheet-stack/react-native-modal": ["./src/adapters/react-native-modal/index"],
       "react-native-bottom-sheet-stack/actions-sheet": ["./src/adapters/actions-sheet/index"],
-      "react-native-bottom-sheet-stack/swmansion": ["./src/adapters/swmansion/index"]
+      "react-native-bottom-sheet-stack/swmansion": ["./src/adapters/swmansion/index"],
+      // react-native-gesture-handler 3 depends on @types/react-test-renderer,
+      // which installs a second @types/react under example/node_modules
+      // (nmHoistingLimits: workspaces). Two copies make refs crossing from the
+      // example into src unassignable, so every file uses the root one. These
+      // are type paths only: the example turns off Expo's
+      // `experiments.tsconfigPaths`, and resolves this package through its
+      // Babel aliases instead.
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
