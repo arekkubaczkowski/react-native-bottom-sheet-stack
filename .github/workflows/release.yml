@@ -1,0 +1,69 @@
+name: Release
+
+# Dispatched by hand from the Actions tab. The version comes from the commits
+# via conventional-changelog, so there is no bump input to get wrong.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Compute the version and changelog without publishing or pushing'
+        type: boolean
+        default: false
+
+# Two releases at once would leave the tag and package.json disagreeing.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      # the `chore: release` commit, the tag and the GitHub release
+      contents: write
+      # OIDC for npm trusted publishing — this is what replaces a token and 2FA
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # release-it builds the changelog from the last tag onwards, so it
+          # needs the full history and the tags.
+          fetch-depth: 0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Lint files
+        run: yarn lint
+
+      - name: Typecheck files
+        run: yarn typecheck
+
+      - name: Test
+        run: yarn test
+
+      # Trusted publishing landed in npm 11.5.1; the node from .nvmrc ships 10.x.
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Configure git author
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      # Everything except the publish: bump, commit, tag, push, GitHub release.
+      # `--no-npm.publish` because the npm half runs separately on OIDC, which
+      # release-it's `npm whoami` precheck cannot see (hence `--npm.skipChecks`).
+      - name: Version, tag and GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: yarn release --ci --no-npm.publish --npm.skipChecks ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      # No token: npm exchanges the workflow's OIDC token for publish rights.
+      # `prepare` (bob build) runs here automatically, and trusted publishing
+      # generates provenance as a side effect.
+      - name: Publish to npm
+        if: ${{ !inputs.dry_run }}
+        run: npm publish

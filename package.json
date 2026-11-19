@@ -177,7 +177,8 @@
   "release-it": {
     "git": {
       "commitMessage": "chore: release ${version}",
-      "tagName": "v${version}"
+      "tagName": "v${version}",
+      "requireCommits": true
     },
     "npm": {
       "publish": true
